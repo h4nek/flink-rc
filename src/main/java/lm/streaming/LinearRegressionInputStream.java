@@ -13,6 +13,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
+import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.util.Collector;
 
@@ -142,16 +143,16 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
 
     /**
      * Starts predicting an output based on the defined type of linear regression.
-     * It trains the model online, changing it with time, based on the realOutput stream values.
+     * It trains the model online, changing it with time, based on the newest alphaStream element value.
      * @return
      */
-    public SingleOutputStreamOperator<Double> predict(DataStream<Double> outputStream, 
+    public SingleOutputStreamOperator<Double> predict(DataStream<List<Double>> alphaStream, 
                                                       List<Function<List<Double>, Double>> basisFunctions, 
                                                       List<Double> alphaInit) {
-        return this.map(
-                new RichMapFunction<List<Double>, Double>() {
+        return this.connect(alphaStream).flatMap(
+                new RichCoFlatMapFunction<List<Double>, List<Double>, Double>() {
                     private ListState<Double> alphaState;
-                    
+
                     @Override
                     public void open(Configuration parameters) throws Exception {
                         super.open(parameters);
@@ -159,48 +160,88 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
                                 "alpha parameters", Double.class));
                         alphaState.update(alphaInit);
                     }
-
+                    
                     @Override
-                    public Double map(List<Double> input) throws Exception {
+                    public void flatMap1(List<Double> input, Collector<Double> out) throws Exception {
                         List<Double> alpha = (List<Double>) alphaState.get();
                         double y_pred = 0;
                         for (int i = 0; i < alpha.size(); i++) {
                             y_pred += alpha.get(i) * basisFunctions.get(i).apply(input);
                         }
-                        return y_pred;
+                        out.collect(y_pred);
                     }
-            }
+
+                    /**
+                     * Here we just update the state when new alpha vector arrives.
+                     * @param alpha
+                     * @param out
+                     * @throws Exception
+                     */
+                    @Override
+                    public void flatMap2(List<Double> alpha, Collector<Double> out) throws Exception {
+                        //TODO: Replace with CoProcess function to compare timestamps?
+                        alphaState.update(alpha);
+                    }
+                }
         );
     }
 
-    public DataStream<Double> predictSimplePolynomial(DataStream<Double> realOutput, int degree, double[] alphaInit) 
+    /**
+     * Separate and probably more effective implementation than the above <i>predict()</i>.
+     * Realizing polynomial regression of one variable.
+     * The function is of form: f(x) = alpha_0 + alpha_1*x + ... + alpha_n*x^n, where n = degree
+     * @param alphaStream
+     * @param degree
+     * @param alphaInit
+     * @return
+     * @throws InvalidArgumentException
+     */
+    public DataStream<Double> predictSimplePolynomial(DataStream<List<Double>> alphaStream, int degree, 
+                                                      List<Double> alphaInit) 
             throws InvalidArgumentException {
-        if (alphaInit.length != degree + 1) {
+        if (alphaInit.size() != degree + 1) {
             throw new InvalidArgumentException(new String[] {"Degree + 1 must be the same as the length of alphaInit array!"});
         }
         
-        return this.map(new MapFunction<List<Double>, Double>() {
-
-//            private ListState<Double> alphaState;
-            private double[] alpha = alphaInit;
+        return this.connect(alphaStream).process(new CoProcessFunction<List<Double>, List<Double>, Double>() {
+            private ListState<Double> alphaState;
+            private Long timestamp;
 
             @Override
-            public Double map(List<Double> input) throws Exception {
+            public void open(Configuration parameters) throws Exception {
+                super.open(parameters);
+                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>(
+                        "alpha parameters", Double.class));
+                alphaState.update(alphaInit);
+                timestamp = Long.MIN_VALUE; //TODO Change to current watermark?
+            }
+            
+            @Override
+            public void processElement1(List<Double> input, Context ctx, Collector<Double> out) throws Exception {
 
 //                double[] x = new double[degree + 1];    // we'll have a vector of values {1, x, ..., x^(degree)}
                 double val = 1;
                 double y_pred = 0;
+                List<Double> alpha = (List<Double>) alphaState.get();
                 for (int i = 0; i <= degree; ++i) {
 //                    x[i] = val;
-                    y_pred += alpha[i]*val;
+                    y_pred += alpha.get(i)*val;
                     val *= input.get(0);    // this way we don't have to compute the power from scratch every time
-                                            // in this simple version of polynomial regression, we expect the input 
-                                            // variable to be scalar
+                    // in this simple version of polynomial regression, we expect the input 
+                    // variable to be scalar
                 }
 
 //                double y_pred = dotProduct(alpha, x);
-                
-                return y_pred;
+
+                out.collect(y_pred);
+            }
+
+            @Override
+            public void processElement2(List<Double> alpha, Context ctx, Collector<Double> out) throws Exception {
+                if (ctx.timestamp() > timestamp) {
+                    alphaState.update(alpha);
+                    timestamp = ctx.timestamp();
+                }
             }
         });
     }

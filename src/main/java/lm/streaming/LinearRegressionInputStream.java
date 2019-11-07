@@ -3,15 +3,21 @@ package lm.streaming;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.RichMapFunction;
-import org.apache.flink.api.common.state.ListState;
-import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.state.*;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
+import org.apache.flink.util.Collector;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -26,13 +32,120 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
     public LinearRegressionInputStream(StreamExecutionEnvironment environment, StreamTransformation<List<Double>> transformation) {
         super(environment, transformation);
     }
+    
+    public SingleOutputStreamOperator<List<Double>> linearModel(DataStream<Double> outputStream, 
+                                                                List<Function<List<Double>, Double>> basisFunctions,
+                                                                List<Double> alphaInit) {
+        return this.connect(outputStream).process(new CoProcessFunction<List<Double>, Double, List<Double>>() {
+
+            MapState<Long, List<Double>> unpairedIns;
+            MapState<Long, Double> unpairedOuts;
+//            ListState<Double> alphaState;
+            ValueState<List<Double>> alphaState;
+            
+            @Override
+            public void open(Configuration parameters) throws Exception {
+                super.open(parameters);
+                
+                unpairedIns = getRuntimeContext().getMapState(new MapStateDescriptor<Long, List<Double>>(
+                        "unpaired inputs", TypeInformation.of(Long.class), TypeInformation.of(
+                                new TypeHint<List<Double>>() {})));
+                unpairedOuts = getRuntimeContext().getMapState(new MapStateDescriptor<Long, Double>(
+                        "unpaired outputs", TypeInformation.of(Long.class), TypeInformation.of(Double.class)
+                ));
+//                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>("alpha parameters", 
+//                        TypeInformation.of(Double.class)));
+                alphaState = getRuntimeContext().getState(new ValueStateDescriptor<List<Double>>("alpha parameters", 
+                        TypeInformation.of(new TypeHint<List<Double>>() {})));
+            }
+
+            @Override
+            public void processElement1(List<Double> value, Context ctx, Collector<List<Double>> out) throws Exception {
+                Long timestamp = ctx.timestamp();
+                for (Long key : unpairedOuts.keys()) {
+                    if (timestamp.equals(key)) {
+                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), value, unpairedOuts.get(key), 
+                                10, .00001);
+                        
+                        alphaState.update(newAlpha);
+                        out.collect(newAlpha);
+                    }
+                    else {
+                        unpairedIns.put(timestamp, value);
+                    }
+                }
+                
+            }
+
+            @Override
+            public void processElement2(Double value, Context ctx, Collector<List<Double>> out) throws Exception {
+                Long timestamp = ctx.timestamp();
+                for (Long key : unpairedIns.keys()) {
+                    if (timestamp.equals(key)) {
+                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), unpairedIns.get(key), value,
+                                10, .00001);
+
+                        alphaState.update(newAlpha);
+                        out.collect(newAlpha);
+                    }
+                    else {
+                        unpairedOuts.put(timestamp, value);
+                    }
+                }
+            }
+        });
+    }
+    
+    protected List<Double> trainUsingGradientDescent(List<Double> oldAlpha, List<Double> input, Double output, 
+                                                     int numIters, double learningRate) throws InvalidArgumentException {
+        List<Double> alpha = oldAlpha;
+        
+        for (int i = 0; i < numIters; i++) {
+            alpha = vectorSubtraction(alpha, scalarMultiplication(2*learningRate*(dotProduct(alpha, input) - output), input));
+        }
+        
+        return alpha;
+    }
+
+    private static Double dotProduct(List<Double> X, List<Double> Y) throws InvalidArgumentException {
+        double result = 0;
+
+        if (X.size() != Y.size()) {
+            throw new InvalidArgumentException(new String[] {"Lengths must agree!"});
+        }
+
+        for (int i = 0; i < X.size(); i++) {
+            result += X.get(i)*Y.get(i);
+        }
+        return result;
+    }
+
+    private static List<Double> scalarMultiplication(Double a, List<Double> X) {
+        List<Double> result = new ArrayList<>(X.size());
+        for (Double x : X) {
+            result.add(x * a);
+        }
+        return result;
+    }
+
+    private static List<Double> vectorSubtraction(List<Double> X, List<Double> Y) throws InvalidArgumentException {
+        if (X.size() != Y.size()) {
+            throw new InvalidArgumentException(new String[] {"Lengths must agree!"});
+        }
+
+        List<Double> result = new ArrayList<>(X.size());
+        for (int i = 0; i < X.size(); i++) {
+            result.add(X.get(i) - Y.get(i));
+        }
+        return result;
+    }
 
     /**
      * Starts predicting an output based on the defined type of linear regression.
      * It trains the model online, changing it with time, based on the realOutput stream values.
      * @return
      */
-    public SingleOutputStreamOperator<Double> predict(DataStream<Double> realOutput, 
+    public SingleOutputStreamOperator<Double> predict(DataStream<Double> outputStream, 
                                                       List<Function<List<Double>, Double>> basisFunctions, 
                                                       List<Double> alphaInit) {
         return this.map(

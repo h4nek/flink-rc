@@ -45,13 +45,21 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
 
     /**
      * Create a linear model with default parameters.
-     * @param outputStream
+     * @param outputStream The stream of actual outputs that we'll use to make better predictions
      * @return
      */
     public SingleOutputStreamOperator<List<Double>> fitDefault(DataStream<Double> outputStream) {
-        return fit(outputStream, new ArrayList<>(INPUT_LENGTH), 10, .00001);
+        return fit(outputStream, new ArrayList<>(INPUT_LENGTH + 1), 10, .00001);
     }
-    
+
+    /**
+     * Create a linear model that adapts online as new input-output pairs become available.
+     * @param outputStream
+     * @param alphaInit
+     * @param numIterations
+     * @param learningRate
+     * @return Alpha list of parameters
+     */
     public SingleOutputStreamOperator<List<Double>> fit(DataStream<Double> outputStream, 
                                                         List<Double> alphaInit, 
                                                         int numIterations,
@@ -77,46 +85,57 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
 //                        TypeInformation.of(Double.class)));
                 alphaState = getRuntimeContext().getState(new ValueStateDescriptor<List<Double>>("alpha parameters",
                         TypeInformation.of(new TypeHint<List<Double>>() {})));
+                alphaState.update(alphaInit);
             }
 
             @Override
-            public void processElement1(List<Double> value, Context ctx, Collector<List<Double>> out) throws Exception {
+            public void processElement1(List<Double> input, Context ctx, Collector<List<Double>> out) throws Exception {
+                input.add(0, 1.0);  // add an extra value for Alpha_0 (intercept) that doesn't multiply any variable
                 Long timestamp = ctx.timestamp();
                 for (Long key : unpairedOuts.keys()) {
                     if (timestamp.equals(key)) {
-                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), value, unpairedOuts.get(key),
+                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), input, unpairedOuts.get(key),
                                 numIterations, learningRate);
 
                         alphaState.update(newAlpha);
                         out.collect(newAlpha);
                     }
                     else {
-                        unpairedIns.put(timestamp, value);
+                        unpairedIns.put(timestamp, input);
                     }
                 }
 
             }
 
             @Override
-            public void processElement2(Double value, Context ctx, Collector<List<Double>> out) throws Exception {
+            public void processElement2(Double output, Context ctx, Collector<List<Double>> out) throws Exception {
                 Long timestamp = ctx.timestamp();
                 for (Long key : unpairedIns.keys()) {
                     if (timestamp.equals(key)) {
-                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), unpairedIns.get(key), value,
+                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), unpairedIns.get(key), output,
                                 numIterations, learningRate);
 
                         alphaState.update(newAlpha);
                         out.collect(newAlpha);
                     }
                     else {
-                        unpairedOuts.put(timestamp, value);
+                        unpairedOuts.put(timestamp, output);
                     }
                 }
             }
         });
     }
-    
-    
+
+    /**
+     * Realizing Gradient descent with basic arithmetic operations.
+     * @param oldAlpha
+     * @param input
+     * @param output
+     * @param numIters
+     * @param learningRate
+     * @return
+     * @throws InvalidArgumentException
+     */
     protected List<Double> trainUsingGradientDescent(List<Double> oldAlpha, List<Double> input, Double output, 
                                                      int numIters, double learningRate) throws InvalidArgumentException {
         List<Double> alpha = oldAlpha;
@@ -187,6 +206,7 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
             @Override
             public void processElement1(List<Double> input, Context ctx, Collector<Double> out) throws Exception {
                 List<Double> alpha = (List<Double>) alphaState.get();
+                input.add(0, 1.0); // add an extra value for the intercept
                 
                 double y_pred = 0;
                 for (int i = 0; i < alpha.size(); i++) {
@@ -209,52 +229,6 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
                 }
             }
         });
-    }
-    
-    /**
-     * (A Generalized additive model.)
-     * Starts predicting an output based on the defined type of linear regression.
-     * It trains the model online, changing it with time, based on the newest alphaStream element value.
-     * @return
-     */
-    public SingleOutputStreamOperator<Double> predictGeneral(DataStream<List<Double>> alphaStream,
-                                                             List<Function<List<Double>, Double>> basisFunctions,
-                                                             List<Double> alphaInit) {
-        return this.connect(alphaStream).flatMap(
-                new RichCoFlatMapFunction<List<Double>, List<Double>, Double>() {
-                    private ListState<Double> alphaState;
-
-                    @Override
-                    public void open(Configuration parameters) throws Exception {
-                        super.open(parameters);
-                        alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>(
-                                "alpha parameters", Double.class));
-                        alphaState.update(alphaInit);
-                    }
-                    
-                    @Override
-                    public void flatMap1(List<Double> input, Collector<Double> out) throws Exception {
-                        List<Double> alpha = (List<Double>) alphaState.get();
-                        double y_pred = 0;
-                        for (int i = 0; i < alpha.size(); i++) {
-                            y_pred += alpha.get(i) * basisFunctions.get(i).apply(input);
-                        }
-                        out.collect(y_pred);
-                    }
-
-                    /**
-                     * Here we just update the state when new alpha vector arrives.
-                     * @param alpha
-                     * @param out
-                     * @throws Exception
-                     */
-                    @Override
-                    public void flatMap2(List<Double> alpha, Collector<Double> out) throws Exception {
-                        //TODO: Replace with CoProcess function to compare timestamps?
-                        alphaState.update(alpha);
-                    }
-                }
-        );
     }
 
     /**

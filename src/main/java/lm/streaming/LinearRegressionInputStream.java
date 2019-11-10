@@ -17,11 +17,15 @@ import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.util.Collector;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+/**
+ * A DataStream type that is used as an input for a Linear Model.
+ * After the linear model is established using linear regression, this stream can be used to predict some feature
+ * (output variable) based on the values of each input element.
+ */
 public class LinearRegressionInputStream extends DataStream<List<Double>> {
     /**
      * Create a new {@link LinearRegressionInputStream} in the given execution environment with
@@ -33,8 +37,15 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
     public LinearRegressionInputStream(StreamExecutionEnvironment environment, StreamTransformation<List<Double>> transformation) {
         super(environment, transformation);
     }
-    
-    public SingleOutputStreamOperator<List<Double>> linearModel(DataStream<Double> outputStream, 
+
+    /**
+     * A Generalized additive model.
+     * @param outputStream
+     * @param basisFunctions
+     * @param alphaInit
+     * @return
+     */
+    public SingleOutputStreamOperator<List<Double>> linearModelGeneral(DataStream<Double> outputStream, 
                                                                 List<Function<List<Double>, Double>> basisFunctions,
                                                                 List<Double> alphaInit) {
         return this.connect(outputStream).process(new CoProcessFunction<List<Double>, Double, List<Double>>() {
@@ -142,13 +153,14 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
     }
 
     /**
+     * (A Generalized additive model.)
      * Starts predicting an output based on the defined type of linear regression.
      * It trains the model online, changing it with time, based on the newest alphaStream element value.
      * @return
      */
-    public SingleOutputStreamOperator<Double> predict(DataStream<List<Double>> alphaStream, 
-                                                      List<Function<List<Double>, Double>> basisFunctions, 
-                                                      List<Double> alphaInit) {
+    public SingleOutputStreamOperator<Double> predictGeneral(DataStream<List<Double>> alphaStream,
+                                                             List<Function<List<Double>, Double>> basisFunctions,
+                                                             List<Double> alphaInit) {
         return this.connect(alphaStream).flatMap(
                 new RichCoFlatMapFunction<List<Double>, List<Double>, Double>() {
                     private ListState<Double> alphaState;
@@ -218,21 +230,17 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
             
             @Override
             public void processElement1(List<Double> input, Context ctx, Collector<Double> out) throws Exception {
-
-//                double[] x = new double[degree + 1];    // we'll have a vector of values {1, x, ..., x^(degree)}
                 double val = 1;
                 double y_pred = 0;
                 List<Double> alpha = (List<Double>) alphaState.get();
+                
                 for (int i = 0; i <= degree; ++i) {
-//                    x[i] = val;
                     y_pred += alpha.get(i)*val;
                     val *= input.get(0);    // this way we don't have to compute the power from scratch every time
-                    // in this simple version of polynomial regression, we expect the input 
-                    // variable to be scalar
+                                            // in this simple version of polynomial regression, we expect the input 
+                                            // variable to be scalar
                 }
-
-//                double y_pred = dotProduct(alpha, x);
-
+                
                 out.collect(y_pred);
             }
 

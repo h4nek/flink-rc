@@ -27,6 +27,8 @@ import java.util.function.Function;
  * (output variable) based on the values of each input element.
  */
 public class LinearRegressionInputStream extends DataStream<List<Double>> {
+    private final int INPUT_LENGTH;
+    
     /**
      * Create a new {@link LinearRegressionInputStream} in the given execution environment with
      * partitioning set to forward by default.
@@ -34,40 +36,46 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
      * @param environment    The StreamExecutionEnvironment
      * @param transformation
      */
-    public LinearRegressionInputStream(StreamExecutionEnvironment environment, StreamTransformation<List<Double>> transformation) {
+    public LinearRegressionInputStream(StreamExecutionEnvironment environment, StreamTransformation<List<Double>> transformation,
+                                       int inputLength) {
         super(environment, transformation);
+        INPUT_LENGTH = inputLength;
     }
 
+
     /**
-     * A Generalized additive model.
+     * Create a linear model with default parameters.
      * @param outputStream
-     * @param basisFunctions
-     * @param alphaInit
      * @return
      */
-    public SingleOutputStreamOperator<List<Double>> linearModelGeneral(DataStream<Double> outputStream, 
-                                                                List<Function<List<Double>, Double>> basisFunctions,
-                                                                List<Double> alphaInit) {
+    public SingleOutputStreamOperator<List<Double>> fitDefault(DataStream<Double> outputStream) {
+        return fit(outputStream, new ArrayList<>(INPUT_LENGTH), 10, .00001);
+    }
+    
+    public SingleOutputStreamOperator<List<Double>> fit(DataStream<Double> outputStream, 
+                                                        List<Double> alphaInit, 
+                                                        int numIterations,
+                                                        double learningRate) {
         return this.connect(outputStream).process(new CoProcessFunction<List<Double>, Double, List<Double>>() {
 
             MapState<Long, List<Double>> unpairedIns;
             MapState<Long, Double> unpairedOuts;
 //            ListState<Double> alphaState;
             ValueState<List<Double>> alphaState;
-            
+
             @Override
             public void open(Configuration parameters) throws Exception {
                 super.open(parameters);
-                
+
                 unpairedIns = getRuntimeContext().getMapState(new MapStateDescriptor<Long, List<Double>>(
                         "unpaired inputs", TypeInformation.of(Long.class), TypeInformation.of(
-                                new TypeHint<List<Double>>() {})));
+                        new TypeHint<List<Double>>() {})));
                 unpairedOuts = getRuntimeContext().getMapState(new MapStateDescriptor<Long, Double>(
                         "unpaired outputs", TypeInformation.of(Long.class), TypeInformation.of(Double.class)
                 ));
 //                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>("alpha parameters", 
 //                        TypeInformation.of(Double.class)));
-                alphaState = getRuntimeContext().getState(new ValueStateDescriptor<List<Double>>("alpha parameters", 
+                alphaState = getRuntimeContext().getState(new ValueStateDescriptor<List<Double>>("alpha parameters",
                         TypeInformation.of(new TypeHint<List<Double>>() {})));
             }
 
@@ -76,9 +84,9 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
                 Long timestamp = ctx.timestamp();
                 for (Long key : unpairedOuts.keys()) {
                     if (timestamp.equals(key)) {
-                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), value, unpairedOuts.get(key), 
-                                10, .00001);
-                        
+                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), value, unpairedOuts.get(key),
+                                numIterations, learningRate);
+
                         alphaState.update(newAlpha);
                         out.collect(newAlpha);
                     }
@@ -86,7 +94,7 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
                         unpairedIns.put(timestamp, value);
                     }
                 }
-                
+
             }
 
             @Override
@@ -95,7 +103,7 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
                 for (Long key : unpairedIns.keys()) {
                     if (timestamp.equals(key)) {
                         List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), unpairedIns.get(key), value,
-                                10, .00001);
+                                numIterations, learningRate);
 
                         alphaState.update(newAlpha);
                         out.collect(newAlpha);
@@ -107,6 +115,7 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
             }
         });
     }
+    
     
     protected List<Double> trainUsingGradientDescent(List<Double> oldAlpha, List<Double> input, Double output, 
                                                      int numIters, double learningRate) throws InvalidArgumentException {
@@ -152,6 +161,56 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
         return result;
     }
 
+    /**
+     * Starts predicting an output based on the fitted model.
+     * It trains the model online, changing it with time, based on the newest alphaStream element value.
+     * @return
+     */
+    public SingleOutputStreamOperator<Double> predict(DataStream<List<Double>> alphaStream,
+                                                      List<Double> alphaInit) {
+        return this.connect(alphaStream).process(new CoProcessFunction<List<Double>, List<Double>, Double>() {
+            private ListState<Double> alphaState;
+            private ValueState<Long> alphaTimestamp;
+
+            @Override
+            public void open(Configuration parameters) throws Exception {
+                super.open(parameters);
+                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>(
+                        "alpha parameters", Double.class));
+                alphaState.update(alphaInit);
+
+                alphaTimestamp = getRuntimeContext().getState(new ValueStateDescriptor<Long>("timestamp of alpha",
+                        Long.class));
+                alphaTimestamp.update(Long.MIN_VALUE);
+            }
+            
+            @Override
+            public void processElement1(List<Double> input, Context ctx, Collector<Double> out) throws Exception {
+                List<Double> alpha = (List<Double>) alphaState.get();
+                
+                double y_pred = 0;
+                for (int i = 0; i < alpha.size(); i++) {
+                    y_pred += alpha.get(i) * input.get(i);
+                }
+                out.collect(y_pred);
+            }
+
+            /**
+             * Here we just update the state when new alpha vector arrives.
+             * @param alpha
+             * @param out
+             * @throws Exception
+             */
+            @Override
+            public void processElement2(List<Double> alpha, Context ctx, Collector<Double> out) throws Exception {
+                if (ctx.timestamp() > alphaTimestamp.value()) { 
+                    alphaState.update(alpha);
+                    alphaTimestamp.update(ctx.timestamp());
+                }
+            }
+        });
+    }
+    
     /**
      * (A Generalized additive model.)
      * Starts predicting an output based on the defined type of linear regression.
@@ -253,13 +312,4 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
             }
         });
     }
-    
-//    protected static double dotProduct(double[] x, double[] y) {
-//        double result = 0;
-//
-//        for (int i = 0; i < x.length; i++) {
-//            result += x[i]*y[i];
-//        }
-//        return result;
-//    }
 }

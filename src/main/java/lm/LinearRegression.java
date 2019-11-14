@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 /**
- * A general function computing the training phase, a non-Flink solution for now.
+ * A general function computing the training phase, a non-Flink solution.
  */
 public class LinearRegression {
     

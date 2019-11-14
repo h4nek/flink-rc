@@ -12,6 +12,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
@@ -283,6 +284,28 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
                     alphaState.update(alpha);
                     timestamp = ctx.timestamp();
                 }
+            }
+        });
+    }
+
+    /**
+     * Predicts the dependent (scalar) variable from the independent (vector) variable using a single non-updateable 
+     * list of optimal alpha parameters. Such model can be trained using methods from {@link lm.LinearRegression} class
+     * @param alpha The List (vector) of optimal alpha parameters, computed beforehand.
+     * @return
+     */
+    public SingleOutputStreamOperator<Double> predictOffline(List<Double> alpha) {
+        return this.process(new ProcessFunction<List<Double>, Double>() {
+
+            @Override
+            public void processElement(List<Double> input, Context ctx, Collector<Double> out) throws Exception {
+                input.add(0, 1.0); // add an extra value for the intercept
+
+                double y_pred = 0;
+                for (int i = 0; i < alpha.size(); i++) {
+                    y_pred += alpha.get(i) * input.get(i);
+                }
+                out.collect(y_pred);
             }
         });
     }

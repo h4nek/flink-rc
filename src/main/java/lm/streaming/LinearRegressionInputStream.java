@@ -27,19 +27,17 @@ import java.util.function.Function;
  * After the linear model is established using linear regression, this stream can be used to predict some feature
  * (output variable) based on the values of each input element.
  */
-public class LinearRegressionInputStream extends DataStream<List<Double>> {
+public class LinearRegressionInputStream {
     private final int INPUT_LENGTH;
+
+    DataStream<List<Double>> dataStream;
     
     /**
-     * Create a new {@link LinearRegressionInputStream} in the given execution environment with
-     * partitioning set to forward by default.
+     * Create a new {@link LinearRegressionInputStream} class
      *
-     * @param environment    The StreamExecutionEnvironment
-     * @param transformation
      */
-    public LinearRegressionInputStream(StreamExecutionEnvironment environment, StreamTransformation<List<Double>> transformation,
-                                       int inputLength) {
-        super(environment, transformation);
+    public LinearRegressionInputStream(DataStream<List<Double>> dataStream, int inputLength) {
+        this.dataStream = dataStream;
         INPUT_LENGTH = inputLength;
     }
 
@@ -65,7 +63,7 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
                                                         List<Double> alphaInit, 
                                                         int numIterations,
                                                         double learningRate) {
-        return this.connect(outputStream).process(new CoProcessFunction<List<Double>, Double, List<Double>>() {
+        return this.dataStream.connect(outputStream).process(new CoProcessFunction<List<Double>, Double, List<Double>>() {
 
             MapState<Long, List<Double>> unpairedIns;
             MapState<Long, Double> unpairedOuts;
@@ -188,7 +186,7 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
      */
     public SingleOutputStreamOperator<Double> predict(DataStream<List<Double>> alphaStream,
                                                       List<Double> alphaInit) {
-        return this.connect(alphaStream).process(new CoProcessFunction<List<Double>, List<Double>, Double>() {
+        return this.dataStream.connect(alphaStream).process(new CoProcessFunction<List<Double>, List<Double>, Double>() {
             private ListState<Double> alphaState;
             private ValueState<Long> alphaTimestamp;
 
@@ -249,7 +247,7 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
             throw new InvalidArgumentException(new String[] {"Degree + 1 must be the same as the length of alphaInit array!"});
         }
         
-        return this.connect(alphaStream).process(new CoProcessFunction<List<Double>, List<Double>, Double>() {
+        return this.dataStream.connect(alphaStream).process(new CoProcessFunction<List<Double>, List<Double>, Double>() {
             private ListState<Double> alphaState;
             private Long timestamp;
 
@@ -295,7 +293,7 @@ public class LinearRegressionInputStream extends DataStream<List<Double>> {
      * @return
      */
     public SingleOutputStreamOperator<Double> predictOffline(List<Double> alpha) {
-        return this.process(new ProcessFunction<List<Double>, Double>() {
+        return this.dataStream.process(new ProcessFunction<List<Double>, Double>() {
 
             @Override
             public void processElement(List<Double> input, Context ctx, Collector<Double> out) throws Exception {

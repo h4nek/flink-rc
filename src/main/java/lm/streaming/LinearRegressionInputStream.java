@@ -29,6 +29,7 @@ import java.util.function.Function;
  */
 public class LinearRegressionInputStream {
     private final int INPUT_LENGTH;
+    private static final int DELAY_THRESHOLD = 150000;
 
     DataStream<List<Double>> dataStream;
     
@@ -108,7 +109,8 @@ public class LinearRegressionInputStream {
             input.add(0, 1.0);  // add an extra value for Alpha_0 (intercept) that doesn't multiply any variable
             Long timestamp = ctx.timestamp();
             for (Long key : unpairedOuts.keys()) {
-                if (timestamp.equals(key)) {
+                if ((timestamp - key) < DELAY_THRESHOLD) {
+                    System.out.println(timestamp);
                     List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), input, unpairedOuts.get(key),
                             numIterations, learningRate);
 
@@ -126,7 +128,7 @@ public class LinearRegressionInputStream {
         public void processElement2(Double output, Context ctx, Collector<List<Double>> out) throws Exception {
             Long timestamp = ctx.timestamp();
             for (Long key : unpairedIns.keys()) {
-                if (timestamp.equals(key)) {
+                if ((timestamp - key) < DELAY_THRESHOLD) {
                     List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), unpairedIns.get(key), output,
                             numIterations, learningRate);
 

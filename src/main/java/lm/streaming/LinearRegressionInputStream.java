@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * A DataStream type that is used as an input for a Linear Model.
- * After the linear model is established using linear regression, this stream can be used to predict some feature
- * (output variable) based on the values of each input element.
+ * A DataStream wrapper class that is used as an input for a Linear Model.
+ * After the linear model is established using linear regression, the inner input stream can be used to predict some 
+ * feature (output variable) based on the values of each input element.
  */
 public class LinearRegressionInputStream {
     private final int INPUT_LENGTH;

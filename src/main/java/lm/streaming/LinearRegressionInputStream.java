@@ -63,66 +63,81 @@ public class LinearRegressionInputStream {
                                                         List<Double> alphaInit, 
                                                         int numIterations,
                                                         double learningRate) {
-        return this.dataStream.connect(outputStream).process(new CoProcessFunction<List<Double>, Double, List<Double>>() {
+        return this.dataStream.connect(outputStream).process(new MLRFitCoProcessFunction(
+                                                            alphaInit, numIterations, learningRate));
+    }
+    
+    private static class MLRFitCoProcessFunction extends CoProcessFunction<List<Double>, Double, List<Double>> {
 
-            MapState<Long, List<Double>> unpairedIns;
-            MapState<Long, Double> unpairedOuts;
+        private List<Double> alphaInit;
+        private int numIterations;
+        private double learningRate;
+        
+        MapState<Long, List<Double>> unpairedIns;
+        MapState<Long, Double> unpairedOuts;
 //            ListState<Double> alphaState;
-            ValueState<List<Double>> alphaState;
+        ValueState<List<Double>> alphaState;
+        
+        public MLRFitCoProcessFunction(List<Double> alphaInit,
+                                       int numIterations,
+                                       double learningRate) {
+            this.alphaInit = alphaInit;
+            this.numIterations = numIterations;
+            this.learningRate = learningRate;
+        }
 
-            @Override
-            public void open(Configuration parameters) throws Exception {
-                super.open(parameters);
+        @Override
+        public void open(Configuration parameters) throws Exception {
+            super.open(parameters);
 
-                unpairedIns = getRuntimeContext().getMapState(new MapStateDescriptor<Long, List<Double>>(
-                        "unpaired inputs", TypeInformation.of(Long.class), TypeInformation.of(
-                        new TypeHint<List<Double>>() {})));
-                unpairedOuts = getRuntimeContext().getMapState(new MapStateDescriptor<Long, Double>(
-                        "unpaired outputs", TypeInformation.of(Long.class), TypeInformation.of(Double.class)
-                ));
+            unpairedIns = getRuntimeContext().getMapState(new MapStateDescriptor<Long, List<Double>>(
+                    "unpaired inputs", TypeInformation.of(Long.class), TypeInformation.of(
+                    new TypeHint<List<Double>>() {})));
+            unpairedOuts = getRuntimeContext().getMapState(new MapStateDescriptor<Long, Double>(
+                    "unpaired outputs", TypeInformation.of(Long.class), TypeInformation.of(Double.class)
+            ));
 //                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>("alpha parameters", 
 //                        TypeInformation.of(Double.class)));
-                alphaState = getRuntimeContext().getState(new ValueStateDescriptor<List<Double>>("alpha parameters",
-                        TypeInformation.of(new TypeHint<List<Double>>() {})));
-                alphaState.update(alphaInit);
-            }
+            alphaState = getRuntimeContext().getState(new ValueStateDescriptor<List<Double>>("alpha parameters",
+                    TypeInformation.of(new TypeHint<List<Double>>() {})));
+            alphaState.update(alphaInit);
+        }
 
-            @Override
-            public void processElement1(List<Double> input, Context ctx, Collector<List<Double>> out) throws Exception {
-                input.add(0, 1.0);  // add an extra value for Alpha_0 (intercept) that doesn't multiply any variable
-                Long timestamp = ctx.timestamp();
-                for (Long key : unpairedOuts.keys()) {
-                    if (timestamp.equals(key)) {
-                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), input, unpairedOuts.get(key),
-                                numIterations, learningRate);
+        @Override
+        public void processElement1(List<Double> input, Context ctx, Collector<List<Double>> out) throws Exception {
+            input.add(0, 1.0);  // add an extra value for Alpha_0 (intercept) that doesn't multiply any variable
+            Long timestamp = ctx.timestamp();
+            for (Long key : unpairedOuts.keys()) {
+                if (timestamp.equals(key)) {
+                    List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), input, unpairedOuts.get(key),
+                            numIterations, learningRate);
 
-                        alphaState.update(newAlpha);
-                        out.collect(newAlpha);
-                    }
-                    else {
-                        unpairedIns.put(timestamp, input);
-                    }
+                    alphaState.update(newAlpha);
+                    out.collect(newAlpha);
                 }
-
-            }
-
-            @Override
-            public void processElement2(Double output, Context ctx, Collector<List<Double>> out) throws Exception {
-                Long timestamp = ctx.timestamp();
-                for (Long key : unpairedIns.keys()) {
-                    if (timestamp.equals(key)) {
-                        List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), unpairedIns.get(key), output,
-                                numIterations, learningRate);
-
-                        alphaState.update(newAlpha);
-                        out.collect(newAlpha);
-                    }
-                    else {
-                        unpairedOuts.put(timestamp, output);
-                    }
+                else {
+                    unpairedIns.put(timestamp, input);
                 }
             }
-        });
+
+        }
+
+        @Override
+        public void processElement2(Double output, Context ctx, Collector<List<Double>> out) throws Exception {
+            Long timestamp = ctx.timestamp();
+            for (Long key : unpairedIns.keys()) {
+                if (timestamp.equals(key)) {
+                    List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), unpairedIns.get(key), output,
+                            numIterations, learningRate);
+
+                    alphaState.update(newAlpha);
+                    out.collect(newAlpha);
+                }
+                else {
+                    unpairedOuts.put(timestamp, output);
+                }
+            }
+        }
     }
 
     /**
@@ -135,7 +150,7 @@ public class LinearRegressionInputStream {
      * @return
      * @throws InvalidArgumentException
      */
-    protected List<Double> trainUsingGradientDescent(List<Double> oldAlpha, List<Double> input, Double output, 
+    protected static List<Double> trainUsingGradientDescent(List<Double> oldAlpha, List<Double> input, Double output, 
                                                      int numIters, double learningRate) throws InvalidArgumentException {
         List<Double> alpha = oldAlpha;
         

@@ -94,6 +94,7 @@ public class LinearRegressionInputStream {
         
         @Override
         public Tuple2<Long, List<Double>> join(Tuple2<Long, List<Double>> input, Tuple2<Long, Double> output) throws Exception {
+            input.f1.add(0, 1.0);
             List<Double> newAlpha = trainUsingGradientDescent(alpha, input.f1, output.f1,
                     numIterations, learningRate);
 
@@ -205,7 +206,8 @@ public class LinearRegressionInputStream {
         double result = 0;
 
         if (X.size() != Y.size()) {
-            throw new InvalidArgumentException(new String[] {"Lengths must agree!"});
+            throw new InvalidArgumentException(new String[] {"Length of X: " + X.size(), "Length of Y: " + Y.size(), 
+                    "Lengths must agree!"});
         }
 
         for (int i = 0; i < X.size(); i++) {

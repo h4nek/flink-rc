@@ -60,6 +60,7 @@ public class LinearRegressionInputStream {
                                                       int numIterations,
                                                       double learningRate) {
 //        KeyedStream<Double, Long> keyedInputStream = this.dataStream.keyBy(x -> x.timestamp)
+//        return this.dataStream.keyBy(x -> x.f0).join(outputStream.keyBy(y -> y.f0)).where(x -> x.f0).equalTo(y -> y.f0)
         return this.dataStream.join(outputStream).where(x -> x.f0).equalTo(y -> y.f0)
                 .window(TumblingEventTimeWindows.of(Time.seconds(1)))
                 .apply(new MLRFitJoinFunction(alphaInit, numIterations, learningRate));
@@ -68,34 +69,36 @@ public class LinearRegressionInputStream {
 
     private static class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>,
             Tuple2<Long, List<Double>>> {
-        private List<Double> alphaInit;
+//        private List<Double> alphaInit;
         private int numIterations;
         private double learningRate;
-        private ValueState<List<Double>> alphaState;
+//        private ValueState<List<Double>> alphaState;
+        private List<Double> alpha;
 
         MLRFitJoinFunction(List<Double> alphaInit,
                            int numIterations,
                            double learningRate) {
-            this.alphaInit = alphaInit;
+            this.alpha = alphaInit;
             this.numIterations = numIterations;
             this.learningRate = learningRate;
         }
         
-        @Override
-        public void open(Configuration parameters) throws Exception {
-            super.open(parameters);
-
-            alphaState = getRuntimeContext().getState(new ValueStateDescriptor<List<Double>>("alpha parameters",
-                    TypeInformation.of(new TypeHint<List<Double>>() {})));
-            alphaState.update(alphaInit);
-        }
+//        @Override
+//        public void open(Configuration parameters) throws Exception {
+//            super.open(parameters);
+//
+//            alphaState = getRuntimeContext().getState(new ValueStateDescriptor<List<Double>>("alpha parameters",
+//                    TypeInformation.of(new TypeHint<List<Double>>() {})));
+//            alphaState.update(alphaInit);
+//        }
         
         @Override
         public Tuple2<Long, List<Double>> join(Tuple2<Long, List<Double>> input, Tuple2<Long, Double> output) throws Exception {
-            List<Double> newAlpha = trainUsingGradientDescent(alphaState.value(), input.f1, output.f1,
+            List<Double> newAlpha = trainUsingGradientDescent(alpha, input.f1, output.f1,
                     numIterations, learningRate);
 
-            alphaState.update(newAlpha);
+//            alphaState.update(newAlpha);
+            alpha = newAlpha;
             return Tuple2.of(input.f0, newAlpha);
         }
     }
@@ -240,25 +243,27 @@ public class LinearRegressionInputStream {
                                                       List<Double> alphaInit) {
         return this.dataStream.connect(alphaStream).process(
                 new CoProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>, Tuple2<Long, Double>>() {
-            private ListState<Double> alphaState;
-            private ValueState<Long> alphaTimestamp;
+//            private ListState<Double> alphaState;
+//            private ValueState<Long> alphaTimestamp;
+                    private List<Double> alpha = alphaInit;
+                    private Long alphaTimestamp = Long.MIN_VALUE;
 
-            @Override
-            public void open(Configuration parameters) throws Exception {
-                super.open(parameters);
-                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>(
-                        "alpha parameters", Double.class));
-                alphaState.update(alphaInit);
-
-                alphaTimestamp = getRuntimeContext().getState(new ValueStateDescriptor<Long>("timestamp of alpha",
-                        Long.class));
-                alphaTimestamp.update(Long.MIN_VALUE);
-            }
+//            @Override
+//            public void open(Configuration parameters) throws Exception {
+//                super.open(parameters);
+//                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>(
+//                        "alpha parameters", Double.class));
+//                alphaState.update(alphaInit);
+//
+//                alphaTimestamp = getRuntimeContext().getState(new ValueStateDescriptor<Long>("timestamp of alpha",
+//                        Long.class));
+//                alphaTimestamp.update(Long.MIN_VALUE);
+//            }
             
             @Override
             public void processElement1(Tuple2<Long, List<Double>> input, Context ctx, 
                                         Collector<Tuple2<Long, Double>> out) throws Exception {
-                List<Double> alpha = (List<Double>) alphaState.get();
+//                List<Double> alpha = (List<Double>) alphaState.get();
                 List<Double> inputVector = input.f1;
                 inputVector.add(0, 1.0); // add an extra value for the intercept
                 
@@ -278,9 +283,13 @@ public class LinearRegressionInputStream {
             @Override
             public void processElement2(Tuple2<Long, List<Double>> alpha, Context ctx, 
                                         Collector<Tuple2<Long, Double>> out) throws Exception {
-                if (ctx.timestamp() > alphaTimestamp.value()) { 
-                    alphaState.update(alpha.f1);
-                    alphaTimestamp.update(ctx.timestamp());
+//                if (ctx.timestamp() > alphaTimestamp.value()) { 
+//                    alphaState.update(alpha.f1);
+//                    alphaTimestamp.update(ctx.timestamp());
+//                }
+                if (ctx.timestamp() > alphaTimestamp) {
+                    this.alpha = alpha.f1;
+                    alphaTimestamp = ctx.timestamp();
                 }
             }
         });

@@ -2,9 +2,7 @@ package lm.streaming;
 
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.RichJoinFunction;
-import org.apache.flink.api.common.state.ListState;
-import org.apache.flink.api.common.state.ListStateDescriptor;
-import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.*;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
@@ -291,11 +289,21 @@ public class LinearRegressionInputStream {
     public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> alphaStream,
                                                       List<Double> alphaInit) {
         return this.dataStream.connect(alphaStream).process(
-                new CoProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>, Tuple2<Long, Double>>() {
-//            private ListState<Double> alphaState;
-//            private ValueState<Long> alphaTimestamp;
-                    private List<Double> alpha = alphaInit;
-                    private Long alphaTimestamp = Long.MIN_VALUE;
+                new MLRPredictCoProcessFunction(alphaInit));
+    }
+    
+    private static class MLRPredictCoProcessFunction 
+            extends CoProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>, Tuple2<Long, Double>> 
+            implements CheckpointedFunction {
+        private ListState<Double> alphaState;
+        private BroadcastState<Integer, Long> alphaTimestamp;
+//        private List<Double> alpha = alphaInit;
+//        private Long alphaTimestamp = Long.MIN_VALUE;
+        private List<Double> alphaInit;
+        
+        private MLRPredictCoProcessFunction(List<Double> alphaInit) {
+            this.alphaInit = alphaInit;
+        }
 
 //            @Override
 //            public void open(Configuration parameters) throws Exception {
@@ -308,49 +316,67 @@ public class LinearRegressionInputStream {
 //                        Long.class));
 //                alphaTimestamp.update(Long.MIN_VALUE);
 //            }
-            
-            @Override
-            public void processElement1(Tuple2<Long, List<Double>> input, Context ctx, 
-                                        Collector<Tuple2<Long, Double>> out) throws Exception {
-//                List<Double> alpha = (List<Double>) alphaState.get();
-                List<Double> inputVector = new ArrayList<>(input.f1);   // copy the list to prevent some problems
-                inputVector.add(0, 1.0); // add an extra value for the intercept
-                
-                double y_pred = 0;
-                for (int i = 0; i < alpha.size(); i++) {
-                    System.out.println("i: " + i + "\talpha: " + alpha.get(i) + "\tx: " + inputVector.get(i));
-                    y_pred += alpha.get(i) * inputVector.get(i);
-                }
-                out.collect(Tuple2.of(input.f0, y_pred));
-            }
 
-            /**
-             * Here we just update the state when new alpha vector arrives.
-             * @param alpha
-             * @param out
-             * @throws Exception
-             */
-            @Override
-            public void processElement2(Tuple2<Long, List<Double>> alpha, Context ctx, 
-                                        Collector<Tuple2<Long, Double>> out) throws Exception {
-//                if (ctx.timestamp() > alphaTimestamp.value()) { 
-//                    alphaState.update(alpha.f1);
-//                    alphaTimestamp.update(ctx.timestamp());
-//                }
-                System.out.println("SOME NEW ALPHA");
-                System.out.println(alpha.f1.get(0));
-                System.out.println(alpha.f1.get(1));
-                System.out.println(ctx.timestamp());
-                System.out.println(alphaTimestamp);
-                this.alpha = alpha.f1;
-                alphaTimestamp = ctx.timestamp();
+        @Override
+        public void initializeState(FunctionInitializationContext context) throws Exception {
+            alphaState = context.getOperatorStateStore().getListState(new ListStateDescriptor<Double>(
+                    "alpha parameters", Types.DOUBLE));
+            alphaTimestamp = context.getOperatorStateStore().getBroadcastState(new MapStateDescriptor<Integer, Long>(
+                    "alpha timestamp", Types.INT, Types.LONG));
+
+            alphaState.update(alphaInit);
+            alphaTimestamp.put(0, Long.MIN_VALUE);
+        }
+
+        @Override
+        public void snapshotState(FunctionSnapshotContext context) throws Exception {
+
+        }
+        
+        @Override
+        public void processElement1(Tuple2<Long, List<Double>> input, Context ctx,
+                Collector<Tuple2<Long, Double>> out) throws Exception {
+                List<Double> alpha = (List<Double>) alphaState.get();
+            System.out.println("Predicting y...");
+            System.out.println(System.currentTimeMillis());
+            List<Double> inputVector = new ArrayList<>(input.f1);   // copy the list to prevent some problems
+            inputVector.add(0, 1.0); // add an extra value for the intercept
+
+            double y_pred = 0;
+            for (int i = 0; i < alpha.size(); i++) {
+                System.out.println("i: " + i + "\talpha: " + alpha.get(i) + "\tx: " + inputVector.get(i));
+                y_pred += alpha.get(i) * inputVector.get(i);
+            }
+            out.collect(Tuple2.of(input.f0, y_pred));
+        }
+
+        /**
+         * Here we just update the state when new alpha vector arrives.
+         * @param alpha
+         * @param out
+         * @throws Exception
+         */
+        @Override
+        public void processElement2(Tuple2<Long, List<Double>> alpha, Context ctx,
+                Collector<Tuple2<Long, Double>> out) throws Exception {
+                if (ctx.timestamp() >= alphaTimestamp.get(0)) { 
+                    alphaState.update(alpha.f1);
+                    alphaTimestamp.put(0, ctx.timestamp());
+                }
+            System.out.println("SOME NEW ALPHA");
+            System.out.println(System.currentTimeMillis());
+//            System.out.println(alpha.f1.get(0));
+//            System.out.println(alpha.f1.get(1));
+            System.out.println(ctx.timestamp());
+//            System.out.println(alphaTimestamp);
+//            this.alpha = alpha.f1;
+//            alphaTimestamp = ctx.timestamp();
 //                if (ctx.timestamp() > alphaTimestamp) {
 //                    System.out.println("NEWER TIMESTAMP");
 //                    this.alpha = alpha.f1;
 //                    alphaTimestamp = ctx.timestamp();
 //                }
-            }
-        });
+        }
     }
 
 //    /**

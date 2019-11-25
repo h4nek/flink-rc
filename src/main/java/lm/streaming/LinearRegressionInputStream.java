@@ -2,11 +2,14 @@ package lm.streaming;
 
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.RichJoinFunction;
-import org.apache.flink.api.common.state.*;
-import org.apache.flink.api.common.typeinfo.TypeHint;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.state.FunctionInitializationContext;
+import org.apache.flink.runtime.state.FunctionSnapshotContext;
+import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
@@ -68,19 +71,34 @@ public class LinearRegressionInputStream {
     }
 
     private static class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>,
-            Tuple2<Long, List<Double>>> {
-//        private List<Double> alphaInit;
+            Tuple2<Long, List<Double>>> implements CheckpointedFunction {
+        private List<Double> alphaInit;
         private int numIterations;
         private double learningRate;
 //        private ValueState<List<Double>> alphaState;
-        private List<Double> alpha;
+        private ListState<Double> alphaState;
+//        private List<Double> alpha;
 
         MLRFitJoinFunction(List<Double> alphaInit,
                            int numIterations,
                            double learningRate) {
-            this.alpha = alphaInit;
+//            this.alpha = alphaInit;
+            this.alphaInit = alphaInit;
             this.numIterations = numIterations;
             this.learningRate = learningRate;
+        }
+
+        @Override
+        public void initializeState(FunctionInitializationContext context) throws Exception {
+            alphaState = context.getOperatorStateStore().getListState(new ListStateDescriptor<Double>(
+                    "alpha parameters", Types.DOUBLE));
+            
+            alphaState.update(alphaInit);
+        }
+
+        @Override
+        public void snapshotState(FunctionSnapshotContext context) throws Exception {
+            
         }
         
 //        @Override
@@ -94,12 +112,18 @@ public class LinearRegressionInputStream {
         
         @Override
         public Tuple2<Long, List<Double>> join(Tuple2<Long, List<Double>> input, Tuple2<Long, Double> output) throws Exception {
-            input.f1.add(0, 1.0);
-            List<Double> newAlpha = trainUsingGradientDescent(alpha, input.f1, output.f1,
+            List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
+            inputVector.add(0, 1.0);    // add a value for the intercept
+//            List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1,
+            List<Double> alphaVector = new ArrayList<>();
+            for (Double alpha : alphaState.get()) {
+                alphaVector.add(alpha);
+            }
+            List<Double> newAlpha = trainUsingGradientDescent(alphaVector, inputVector, output.f1,
                     numIterations, learningRate);
 
-//            alphaState.update(newAlpha);
-            alpha = newAlpha;
+            alphaState.update(newAlpha);
+//            alpha = newAlpha;
             return Tuple2.of(input.f0, newAlpha);
         }
     }
@@ -207,6 +231,8 @@ public class LinearRegressionInputStream {
 
         if (X.size() != Y.size()) {
             throw new InvalidArgumentException(new String[] {"Length of X: " + X.size(), "Length of Y: " + Y.size(), 
+                    "Contents of X: " + listToString(X),
+                    "Contents of Y: " + listToString(Y),
                     "Lengths must agree!"});
         }
 
@@ -214,6 +240,27 @@ public class LinearRegressionInputStream {
             result += X.get(i)*Y.get(i);
         }
         return result;
+    }
+
+    /**
+     * A convenience method that creates a comma-separated string of list contents.
+     * @param list
+     * @param <T>
+     * @return
+     */
+    private static <T> String listToString(List<T> list) {
+        StringBuilder listString = new StringBuilder("{");
+        for (int i = 0; i < list.size(); ++i) {
+            if (i == list.size() - 1) {
+                listString.append(list.get(i));
+            }
+            else {
+                listString.append(list.get(i)).append(", ");
+            }
+        }
+        listString.append('}');
+        
+        return listString.toString();
     }
 
     private static List<Double> scalarMultiplication(Double a, List<Double> X) {
@@ -266,11 +313,12 @@ public class LinearRegressionInputStream {
             public void processElement1(Tuple2<Long, List<Double>> input, Context ctx, 
                                         Collector<Tuple2<Long, Double>> out) throws Exception {
 //                List<Double> alpha = (List<Double>) alphaState.get();
-                List<Double> inputVector = input.f1;
+                List<Double> inputVector = new ArrayList<>(input.f1);   // copy the list to prevent some problems
                 inputVector.add(0, 1.0); // add an extra value for the intercept
                 
                 double y_pred = 0;
                 for (int i = 0; i < alpha.size(); i++) {
+                    System.out.println("i: " + i + "\talpha: " + alpha.get(i) + "\tx: " + inputVector.get(i));
                     y_pred += alpha.get(i) * inputVector.get(i);
                 }
                 out.collect(Tuple2.of(input.f0, y_pred));
@@ -289,10 +337,18 @@ public class LinearRegressionInputStream {
 //                    alphaState.update(alpha.f1);
 //                    alphaTimestamp.update(ctx.timestamp());
 //                }
-                if (ctx.timestamp() > alphaTimestamp) {
-                    this.alpha = alpha.f1;
-                    alphaTimestamp = ctx.timestamp();
-                }
+                System.out.println("SOME NEW ALPHA");
+                System.out.println(alpha.f1.get(0));
+                System.out.println(alpha.f1.get(1));
+                System.out.println(ctx.timestamp());
+                System.out.println(alphaTimestamp);
+                this.alpha = alpha.f1;
+                alphaTimestamp = ctx.timestamp();
+//                if (ctx.timestamp() > alphaTimestamp) {
+//                    System.out.println("NEWER TIMESTAMP");
+//                    this.alpha = alpha.f1;
+//                    alphaTimestamp = ctx.timestamp();
+//                }
             }
         });
     }

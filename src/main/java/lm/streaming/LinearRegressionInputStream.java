@@ -4,12 +4,14 @@ import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.state.*;
 import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
+import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
@@ -19,24 +21,40 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A DataStream wrapper class that is used as an input for a Linear Model.
- * After the linear model is established using linear regression, the inner input stream can be used to predict some 
+ * A DataStream utility class that is used as an input for a Linear Model.
+ * After the linear model is established using linear regression, the input stream can be used to predict some 
  * feature (output variable) based on the values of each input element.
+ * Offline learning...
+ * 
+ * The input stream has to have elements with lists of the same length, otherwise an exception will be thrown.
  */
 public class LinearRegressionInputStream {
-    private final int INPUT_LENGTH;
+    private int inputLength = -1;   // length of each inputStream vector element
     private static final int DELAY_THRESHOLD = 150000;
 
-    DataStream<Tuple2<Long, List<Double>>> dataStream;
-    
-    /**
-     * Create a new {@link LinearRegressionInputStream} class
-     *
-     */
-    public LinearRegressionInputStream(DataStream<Tuple2<Long, List<Double>>> dataStream, int inputLength) {
-        this.dataStream = dataStream;
-        INPUT_LENGTH = inputLength;
+    public int getInputLength() {
+        return inputLength;
     }
+
+    /**
+     * Set the length of input to a value >= 0.
+     * (Otherwise it will be determined from the first element of the inputStream.)
+     * @param inputLength
+     */
+    public void setInputLength(int inputLength) {
+        this.inputLength = inputLength;
+    }
+
+    //    DataStream<Tuple2<Long, List<Double>>> dataStream;
+    
+//    /**
+//     * Create a new {@link LinearRegressionInputStream} class
+//     *
+//     */
+//    public LinearRegressionInputStream(int inputLength) {
+////        this.dataStream = dataStream; //DataStream<Tuple2<Long, List<Double>>> dataStream, 
+//        INPUT_LENGTH = inputLength;
+//    }
 
 
     /**
@@ -44,8 +62,9 @@ public class LinearRegressionInputStream {
      * @param outputStream The stream of actual outputs that we'll use to make better predictions
      * @return
      */
-    public DataStream<Tuple2<Long, List<Double>>> fitDefault(DataStream<Tuple2<Long, Double>> outputStream) {
-        return fit(outputStream, new ArrayList<>(INPUT_LENGTH + 1), 10, .00001);
+    public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
+                                                          DataSet<Tuple2<Long, Double>> outputSet) {
+        return fit(inputSet, outputSet, new ArrayList<>(inputLength + 1), 10, .00001);
     }
 
     /**
@@ -56,15 +75,17 @@ public class LinearRegressionInputStream {
      * @param learningRate
      * @return Alpha list of parameters
      */
-    public DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, Double>> outputStream,
-                                                      List<Double> alphaInit,
-                                                      int numIterations,
-                                                      double learningRate) {
+    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
+                                                   DataSet<Tuple2<Long, Double>> outputSet,
+                                                   List<Double> alphaInit,
+                                                   int numIterations,
+                                                   double learningRate) {
 //        KeyedStream<Double, Long> keyedInputStream = this.dataStream.keyBy(x -> x.timestamp)
 //        return this.dataStream.keyBy(x -> x.f0).join(outputStream.keyBy(y -> y.f0)).where(x -> x.f0).equalTo(y -> y.f0)
-        return this.dataStream.join(outputStream).where(x -> x.f0).equalTo(y -> y.f0)
-                .window(TumblingEventTimeWindows.of(Time.seconds(1)))
-                .apply(new MLRFitJoinFunction(alphaInit, numIterations, learningRate));
+        return inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
+                .with(new MLRFitJoinFunction(alphaInit, numIterations, learningRate));
+        //TODO Replace with Group - Reduce
+        
 //                .process(new MLRFitCoProcessFunction(alphaInit, numIterations, learningRate));
     }
 
@@ -75,19 +96,20 @@ public class LinearRegressionInputStream {
         private double learningRate;
 //        private ValueState<List<Double>> alphaState;
         private ListState<Double> alphaState;
-//        private List<Double> alpha;
+        private List<Double> alpha;
 
         MLRFitJoinFunction(List<Double> alphaInit,
                            int numIterations,
                            double learningRate) {
-//            this.alpha = alphaInit;
-            this.alphaInit = alphaInit;
+            this.alpha = alphaInit;
+//            this.alphaInit = alphaInit;
             this.numIterations = numIterations;
             this.learningRate = learningRate;
         }
 
         @Override
         public void initializeState(FunctionInitializationContext context) throws Exception {
+            System.out.println("WE INITIALIZE THE STATE");
             alphaState = context.getOperatorStateStore().getListState(new ListStateDescriptor<Double>(
                     "alpha parameters", Types.DOUBLE));
             
@@ -110,18 +132,23 @@ public class LinearRegressionInputStream {
         
         @Override
         public Tuple2<Long, List<Double>> join(Tuple2<Long, List<Double>> input, Tuple2<Long, Double> output) throws Exception {
+//            if (alphaState == null) {
+//                System.err.println("SOMETHING IS WRONG HERE");
+//            }
+            
             List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
             inputVector.add(0, 1.0);    // add a value for the intercept
-//            List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1,
-            List<Double> alphaVector = new ArrayList<>();
-            for (Double alpha : alphaState.get()) {
-                alphaVector.add(alpha);
-            }
-            List<Double> newAlpha = trainUsingGradientDescent(alphaVector, inputVector, output.f1,
+            List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, 
                     numIterations, learningRate);
-
-            alphaState.update(newAlpha);
-//            alpha = newAlpha;
+//            List<Double> alphaVector = new ArrayList<>();
+//            for (Double alpha : alphaState.get()) {
+//                alphaVector.add(alpha);
+//            }
+//            List<Double> newAlpha = trainUsingGradientDescent(alphaVector, inputVector, output.f1,
+//                    numIterations, learningRate);
+//
+//            alphaState.update(newAlpha);
+            alpha = newAlpha;
             return Tuple2.of(input.f0, newAlpha);
         }
     }
@@ -286,59 +313,43 @@ public class LinearRegressionInputStream {
      * It trains the model online, changing it with time, based on the newest alphaStream element value.
      * @return
      */
-    public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> alphaStream,
-                                                      List<Double> alphaInit) {
-        return this.dataStream.connect(alphaStream).process(
-                new MLRPredictCoProcessFunction(alphaInit));
+    public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
+                                                      List<Double> alpha) {
+        return inputStream.process(new MLRPredictCoProcessFunction(alpha));
     }
     
     private static class MLRPredictCoProcessFunction 
-            extends CoProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>, Tuple2<Long, Double>> 
-            implements CheckpointedFunction {
-        private ListState<Double> alphaState;
-        private BroadcastState<Integer, Long> alphaTimestamp;
+            extends ProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>> {//implements CheckpointedFunction {
+//        private ListState<Double> alphaState;
+//        private BroadcastState<Integer, Long> alphaTimestamp;
 //        private List<Double> alpha = alphaInit;
 //        private Long alphaTimestamp = Long.MIN_VALUE;
-        private List<Double> alphaInit;
+        private List<Double> alpha;
         
-        private MLRPredictCoProcessFunction(List<Double> alphaInit) {
-            this.alphaInit = alphaInit;
+        private MLRPredictCoProcessFunction(List<Double> alpha) {
+            this.alpha = alpha;
         }
 
-//            @Override
-//            public void open(Configuration parameters) throws Exception {
-//                super.open(parameters);
-//                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>(
-//                        "alpha parameters", Double.class));
-//                alphaState.update(alphaInit);
+//        @Override
+//        public void initializeState(FunctionInitializationContext context) throws Exception {
+//            alphaState = context.getOperatorStateStore().getListState(new ListStateDescriptor<Double>(
+//                    "alpha parameters", Types.DOUBLE));
+//            alphaTimestamp = context.getOperatorStateStore().getBroadcastState(new MapStateDescriptor<Integer, Long>(
+//                    "alpha timestamp", Types.INT, Types.LONG));
 //
-//                alphaTimestamp = getRuntimeContext().getState(new ValueStateDescriptor<Long>("timestamp of alpha",
-//                        Long.class));
-//                alphaTimestamp.update(Long.MIN_VALUE);
-//            }
-
-        @Override
-        public void initializeState(FunctionInitializationContext context) throws Exception {
-            alphaState = context.getOperatorStateStore().getListState(new ListStateDescriptor<Double>(
-                    "alpha parameters", Types.DOUBLE));
-            alphaTimestamp = context.getOperatorStateStore().getBroadcastState(new MapStateDescriptor<Integer, Long>(
-                    "alpha timestamp", Types.INT, Types.LONG));
-
-            alphaState.update(alphaInit);
-            alphaTimestamp.put(0, Long.MIN_VALUE);
-        }
-
-        @Override
-        public void snapshotState(FunctionSnapshotContext context) throws Exception {
-
-        }
+//            alphaState.update(alphaInit);
+//            alphaTimestamp.put(0, Long.MIN_VALUE);
+//        }
+//
+//        @Override
+//        public void snapshotState(FunctionSnapshotContext context) throws Exception {
+//
+//        }
         
         @Override
-        public void processElement1(Tuple2<Long, List<Double>> input, Context ctx,
+        public void processElement(Tuple2<Long, List<Double>> input, Context ctx,
                 Collector<Tuple2<Long, Double>> out) throws Exception {
-                List<Double> alpha = (List<Double>) alphaState.get();
-            System.out.println("Predicting y...");
-            System.out.println(System.currentTimeMillis());
+//                List<Double> alpha = (List<Double>) alphaState.get();
             List<Double> inputVector = new ArrayList<>(input.f1);   // copy the list to prevent some problems
             inputVector.add(0, 1.0); // add an extra value for the intercept
 
@@ -348,34 +359,6 @@ public class LinearRegressionInputStream {
                 y_pred += alpha.get(i) * inputVector.get(i);
             }
             out.collect(Tuple2.of(input.f0, y_pred));
-        }
-
-        /**
-         * Here we just update the state when new alpha vector arrives.
-         * @param alpha
-         * @param out
-         * @throws Exception
-         */
-        @Override
-        public void processElement2(Tuple2<Long, List<Double>> alpha, Context ctx,
-                Collector<Tuple2<Long, Double>> out) throws Exception {
-                if (ctx.timestamp() >= alphaTimestamp.get(0)) { 
-                    alphaState.update(alpha.f1);
-                    alphaTimestamp.put(0, ctx.timestamp());
-                }
-            System.out.println("SOME NEW ALPHA");
-            System.out.println(System.currentTimeMillis());
-//            System.out.println(alpha.f1.get(0));
-//            System.out.println(alpha.f1.get(1));
-            System.out.println(ctx.timestamp());
-//            System.out.println(alphaTimestamp);
-//            this.alpha = alpha.f1;
-//            alphaTimestamp = ctx.timestamp();
-//                if (ctx.timestamp() > alphaTimestamp) {
-//                    System.out.println("NEWER TIMESTAMP");
-//                    this.alpha = alpha.f1;
-//                    alphaTimestamp = ctx.timestamp();
-//                }
         }
     }
 

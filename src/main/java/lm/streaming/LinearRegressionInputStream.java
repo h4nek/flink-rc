@@ -1,5 +1,6 @@
 package lm.streaming;
 
+import Jama.Matrix;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.state.*;
@@ -315,7 +316,7 @@ public class LinearRegressionInputStream {
      */
     public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       List<Double> alpha) {
-        return inputStream.process(new MLRPredictCoProcessFunction(alpha));
+        return inputStream.process(new MLRPredictCoProcessFunction(alpha)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
     }
     
     private static class MLRPredictCoProcessFunction 

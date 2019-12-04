@@ -53,8 +53,9 @@ public class LinearRegression {
         Matrix X = new Matrix(input);
         Matrix y = new Matrix(output, 1).transpose();  // actually a column vector (mx1 matrix)
         Matrix XTranspose = X.transpose();
-        Matrix XPseudoinverse = XTranspose.times(X).plus(Matrix.identity(X.getRowDimension(), X.getColumnDimension()))
-                .times(regularizationFactor).inverse().times(XTranspose);    // (X^T*X + u*I)^(-1)*X^T
+        Matrix XPseudoinverse = XTranspose.times(X)
+                .plus(Matrix.identity(XTranspose.getRowDimension(), X.getColumnDimension()).times(regularizationFactor))
+                .inverse().times(XTranspose);    // (X^T*X + u*I)^(-1)*X^T
 //        double[][] result = XPseudoinverse.times(y).getArray();
 //        double[] alpha = new double[result.length];
 //        for (int i = 0; i < result.length; i++) {   // convert the one-column matrix into a vector

@@ -27,7 +27,7 @@ public class LinearRegression {
      * @param outputData
      * @return Alpha vector of optimal parameters
      */
-    public double[] linearModel(double[][] inputData, double[] outputData, TrainingMethod method) throws InvalidArgumentException {
+    public static double[] linearModel(double[][] inputData, double[] outputData, TrainingMethod method) throws InvalidArgumentException {
         if (inputData.length != outputData.length) {
             throw new InvalidArgumentException(new String[] {"The amount of input and output data must agree!"});
         }
@@ -49,7 +49,7 @@ public class LinearRegression {
      * @param output
      * @return
      */
-    protected double[] trainUsingPseudoinverse(double[][] input, double[] output, double regularizationFactor) {
+    protected static double[] trainUsingPseudoinverse(double[][] input, double[] output, double regularizationFactor) {
         Matrix X = new Matrix(input);
         Matrix y = new Matrix(output, 1).transpose();  // actually a column vector (mx1 matrix)
         Matrix XTranspose = X.transpose();
@@ -74,7 +74,7 @@ public class LinearRegression {
 //        return Alphas;
     }
 
-    protected double[] trainUsingGradientDescent(double[][] input, double[] output, double[] alphaInit,
+    protected static double[] trainUsingGradientDescent(double[][] input, double[] output, double[] alphaInit,
                                                            int numIters, double learningRate) throws InvalidArgumentException {
         double[] alpha = alphaInit;   // Arrays.copyOf(alphaInit, alphaInit.length);
         Matrix X = new Matrix(input);

@@ -2,21 +2,61 @@ package lm;
 
 import Jama.Matrix;
 import com.sun.javaws.exceptions.InvalidArgumentException;
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.ml.math.DenseMatrix;
 import org.apache.flink.ml.math.SparseMatrix;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 /**
- * A general function computing the training phase, a non-Flink solution.
+ * A general function computing the training phase, mainly a non-Flink solution.
  */
 public class LinearRegression {
     
     public enum TrainingMethod {
         PSEUDOINVERSE,
         GRADIENT_DESCENT
+    }
+
+    /**
+     * Accepts Flink's DataSets and converts them into double arrays before starting the training of a linear model.
+     * @param inputSet
+     * @param outputSet
+     * @param method
+     * @param inputLength
+     * @return
+     * @throws Exception
+     */
+    public static List<Double> fit(DataSet<Tuple2<Long, List<Double>>> inputSet, 
+                                   DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method, int inputLength) throws Exception {
+        /* Prepare the data for offline training */
+        List<Tuple2<Long, List<Double>>> inputList = inputSet.collect();
+        List<Tuple2<Long, Double>> outputList = outputSet.collect();
+        double[][] inputArr = new double[inputList.size()][inputLength + 1];
+        double[] outputArr = new double[outputList.size()];
+
+        for (int i = 0; i < inputList.size(); i++) {
+            List<Double> inputVector = inputList.get(i).f1;
+            inputVector.add(0, 1.0);
+            for (int j = 0; j < inputLength + 1; j++) {
+                inputArr[i][j] = inputVector.get(j);
+            }
+        }
+        for (int i = 0; i < outputList.size(); i++) {
+            outputArr[i] = outputList.get(i).f1;
+        }
+
+        double[] alpha = LinearRegression.linearModel(inputArr, outputArr, method);
+        
+        List<Double> alphaList = new ArrayList<>();
+        for (double value : alpha) {
+            alphaList.add(value);
+        }
+        return alphaList;
     }
 
     /**

@@ -23,16 +23,18 @@ public class LinearRegression {
     }
 
     /**
-     * Accepts Flink's DataSets and converts them into double arrays before starting the training of a linear model.
+     * Accepts Flinks' DataSets and converts them into double arrays before starting the training of a linear model.
      * @param inputSet
      * @param outputSet
      * @param method
      * @param inputLength
+     * @param learningRate 
      * @return
      * @throws Exception
      */
     public static List<Double> fit(DataSet<Tuple2<Long, List<Double>>> inputSet, 
-                                   DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method, int inputLength) throws Exception {
+                                   DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method, int inputLength, 
+                                   double learningRate) throws Exception {
         /* Prepare the data for offline training */
         List<Tuple2<Long, List<Double>>> inputList = inputSet.collect();
         List<Tuple2<Long, Double>> outputList = outputSet.collect();
@@ -50,7 +52,7 @@ public class LinearRegression {
             outputArr[i] = outputList.get(i).f1;
         }
 
-        double[] alpha = LinearRegression.linearModel(inputArr, outputArr, method);
+        double[] alpha = LinearRegression.linearModel(inputArr, outputArr, method, learningRate, 1);
         
         List<Double> alphaList = new ArrayList<>();
         for (double value : alpha) {
@@ -80,6 +82,23 @@ public class LinearRegression {
                         10, 0.01);
             default:    // a null value was passed as a training method - use PSEUDOINVERSE as a default
                 return trainUsingPseudoinverse(inputData, outputData, 0.0001);
+        }
+    }
+    
+    public static double[] linearModel(double[][] inputData, double[] outputData, TrainingMethod method, 
+                                       double learningRate, int numberIterations) throws InvalidArgumentException {
+        if (inputData.length != outputData.length) {
+            throw new InvalidArgumentException(new String[] {"The amount of input and output data must agree!"});
+        }
+
+        switch (method) {
+            case PSEUDOINVERSE:
+                return trainUsingPseudoinverse(inputData, outputData, learningRate);
+            case GRADIENT_DESCENT:
+                return trainUsingGradientDescent(inputData, outputData, new double[inputData.length],
+                        numberIterations, learningRate);
+            default:    // a null value was passed as a training method - use PSEUDOINVERSE as a default
+                return trainUsingPseudoinverse(inputData, outputData, learningRate);
         }
     }
 

@@ -95,7 +95,7 @@ public class LinearRegressionInputStream {
 
     /**
      * Realizing Gradient descent with basic arithmetic operations.
-     * @param oldAlpha
+     * @param alpha
      * @param input
      * @param output
      * @param numIters
@@ -103,9 +103,9 @@ public class LinearRegressionInputStream {
      * @return
      * @throws InvalidArgumentException
      */
-    protected static List<Double> trainUsingGradientDescent(List<Double> oldAlpha, List<Double> input, Double output, 
+    protected static List<Double> trainUsingGradientDescent(List<Double> alpha, List<Double> input, Double output, 
                                                      int numIters, double learningRate) throws InvalidArgumentException {
-        List<Double> alpha = oldAlpha;
+//        List<Double> alpha = alpha;
         
         for (int i = 0; i < numIters; i++) {
             alpha = vectorSubtraction(alpha, scalarMultiplication(2*learningRate*(dotProduct(alpha, input) - output), input));

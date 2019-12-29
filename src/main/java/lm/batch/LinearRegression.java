@@ -30,7 +30,6 @@ public class LinearRegression {
 
                 double y_pred = 0;
                 for (int i = 0; i < alpha.size(); i++) {
-//                System.out.println("i: " + i + "\talpha: " + alpha.get(i) + "\tx: " + inputVector.get(i)); //TEST
                     y_pred += alpha.get(i) * inputVector.get(i);
                 }
                 
@@ -67,7 +66,7 @@ public class LinearRegression {
             outputArr[i] = outputList.get(i).f1;
         }
 
-        double[] alpha = LinearRegression.linearModel(inputArr, outputArr, method);
+        double[] alpha = linearModel(inputArr, outputArr, method);
         
         List<Double> alphaList = new ArrayList<>();
         for (double value : alpha) {
@@ -100,7 +99,6 @@ public class LinearRegression {
         }
     }
 
-//    public static DataSet<Double> trainUsingPseudoinverse(DataSet<List<Double>> input, )
     /**
      * We'll use Moore-Penrose pseudoinverse with Tikhonov regularization.
      * @param input
@@ -114,34 +112,20 @@ public class LinearRegression {
         Matrix XPseudoinverse = XTranspose.times(X)
                 .plus(Matrix.identity(XTranspose.getRowDimension(), X.getColumnDimension()).times(regularizationFactor))
                 .inverse().times(XTranspose);    // (X^T*X + u*I)^(-1)*X^T
-//        double[][] result = XPseudoinverse.times(y).getArray();
-//        double[] alpha = new double[result.length];
-//        for (int i = 0; i < result.length; i++) {   // convert the one-column matrix into a vector
-//            alpha[i] = result[i][0];
-//        }
-//        
-//        return alpha;
         double[] alpha = XPseudoinverse.times(y).getColumnPackedCopy();
         
         return alpha;
-        
-//        Collection<Double> Alphas = new ArrayList<Double>();
-//        for (double[] a : X.solve(y).getArray()) {  // a is a 1x1 vector (scalar)
-//            Alphas.add(a[0]);
-//        }
-//        return Alphas;
     }
 
     protected static double[] trainUsingGradientDescent(double[][] input, double[] output, double[] alphaInit,
                                                            int numIters, double learningRate) throws InvalidArgumentException {
-        double[] alpha = alphaInit;   // Arrays.copyOf(alphaInit, alphaInit.length);
+        double[] alpha = alphaInit;
         Matrix X = new Matrix(input);
         Matrix y = new Matrix(output, 1).transpose();
         
         for (int i = 0; i < numIters; i++) {
             Matrix x_i = new Matrix(input[i], 1).transpose();
             Matrix alphaJama = new Matrix(alpha, 1).transpose();
-//            alpha = vectorSubtraction(alpha, scalarMultiplication(2*learningRate*(dotProduct(alpha, input) - output), input));
             alpha = alphaJama.minus(x_i.times(2*learningRate*dotProduct(alpha, input[i]) - output[i])).getColumnPackedCopy();
         }
 

@@ -50,24 +50,37 @@ public class LinearRegression {
     public static List<Double> fit(DataSet<Tuple2<Long, List<Double>>> inputSet, 
                                    DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method, int inputLength) throws Exception {
         /* Prepare the data for offline training */
-        List<Tuple2<Long, List<Double>>> inputList = inputSet.collect();
-        List<Tuple2<Long, Double>> outputList = outputSet.collect();
-        double[][] inputArr = new double[inputList.size()][inputLength + 1];
-        double[] outputArr = new double[outputList.size()];
-
-        for (int i = 0; i < inputList.size(); i++) {
-            List<Double> inputVector = inputList.get(i).f1;
-            inputVector.add(0, 1.0);
-            for (int j = 0; j < inputLength + 1; j++) {
-                inputArr[i][j] = inputVector.get(j);
-            }
-        }
-        for (int i = 0; i < outputList.size(); i++) {
-            outputArr[i] = outputList.get(i).f1;
-        }
+        double[][] inputArr = inputDataSetToArray(inputSet, inputLength);
+        double[] outputArr = outputDataSetToArray(outputSet);
 
         double[] alpha = linearModel(inputArr, outputArr, method);
         
+        List<Double> alphaList = new ArrayList<>();
+        for (double value : alpha) {
+            alphaList.add(value);
+        }
+        return alphaList;
+    }
+
+    /**
+     * Accepts Flinks' DataSets and converts them into double arrays before starting the training of a linear model.
+     * @param inputSet
+     * @param outputSet
+     * @param method
+     * @param inputLength
+     * @param learningRate learning rate in case of gradient descent; regularization factor in case of pseudoinverse
+     * @return
+     * @throws Exception
+     */
+    public static List<Double> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
+                                   DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method, int inputLength,
+                                   double learningRate) throws Exception {
+        /* Prepare the data for offline training */
+        double[][] inputArr = inputDataSetToArray(inputSet, inputLength);
+        double[] outputArr = outputDataSetToArray(outputSet);
+
+        double[] alpha = linearModel(inputArr, outputArr, method, learningRate, 1);
+
         List<Double> alphaList = new ArrayList<>();
         for (double value : alpha) {
             alphaList.add(value);
@@ -96,6 +109,33 @@ public class LinearRegression {
                         10, 0.01);
             default:    // a null value was passed as a training method - use PSEUDOINVERSE as a default
                 return trainUsingPseudoinverse(inputData, outputData, 0.0001);
+        }
+    }
+
+    /**
+     * A more general (customizable) version of the linearModel method (see above).
+     * @param inputData
+     * @param outputData
+     * @param method
+     * @param learningRate
+     * @param numberIterations
+     * @return
+     * @throws InvalidArgumentException
+     */
+    public static double[] linearModel(double[][] inputData, double[] outputData, TrainingMethod method,
+                                       double learningRate, int numberIterations) throws InvalidArgumentException {
+        if (inputData.length != outputData.length) {
+            throw new InvalidArgumentException(new String[] {"The amount of input and output data must agree!"});
+        }
+
+        switch (method) {
+            case PSEUDOINVERSE:
+                return trainUsingPseudoinverse(inputData, outputData, learningRate);
+            case GRADIENT_DESCENT:
+                return trainUsingGradientDescent(inputData, outputData, new double[inputData.length],
+                        numberIterations, learningRate);
+            default:    // a null value was passed as a training method - use PSEUDOINVERSE as a default
+                return trainUsingPseudoinverse(inputData, outputData, learningRate);
         }
     }
 
@@ -132,7 +172,7 @@ public class LinearRegression {
         return alpha;
     }
 
-    protected static double dotProduct(double[] x, double[] y) throws InvalidArgumentException {
+    private static double dotProduct(double[] x, double[] y) throws InvalidArgumentException {
         double result = 0;
 
         if (x.length != y.length) {
@@ -143,5 +183,29 @@ public class LinearRegression {
             result += x[i]*y[i];
         }
         return result;
+    }
+    
+    private static double[][] inputDataSetToArray(DataSet<Tuple2<Long, List<Double>>> inputSet, int inputLength) throws Exception {
+        List<Tuple2<Long, List<Double>>> inputList = inputSet.collect();
+        double[][] inputArr = new double[inputList.size()][inputLength + 1];
+
+        for (int i = 0; i < inputList.size(); i++) {
+            List<Double> inputVector = inputList.get(i).f1;
+            inputVector.add(0, 1.0);
+            for (int j = 0; j < inputLength + 1; j++) {
+                inputArr[i][j] = inputVector.get(j);
+            }
+        }
+        return inputArr;
+    }
+    
+    private static double[] outputDataSetToArray(DataSet<Tuple2<Long, Double>> outputSet) throws Exception {
+        List<Tuple2<Long, Double>> outputList = outputSet.collect();
+        double[] outputArr = new double[outputList.size()];
+
+        for (int i = 0; i < outputList.size(); i++) {
+            outputArr[i] = outputList.get(i).f1;
+        }
+        return outputArr;
     }
 }

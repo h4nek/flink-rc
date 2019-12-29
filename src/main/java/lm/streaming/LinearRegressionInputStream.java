@@ -174,7 +174,7 @@ public class LinearRegressionInputStream {
     /**
      * Starts predicting an output based on the fitted model...
      * Predicts the dependent (scalar) variable from the independent (vector) variable using a single non-updateable 
-     * list of optimal alpha parameters. Such model can be trained using methods from {@link lm.LinearRegression} class 
+     * list of optimal alpha parameters. Such model can be trained using methods from {@link lm.batch.LinearRegression} class 
      * or {@link lm.streaming.LinearRegressionInputStream} class.
      * @param alpha The List (vector) of optimal alpha parameters, computed beforehand.
      * @return

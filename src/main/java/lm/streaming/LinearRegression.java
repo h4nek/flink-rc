@@ -21,22 +21,22 @@ import java.util.List;
  * 
  * The input stream has to have elements with lists of the same length, otherwise an exception will be thrown.
  */
-public class LinearRegressionInputStream {
-    private int inputLength = -1;   // length of each inputStream vector element
+public class LinearRegression {
+//    private int inputLength = -1;   // length of each inputStream vector element
     private static final int DELAY_THRESHOLD = 150000;
 
-    public int getInputLength() {
-        return inputLength;
-    }
+//    public int getInputLength() {
+//        return inputLength;
+//    }
 
-    /**
-     * Set the length of input to a value >= 0.
-     * (Otherwise it will be determined from the first element of the inputStream.)
-     * @param inputLength
-     */
-    public void setInputLength(int inputLength) {
-        this.inputLength = inputLength;
-    }
+//    /**
+//     * Set the length of input to a value >= 0.
+//     * (Otherwise it will be determined from the first element of the inputStream.)
+//     * @param inputLength
+//     */
+//    public void setInputLength(int inputLength) {
+//        this.inputLength = inputLength;
+//    }
 
     /**
      * Create a linear model with default parameters.
@@ -45,7 +45,7 @@ public class LinearRegressionInputStream {
      */
     public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                           DataSet<Tuple2<Long, Double>> outputSet) {
-        return fit(inputSet, outputSet, new ArrayList<>(inputLength + 1), 10, .00001);
+        return fit(inputSet, outputSet, new ArrayList<>(/*inputLength + 1*/), 10, .00001);
     }
 
     /**
@@ -105,8 +105,6 @@ public class LinearRegressionInputStream {
      */
     protected static List<Double> trainUsingGradientDescent(List<Double> alpha, List<Double> input, Double output, 
                                                      int numIters, double learningRate) throws InvalidArgumentException {
-//        List<Double> alpha = alpha;
-        
         for (int i = 0; i < numIters; i++) {
             alpha = vectorSubtraction(alpha, scalarMultiplication(2*learningRate*(dotProduct(alpha, input) - output), input));
         }
@@ -175,7 +173,7 @@ public class LinearRegressionInputStream {
      * Starts predicting an output based on the fitted model...
      * Predicts the dependent (scalar) variable from the independent (vector) variable using a single non-updateable 
      * list of optimal alpha parameters. Such model can be trained using methods from {@link lm.batch.LinearRegression} class 
-     * or {@link lm.streaming.LinearRegressionInputStream} class.
+     * or {@link LinearRegression} class.
      * @param alpha The List (vector) of optimal alpha parameters, computed beforehand.
      * @return
      */
@@ -200,7 +198,6 @@ public class LinearRegressionInputStream {
 
             double y_pred = 0;
             for (int i = 0; i < alpha.size(); i++) {
-//                System.out.println("i: " + i + "\talpha: " + alpha.get(i) + "\tx: " + inputVector.get(i)); //TEST
                 y_pred += alpha.get(i) * inputVector.get(i);
             }
             out.collect(Tuple2.of(input.f0, y_pred));

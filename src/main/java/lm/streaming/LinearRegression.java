@@ -2,12 +2,16 @@ package lm.streaming;
 
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.RichJoinFunction;
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
+import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.util.Collector;
 
 import java.util.ArrayList;
@@ -39,13 +43,13 @@ public class LinearRegression {
 //    }
 
     /**
-     * Create a linear model with default parameters.
+     * Create a linear model with default parameters. An initial alpha is set to a zero vector.
      * @param outputStream The stream of actual outputs that we'll use to make better predictions
      * @return
      */
     public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                           DataSet<Tuple2<Long, Double>> outputSet) {
-        return fit(inputSet, outputSet, new ArrayList<>(/*inputLength + 1*/), 10, .00001);
+        return fit(inputSet, outputSet, null, 10, .00001);
     }
 
     /**
@@ -82,7 +86,12 @@ public class LinearRegression {
         
         @Override
         public Tuple2<Long, List<Double>> join(Tuple2<Long, List<Double>> input, Tuple2<Long, Double> output) throws Exception {
-            
+            if (alpha == null) {
+                alpha = new ArrayList<>(input.f1.size());
+                for (int i = 0; i < input.f1.size(); i++) {
+                    alpha.add(0.0);
+                }
+            }
             List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
             inputVector.add(0, 1.0);    // add a value for the intercept
             List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, 
@@ -204,60 +213,62 @@ public class LinearRegression {
         }
     }
 
-//    /**
-//     * Separate and probably more effective implementation than the above <i>predict()</i>.
-//     * Realizing polynomial regression of one variable.
-//     * The function is of form: f(x) = alpha_0 + alpha_1*x + ... + alpha_n*x^n, where n = degree
-//     * @param alphaStream
-//     * @param degree
-//     * @param alphaInit
-//     * @return
-//     * @throws InvalidArgumentException
-//     */
-//    public DataStream<Double> predictSimplePolynomial(DataStream<List<Double>> alphaStream, int degree, 
-//                                                      List<Double> alphaInit) 
-//            throws InvalidArgumentException {
-//        if (alphaInit.size() != degree + 1) {
-//            throw new InvalidArgumentException(new String[] {"Degree + 1 must be the same as the length of alphaInit array!"});
-//        }
-//        
-//        return this.dataStream.connect(alphaStream).process(new CoProcessFunction<List<Double>, List<Double>, Double>() {
-//            private ListState<Double> alphaState;
-//            private Long timestamp;
-//
-//            @Override
-//            public void open(Configuration parameters) throws Exception {
-//                super.open(parameters);
-//                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>(
-//                        "alpha parameters", Double.class));
-//                alphaState.update(alphaInit);
-//                timestamp = Long.MIN_VALUE; //TODO Change to current watermark?
-//            }
-//            
-//            @Override
-//            public void processElement1(List<Double> input, Context ctx, Collector<Double> out) throws Exception {
-//                double val = 1;
-//                double y_pred = 0;
-//                List<Double> alpha = (List<Double>) alphaState.get();
-//                
-//                for (int i = 0; i <= degree; ++i) {
-//                    y_pred += alpha.get(i)*val;
-//                    val *= input.get(0);    // this way we don't have to compute the power from scratch every time
-//                                            // in this simple version of polynomial regression, we expect the input 
-//                                            // variable to be scalar
-//                }
-//                
-//                out.collect(y_pred);
-//            }
-//
-//            @Override
-//            public void processElement2(List<Double> alpha, Context ctx, Collector<Double> out) throws Exception {
-//                if (ctx.timestamp() > timestamp) {
-//                    alphaState.update(alpha);
-//                    timestamp = ctx.timestamp();
-//                }
-//            }
-//        });
-//    }
-//
+    /**
+     * Separate and probably more effective implementation than the above <i>predict()</i>.
+     * Realizing polynomial regression of one variable.
+     * The function is of form: f(x) = alpha_0 + alpha_1*x + ... + alpha_n*x^n, where n = degree
+     * @param alphaStream
+     * @param degree
+     * @param alphaInit
+     * @return
+     * @throws InvalidArgumentException
+     */
+    public DataStream<Double> predictSimplePolynomial(DataStream<Tuple2<Long, List<Double>>> inputStream, 
+                                                      DataStream<List<Double>> alphaStream, int degree, 
+                                                      List<Double> alphaInit) 
+            throws InvalidArgumentException {
+        if (alphaInit.size() != degree + 1) {
+            throw new InvalidArgumentException(new String[] {"Degree + 1 must be the same as the length of alphaInit array!"});
+        }
+
+        return inputStream.connect(alphaStream).process(new CoProcessFunction<Tuple2<Long, List<Double>>, List<Double>, Double>() {
+            private ListState<Double> alphaState;
+            private Long timestamp;
+
+            @Override
+            public void open(Configuration parameters) throws Exception {
+                super.open(parameters);
+                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>(
+                        "alpha parameters", Double.class));
+                alphaState.update(alphaInit);
+                timestamp = Long.MIN_VALUE; //TODO Change to current watermark?
+            }
+
+            @Override
+            public void processElement1(Tuple2<Long, List<Double>> input, Context ctx, Collector<Double> out) throws Exception {
+                double val = 1;
+                double y_pred = 0;
+                List<Double> alpha = (List<Double>) alphaState.get();
+                List<Double> inputList = input.f1;
+
+                for (int i = 0; i <= degree; ++i) {
+                    y_pred += alpha.get(i)*val;
+                    val *= inputList.get(0);    // this way we don't have to compute the power from scratch every time
+                                                // in this simple version of polynomial regression, we expect the input 
+                                                // variable to be scalar
+                }
+
+                out.collect(y_pred);
+            }
+
+            @Override
+            public void processElement2(List<Double> alpha, Context ctx, Collector<Double> out) throws Exception {
+                if (ctx.timestamp() > timestamp) {
+                    alphaState.update(alpha);
+                    timestamp = ctx.timestamp();
+                }
+            }
+        });
+    }
+
 }

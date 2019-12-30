@@ -49,38 +49,33 @@ public class LinearRegression {
      */
     public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                           DataSet<Tuple2<Long, Double>> outputSet) {
-        return fit(inputSet, outputSet, null, 10, .00001);
+        return fit(inputSet, outputSet, null, .00001);
     }
 
     /**
      * Create a linear model that adapts online as new input-output pairs become available.
      * @param outputStream
      * @param alphaInit
-     * @param numIterations
      * @param learningRate
      * @return Alpha list of parameters
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
-                                                   int numIterations,
                                                    double learningRate) {
         return inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
-                .with(new MLRFitJoinFunction(alphaInit, numIterations, learningRate));
+                .with(new MLRFitJoinFunction(alphaInit, learningRate));
         //TODO Replace with Group - Reduce
     }
 
     private static class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>,
             Tuple2<Long, List<Double>>> {
-        private int numIterations;
         private double learningRate;
         private List<Double> alpha;
 
         MLRFitJoinFunction(List<Double> alphaInit,
-                           int numIterations,
                            double learningRate) {
             this.alpha = alphaInit;
-            this.numIterations = numIterations;
             this.learningRate = learningRate;
         }
         
@@ -94,8 +89,7 @@ public class LinearRegression {
             }
             List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
             inputVector.add(0, 1.0);    // add a value for the intercept
-            List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, 
-                    numIterations, learningRate);
+            List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, learningRate);
 
             alpha = newAlpha;
             return Tuple2.of(input.f0, newAlpha);
@@ -107,17 +101,13 @@ public class LinearRegression {
      * @param alpha
      * @param input
      * @param output
-     * @param numIters
      * @param learningRate
      * @return
      * @throws InvalidArgumentException
      */
     protected static List<Double> trainUsingGradientDescent(List<Double> alpha, List<Double> input, Double output, 
-                                                     int numIters, double learningRate) throws InvalidArgumentException {
-        for (int i = 0; i < numIters; i++) {
-            alpha = vectorSubtraction(alpha, scalarMultiplication(2*learningRate*(dotProduct(alpha, input) - output), input));
-        }
-        
+                                                            double learningRate) throws InvalidArgumentException {
+        alpha = vectorSubtraction(alpha, scalarMultiplication(2*learningRate*(dotProduct(alpha, input) - output), input));
         return alpha;
     }
 

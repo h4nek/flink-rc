@@ -79,7 +79,7 @@ public class LinearRegression {
         double[][] inputArr = inputDataSetToArray(inputSet, inputLength);
         double[] outputArr = outputDataSetToArray(outputSet);
 
-        double[] alpha = linearModel(inputArr, outputArr, method, learningRate, 1);
+        double[] alpha = linearModel(inputArr, outputArr, method, learningRate);
 
         List<Double> alphaList = new ArrayList<>();
         for (double value : alpha) {
@@ -90,8 +90,8 @@ public class LinearRegression {
 
     /**
      * Realizes the training phase of linear regression, searching for the optimal Alpha parameters.
-     * Uses a default regularization factor of 0.0001, a default alpha_0 vector of zeroes, a default number of 10 
-     * iterations and a default learning rate of 0.01.
+     * Uses a default regularization factor of 0.0001, a default alpha_0 vector of zeroes and a default learning rate 
+     * of 0.01.
      * @param inputData 
      * @param outputData
      * @return Alpha vector of optimal parameters
@@ -105,8 +105,7 @@ public class LinearRegression {
             case PSEUDOINVERSE:
                 return trainUsingPseudoinverse(inputData, outputData, 0.0001);
             case GRADIENT_DESCENT:
-                return trainUsingGradientDescent(inputData, outputData, new double[inputData.length], 
-                        10, 0.01);
+                return trainUsingGradientDescent(inputData, outputData, new double[inputData.length], 0.01);
             default:    // a null value was passed as a training method - use PSEUDOINVERSE as a default
                 return trainUsingPseudoinverse(inputData, outputData, 0.0001);
         }
@@ -118,12 +117,11 @@ public class LinearRegression {
      * @param outputData
      * @param method
      * @param learningRate
-     * @param numberIterations
      * @return
      * @throws InvalidArgumentException
      */
     public static double[] linearModel(double[][] inputData, double[] outputData, TrainingMethod method,
-                                       double learningRate, int numberIterations) throws InvalidArgumentException {
+                                       double learningRate) throws InvalidArgumentException {
         if (inputData.length != outputData.length) {
             throw new InvalidArgumentException(new String[] {"The amount of input and output data must agree!"});
         }
@@ -132,8 +130,7 @@ public class LinearRegression {
             case PSEUDOINVERSE:
                 return trainUsingPseudoinverse(inputData, outputData, learningRate);
             case GRADIENT_DESCENT:
-                return trainUsingGradientDescent(inputData, outputData, new double[inputData.length],
-                        numberIterations, learningRate);
+                return trainUsingGradientDescent(inputData, outputData, new double[inputData.length], learningRate);
             default:    // a null value was passed as a training method - use PSEUDOINVERSE as a default
                 return trainUsingPseudoinverse(inputData, outputData, learningRate);
         }
@@ -157,13 +154,13 @@ public class LinearRegression {
         return alpha;
     }
 
-    protected static double[] trainUsingGradientDescent(double[][] input, double[] output, double[] alphaInit,
-                                                           int numIters, double learningRate) throws InvalidArgumentException {
+    protected static double[] trainUsingGradientDescent(double[][] input, double[] output, double[] alphaInit, 
+                                                        double learningRate) throws InvalidArgumentException {
         double[] alpha = alphaInit;
         Matrix X = new Matrix(input);
         Matrix y = new Matrix(output, 1).transpose();
         
-        for (int i = 0; i < numIters; i++) {
+        for (int i = 0; i < input.length; i++) {
             Matrix x_i = new Matrix(input[i], 1).transpose();
             Matrix alphaJama = new Matrix(alpha, 1).transpose();
             alpha = alphaJama.minus(x_i.times(2*learningRate*dotProduct(alpha, input[i]) - output[i])).getColumnPackedCopy();

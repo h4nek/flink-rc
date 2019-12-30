@@ -44,8 +44,6 @@ public class LinearRegression {
 
     /**
      * Create a linear model with default parameters. An initial alpha is set to a zero vector.
-     * @param outputStream The stream of actual outputs that we'll use to make better predictions
-     * @return
      */
     public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                           DataSet<Tuple2<Long, Double>> outputSet) {
@@ -53,11 +51,7 @@ public class LinearRegression {
     }
 
     /**
-     * Create a linear model that adapts online as new input-output pairs become available.
-     * @param outputStream
-     * @param alphaInit
-     * @param learningRate
-     * @return Alpha list of parameters
+     * Create a general linear model from training DataSets using Gradient Descent.
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
@@ -81,9 +75,9 @@ public class LinearRegression {
         
         @Override
         public Tuple2<Long, List<Double>> join(Tuple2<Long, List<Double>> input, Tuple2<Long, Double> output) throws Exception {
-            if (alpha == null) {
+            if (alpha == null) {    // set the initial alpha to a zero vector of an appropriate length (input length + 1)
                 alpha = new ArrayList<>(input.f1.size());
-                for (int i = 0; i < input.f1.size(); i++) {
+                for (int i = 0; i < input.f1.size() + 1; i++) {
                     alpha.add(0.0);
                 }
             }

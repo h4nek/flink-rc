@@ -28,6 +28,7 @@ import java.util.List;
 public class LinearRegression {
 //    private int inputLength = -1;   // length of each inputStream vector element
     private static final int DELAY_THRESHOLD = 150000;
+    private static int numSamples;  // number of pairs in the current training dataset
 
 //    public int getInputLength() {
 //        return inputLength;
@@ -46,9 +47,16 @@ public class LinearRegression {
      * Create a linear model with default parameters. An initial alpha is set to a zero vector.
      */
     public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
-                                                          DataSet<Tuple2<Long, Double>> outputSet) {
-        return fit(inputSet, outputSet, null, .00001);
+                                                          DataSet<Tuple2<Long, Double>> outputSet, int numSamples) {
+        return fit(inputSet, outputSet, null, .00001, numSamples);
     }
+    
+//    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, Double>> inputSet,
+//                                                   DataSet<Tuple2<Long, Double>> outputSet,
+//                                                   Double alphaInit,
+//                                                   double learningRate) {
+//        inputSet.map(x -> )
+//    }
 
     /**
      * Create a general linear model from training DataSets using Gradient Descent.
@@ -56,7 +64,8 @@ public class LinearRegression {
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
-                                                   double learningRate) {
+                                                   double learningRate, int numSamples) {
+        this.numSamples = numSamples;
         return inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
                 .with(new MLRFitJoinFunction(alphaInit, learningRate));
         //TODO Replace with Group - Reduce
@@ -101,7 +110,12 @@ public class LinearRegression {
      */
     protected static List<Double> trainUsingGradientDescent(List<Double> alpha, List<Double> input, Double output, 
                                                             double learningRate) throws InvalidArgumentException {
-        alpha = vectorSubtraction(alpha, scalarMultiplication(2*learningRate*(dotProduct(alpha, input) - output), input));
+        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/
+                numSamples, input));
+//        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/
+//                (numSamples*Math.abs(dotProduct(alpha, input) - output)), input)); // using norm without square - less sensitive
+//        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*Math.signum(dotProduct(alpha, input) - 
+//                output)/numSamples, input)); // using norm without square & signum for simplified computation
         return alpha;
     }
 

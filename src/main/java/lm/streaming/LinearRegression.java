@@ -28,7 +28,6 @@ import java.util.List;
 public class LinearRegression {
 //    private int inputLength = -1;   // length of each inputStream vector element
     private static final int DELAY_THRESHOLD = 150000;
-    private static int numSamples;  // number of pairs in the current training dataset
 
 //    public int getInputLength() {
 //        return inputLength;
@@ -65,9 +64,8 @@ public class LinearRegression {
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
                                                    double learningRate, int numSamples) {
-        this.numSamples = numSamples;
         return inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
-                .with(new MLRFitJoinFunction(alphaInit, learningRate));
+                .with(new MLRFitJoinFunction(alphaInit, learningRate, numSamples));
         //TODO Replace with Group - Reduce
     }
 
@@ -75,11 +73,13 @@ public class LinearRegression {
             Tuple2<Long, List<Double>>> {
         private double learningRate;
         private List<Double> alpha;
+        private int numSamples;
 
         MLRFitJoinFunction(List<Double> alphaInit,
-                           double learningRate) {
+                           double learningRate, int numSamples) {
             this.alpha = alphaInit;
             this.learningRate = learningRate;
+            this.numSamples = numSamples;
         }
         
         @Override
@@ -92,7 +92,7 @@ public class LinearRegression {
             }
             List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
             inputVector.add(0, 1.0);    // add a value for the intercept
-            List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, learningRate);
+            List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, learningRate, numSamples);
 
             alpha = newAlpha;
             return Tuple2.of(input.f0, newAlpha);
@@ -109,7 +109,7 @@ public class LinearRegression {
      * @throws InvalidArgumentException
      */
     protected static List<Double> trainUsingGradientDescent(List<Double> alpha, List<Double> input, Double output, 
-                                                            double learningRate) throws InvalidArgumentException {
+                                                            double learningRate, int numSamples) throws InvalidArgumentException {
         alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/
                 numSamples, input));
 //        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/

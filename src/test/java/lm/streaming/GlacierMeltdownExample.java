@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
+ * An example using cumulative mass balance of glaciers (source: https://datahub.io/core/glacier-mass-balance).
  * Predict 2nd field (Mean cumulative mass balance) based on 1st (Year) and 3rd (Number of observations)
  */
 public class GlacierMeltdownExample {
@@ -43,14 +44,14 @@ public class GlacierMeltdownExample {
         FileUtils.cleanDirectory(new File(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab"));
 
         /* Online learning (GD) */
-        for (double learningRate : new double[]{0.000000008, 0.00000001, 0.00000002, 0.0000001, 0.0000002, 0.0000003, 0.0000006}) {
+        for (double learningRate : new double[]{0.0018}) {   // 0.0000004 -- originally ~ best
             fitLRForMatlab(learningRate, TrainingMethod.GRADIENT_DESCENT);
         }
         
-        /* Offline learning (PINV) */
-        for (double regularizationFactor : new double[]{0, 0.000005, 0.00006, 0.0001, 0.0004, 0.001}) {
-            fitLRForMatlab(regularizationFactor, TrainingMethod.PSEUDOINVERSE);
-        }
+        /* Offline learning (PINV)*/ //-- Seems to be working well
+//        for (double regularizationFactor : new double[]{0, 0.000005, 0.00006, 0.0001, 0.0004, 0.001}) {
+//            fitLRForMatlab(regularizationFactor, TrainingMethod.PSEUDOINVERSE);
+//        }
     }
 
     /**
@@ -71,9 +72,9 @@ public class GlacierMeltdownExample {
 
         /* Transform the data */
         DataSet<Tuple2<Long, List<Double>>> glaciersInput = glaciers.map(x -> {
-            List<Double> y = new ArrayList<Double>(); y.add(x.f0.doubleValue()); //y.add(x.f2);
-            return Tuple2.of(x.f0, y);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))); // the year (f0) is used here both as an index and as a feature
-        DataSet<Tuple2<Long, Double>> glaciersOutput = glaciers.map(x -> Tuple2.of(x.f0, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+            List<Double> y = new ArrayList<Double>(); y.add(x.f0.doubleValue()-1945); //y.add(x.f2);
+            return Tuple2.of(x.f0-1945, y);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        DataSet<Tuple2<Long, Double>> glaciersOutput = glaciers.map(x -> Tuple2.of(x.f0-1945, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
 
         LinearRegression lr = new LinearRegression();
         /* Training phase - compute the Alpha parameters */
@@ -83,13 +84,33 @@ public class GlacierMeltdownExample {
         }
         else {  // online LR using GD
             List<Double> alphaInit = new ArrayList<>();
-            alphaInit.add(950.0);
-            alphaInit.add(-0.5);
+            alphaInit.add(0.0);
+            alphaInit.add(0.0);
             
-            DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(glaciersInput, glaciersOutput, alphaInit, learningRate);
-            
+            DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(glaciersInput, glaciersOutput, alphaInit, learningRate,
+                    glaciers.collect().size());
+
             List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
             Alpha = alphaList.get(alphaList.size() - 1);
+            
+            /*Check the whole trend of MSE*/
+            ExampleOfflineUtilities.showMSETrend(alphaList, glaciersInput, glaciersOutput);
+
+            /*Choose the best Alpha*/
+            List<Double> mseTrend = ExampleOfflineUtilities.computeMSETrend(alphaList, glaciersInput, glaciersOutput);
+//            int minIdx = mseTrend.indexOf(Collections.min(mseTrend));
+            int minIdx = -1;
+            double minMSE = Double.POSITIVE_INFINITY;
+            for (int i = 0; i < mseTrend.size(); ++i) {
+                if (mseTrend.get(i) < minMSE) {
+                    minMSE = mseTrend.get(i);
+                    minIdx = i;
+                }
+            }
+            Alpha = alphaList.get(minIdx);
+            
+            /*PLot the MSE trend*/
+            ExampleOfflineUtilities.plotLearningCurve(mseTrend);
         }
 
         /* Testing phase - use the input values and the Alpha vector to compute the predictions */
@@ -100,9 +121,7 @@ public class GlacierMeltdownExample {
 //        outputStream.print("REAL JO");
 
         DataSet<Double> mse = ExampleOfflineUtilities.computeMSE(predictions, glaciersOutput); //ExampleOnlineUtilities.computeMSE(predictions, glaciersOutput);
-
-        mse.printOnTaskManager("MSE");
-
+        
         /* Save the inputs, predictions and outputs to a CSV */
         String learningType = "";
         if (trainingMethod == lm.batch.LinearRegression.TrainingMethod.PSEUDOINVERSE) {
@@ -119,12 +138,17 @@ public class GlacierMeltdownExample {
                 learningType + "_" + learningRate + ".csv", FileSystem.WriteMode.OVERWRITE);
 
         List<Double> mseList = mse.collect();
+        System.out.println("Alpha: " + Alpha);
+        System.out.println("MSE: " + mseList.get(mseList.size() - 1));
+
         List<Double> mseLast = new ArrayList<>();
         mseLast.add(mseList.get(mseList.size() - 1));
         ExampleOnlineUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + 
                 learningType + "_" + learningRate + ".csv", mseLast);
 //        mse.writeAsText(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + learningType + "_" + learningRate + 
 //                ".csv", FileSystem.WriteMode.OVERWRITE);
+
+        ExampleOfflineUtilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
         
 //        env.execute("Glacier Meltdown Example for Matlab");
     }
@@ -161,7 +185,7 @@ public class GlacierMeltdownExample {
         }
         else {  // online LR using GD
             DataSet<Tuple2<Long, List<Double>>> alphas = mlr.fit(glaciersFirstHalfInput, glaciersFirstHalfOutput, 
-                    Arrays.asList(ArrayUtils.toObject(ALPHA_INIT)), LEARNING_RATE);
+                    Arrays.asList(ArrayUtils.toObject(ALPHA_INIT)), LEARNING_RATE, SPLIT_SIZE);
 
             alphas.printOnTaskManager("ALPHA");
             List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();

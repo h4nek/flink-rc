@@ -21,7 +21,9 @@ import java.util.List;
 
 /**
  * An example using cumulative mass balance of glaciers (source: https://datahub.io/core/glacier-mass-balance).
- * Predict 2nd field (Mean cumulative mass balance) based on 1st (Year) and 3rd (Number of observations)
+ * Predict 2nd field (Mean cumulative mass balance) based on 1st (Year) and 3rd (Number of observations).
+ * 
+ * Testing GD (online) as well as PINV (offline) training.
  */
 public class GlacierMeltdownExample {
     public static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";

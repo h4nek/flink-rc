@@ -1,7 +1,6 @@
 package lm.streaming;
 
 import com.sun.javaws.exceptions.InvalidArgumentException;
-import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -14,6 +13,7 @@ import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.util.Collector;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,9 +25,10 @@ import java.util.List;
  * 
  * The input stream has to have elements with lists of the same length, otherwise an exception will be thrown.
  */
-public class LinearRegression {
+public class LinearRegression implements Serializable {
 //    private int inputLength = -1;   // length of each inputStream vector element
     private static final int DELAY_THRESHOLD = 150000;
+    private double MSE; // stores the current MSE
 
 //    public int getInputLength() {
 //        return inputLength;
@@ -65,38 +66,8 @@ public class LinearRegression {
                                                    List<Double> alphaInit,
                                                    double learningRate, int numSamples) {
         return inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
-                .with(new MLRFitJoinFunction(alphaInit, learningRate, numSamples));
+                .with(new MLRFitJoinFunction(this, alphaInit, learningRate, numSamples));
         //TODO Replace with Group - Reduce
-    }
-
-    private static class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>,
-            Tuple2<Long, List<Double>>> {
-        private double learningRate;
-        private List<Double> alpha;
-        private int numSamples;
-
-        MLRFitJoinFunction(List<Double> alphaInit,
-                           double learningRate, int numSamples) {
-            this.alpha = alphaInit;
-            this.learningRate = learningRate;
-            this.numSamples = numSamples;
-        }
-        
-        @Override
-        public Tuple2<Long, List<Double>> join(Tuple2<Long, List<Double>> input, Tuple2<Long, Double> output) throws Exception {
-            if (alpha == null) {    // set the initial alpha to a zero vector of an appropriate length (input length + 1)
-                alpha = new ArrayList<>(input.f1.size());
-                for (int i = 0; i < input.f1.size() + 1; i++) {
-                    alpha.add(0.0);
-                }
-            }
-            List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
-            inputVector.add(0, 1.0);    // add a value for the intercept
-            List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, learningRate, numSamples);
-
-            alpha = newAlpha;
-            return Tuple2.of(input.f0, newAlpha);
-        }
     }
 
     /**
@@ -108,8 +79,15 @@ public class LinearRegression {
      * @return
      * @throws InvalidArgumentException
      */
-    protected static List<Double> trainUsingGradientDescent(List<Double> alpha, List<Double> input, Double output, 
+    protected List<Double> trainUsingGradientDescent(List<Double> alpha, List<Double> input, Double output, 
                                                             double learningRate, int numSamples) throws InvalidArgumentException {
+        Double yDiff = dotProduct(alpha, input) - output;
+//        MSE += yDiff;
+//        System.out.println("current MSE: " + MSE);
+        System.out.println("y_hat - y: " + yDiff);
+        List<Double> gradient = scalarMultiplication(yDiff, input);
+        System.out.println("gradient: " + gradient);
+        
         alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/
                 numSamples, input));
 //        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/

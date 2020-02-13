@@ -3,6 +3,7 @@ package lm.streaming;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -28,9 +29,19 @@ import java.util.List;
 public class LinearRegression implements Serializable {
 //    private int inputLength = -1;   // length of each inputStream vector element
     private static final int DELAY_THRESHOLD = 150000;
-    private double MSE; // stores the current MSE
+//    private double MSE; 
+    private MLRFitJoinFunction MLRFitJoinFunction;
 
-//    public int getInputLength() {
+    public double getMSE(List<Double> lastAlpha) {
+        System.out.println("last Alpha: " + lastAlpha);
+        if (MLRFitJoinFunction == null) {
+            System.out.println("BEFORE FIT");
+            return 0.0;
+        }
+        return MLRFitJoinFunction.getMSE(); // we need to return this after the fit
+    }
+
+    //    public int getInputLength() {
 //        return inputLength;
 //    }
 
@@ -65,94 +76,16 @@ public class LinearRegression implements Serializable {
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
                                                    double learningRate, int numSamples) {
-        return inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
-                .with(new MLRFitJoinFunction(this, alphaInit, learningRate, numSamples));
+        MLRFitJoinFunction = new MLRFitJoinFunction(this, alphaInit, learningRate, numSamples);
+        DataSet<Tuple2<Long, List<Double>>> alphas = inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
+                .with(MLRFitJoinFunction);
+
+        
+//        System.out.println("MSE estimate: " + getMSE(alphas.collect().get(0).f1));
+        return alphas;
         //TODO Replace with Group - Reduce
     }
-
-    /**
-     * Realizing Gradient descent with basic arithmetic operations.
-     * @param alpha
-     * @param input
-     * @param output
-     * @param learningRate
-     * @return
-     * @throws InvalidArgumentException
-     */
-    protected List<Double> trainUsingGradientDescent(List<Double> alpha, List<Double> input, Double output, 
-                                                            double learningRate, int numSamples) throws InvalidArgumentException {
-        Double yDiff = dotProduct(alpha, input) - output;
-//        MSE += yDiff;
-//        System.out.println("current MSE: " + MSE);
-        System.out.println("y_hat - y: " + yDiff);
-        List<Double> gradient = scalarMultiplication(yDiff, input);
-        System.out.println("gradient: " + gradient);
-        
-        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/
-                numSamples, input));
-//        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/
-//                (numSamples*Math.abs(dotProduct(alpha, input) - output)), input)); // using norm without square - less sensitive
-//        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*Math.signum(dotProduct(alpha, input) - 
-//                output)/numSamples, input)); // using norm without square & signum for simplified computation
-        return alpha;
-    }
-
-    private static Double dotProduct(List<Double> X, List<Double> Y) throws InvalidArgumentException {
-        double result = 0;
-
-        if (X.size() != Y.size()) {
-            throw new InvalidArgumentException(new String[] {"Length of X: " + X.size(), "Length of Y: " + Y.size(), 
-                    "Contents of X: " + listToString(X),
-                    "Contents of Y: " + listToString(Y),
-                    "Lengths must agree!"});
-        }
-
-        for (int i = 0; i < X.size(); i++) {
-            result += X.get(i)*Y.get(i);
-        }
-        return result;
-    }
-
-    /**
-     * A convenience method that creates a comma-separated string of list contents.
-     * @param list
-     * @param <T>
-     * @return
-     */
-    private static <T> String listToString(List<T> list) {
-        StringBuilder listString = new StringBuilder("{");
-        for (int i = 0; i < list.size(); ++i) {
-            if (i == list.size() - 1) {
-                listString.append(list.get(i));
-            }
-            else {
-                listString.append(list.get(i)).append(", ");
-            }
-        }
-        listString.append('}');
-        
-        return listString.toString();
-    }
-
-    private static List<Double> scalarMultiplication(Double a, List<Double> X) {
-        List<Double> result = new ArrayList<>(X.size());
-        for (Double x : X) {
-            result.add(x * a);
-        }
-        return result;
-    }
-
-    private static List<Double> vectorSubtraction(List<Double> X, List<Double> Y) throws InvalidArgumentException {
-        if (X.size() != Y.size()) {
-            throw new InvalidArgumentException(new String[] {"Lengths must agree!"});
-        }
-
-        List<Double> result = new ArrayList<>(X.size());
-        for (int i = 0; i < X.size(); i++) {
-            result.add(X.get(i) - Y.get(i));
-        }
-        return result;
-    }
+    
 
     /**
      * Starts predicting an output based on the fitted model...

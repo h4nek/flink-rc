@@ -19,7 +19,7 @@ import java.util.List;
  */
 public class CO2EmissionsByNationExample {
     public static final String INPUT_FILE_PATH = "src/test/resources/co2_emissions/fossil-fuel-co2-emissions-by-nation.csv";
-    public static final double LEARNING_RATE = 0.02; //0.000001;
+    public static final double LEARNING_RATE = 0.85; //0.000001;
     public static final String[] selectNations = {"UNITED KINGDOM", "NORWAY", "CZECH REPUBLIC", "CHINA (MAINLAND)"};
 
 
@@ -32,6 +32,8 @@ public class CO2EmissionsByNationExample {
                 .includeFields("1110000000")
                 .types(Long.class, String.class, Double.class)
                 .filter(x -> {for (int i = 0; i < selectNations.length; i++) {
+//                    if (x.f0 == 2000 && x.f1.equals("UNITED KINGDOM"))  //TEST
+//                        System.err.println("We're doing one read of the input data.");
                     if (x.f1.equals(selectNations[i]))
                         return true;
                 } return false;});
@@ -41,7 +43,7 @@ public class CO2EmissionsByNationExample {
         indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
 
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {
-            List<Double> y = new ArrayList<>(); y.add(x.f1.f0.doubleValue()/500);
+            List<Double> y = new ArrayList<>(); y.add((x.f1.f0.doubleValue() - 1750)/200);
 //            y.add(Math.exp(x.f0.doubleValue()/500));    // "replace" x0 with e^x0
             for (double d : assignNationCode(x.f1.f1)) {
                 y.add(d);

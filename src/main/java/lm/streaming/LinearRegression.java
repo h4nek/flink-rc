@@ -3,7 +3,6 @@ package lm.streaming;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
-import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -30,15 +29,15 @@ public class LinearRegression implements Serializable {
 //    private int inputLength = -1;   // length of each inputStream vector element
     private static final int DELAY_THRESHOLD = 150000;
 //    private double MSE; 
-    private MLRFitJoinFunction MLRFitJoinFunction;
+    private MLRFitCoGroupFunction MLRFitCoGroupFunction;
 
     public double getMSE(List<Double> lastAlpha) {
         System.out.println("last Alpha: " + lastAlpha);
-        if (MLRFitJoinFunction == null) {
+        if (MLRFitCoGroupFunction == null) {
             System.out.println("BEFORE FIT");
             return 0.0;
         }
-        return MLRFitJoinFunction.getMSE(); // we need to return this after the fit
+        return MLRFitCoGroupFunction.getMSE(); // we need to return this after the fit
     }
 
     //    public int getInputLength() {
@@ -58,8 +57,8 @@ public class LinearRegression implements Serializable {
      * Create a linear model with default parameters. An initial alpha is set to a zero vector.
      */
     public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
-                                                          DataSet<Tuple2<Long, Double>> outputSet, int numSamples) {
-        return fit(inputSet, outputSet, null, .00001, numSamples);
+                                                          DataSet<Tuple2<Long, Double>> outputSet, int numSamples, boolean includeMSE) {
+        return fit(inputSet, outputSet, null, .00001, numSamples,includeMSE);
     }
     
 //    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, Double>> inputSet,
@@ -75,15 +74,16 @@ public class LinearRegression implements Serializable {
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
-                                                   double learningRate, int numSamples) {
-        MLRFitJoinFunction = new MLRFitJoinFunction(this, alphaInit, learningRate, numSamples);
-        DataSet<Tuple2<Long, List<Double>>> alphas = inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
-                .with(MLRFitJoinFunction);
+                                                   double learningRate, int numSamples, boolean includeMSE) {
+//        MLRFitJoinFunction = new MLRFitJoinFunction(this, alphaInit, learningRate, numSamples, includeMSE);
+//        DataSet<Tuple2<Long, List<Double>>> alphas = inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
+//                .with(MLRFitJoinFunction);
 
         
 //        System.out.println("MSE estimate: " + getMSE(alphas.collect().get(0).f1));
-        return alphas;
-        //TODO Replace with Group - Reduce
+//        return alphas;
+        return inputSet.coGroup(outputSet).where(0).equalTo(0).with(new MLRFitCoGroupFunction(
+                this, alphaInit, learningRate, numSamples, includeMSE));
     }
     
 

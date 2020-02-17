@@ -1,24 +1,27 @@
 package lm.streaming;
 
 import com.sun.javaws.exceptions.InvalidArgumentException;
+import org.apache.flink.api.common.functions.CoGroupFunction;
 import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.checkpoint.ListCheckpointed;
+import org.apache.flink.util.Collector;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>,
-        Tuple2<Long, List<Double>>> implements ListCheckpointed<Double> {
+class MLRFitCoGroupFunction implements CoGroupFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>,
+        Tuple2<Long, List<Double>>>, ListCheckpointed<Double> {
     private final LinearRegression linearRegression;
     private double learningRate;
     private List<Double> alpha;
     private int numSamples;
+    private boolean includeMSE;
     private double MSE; // stores the current MSE - it's a rough estimate of the real MSE as it uses different Alpha vectors
 //    private ValueState<Double> MSEState;
 
@@ -26,7 +29,7 @@ class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tu
     public double getMSE() {
         
         try {
-            return snapshotState(5, 120).get(0);
+            return snapshotState(100, 120).get(0);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -35,11 +38,13 @@ class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tu
         return -1;
     }
 
-    MLRFitJoinFunction(LinearRegression linearRegression, List<Double> alphaInit, double learningRate, int numSamples) {
+    MLRFitCoGroupFunction(LinearRegression linearRegression, List<Double> alphaInit, double learningRate, int numSamples,
+                          boolean includeMSE) {
         this.linearRegression = linearRegression;
         this.alpha = alphaInit;
         this.learningRate = learningRate;
         this.numSamples = numSamples;
+        this.includeMSE = includeMSE;
     }
 
 //    @Override
@@ -69,20 +74,40 @@ class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tu
         }
     }
 
+//    @Override
+//    public Tuple2<Long, List<Double>> join(Tuple2<Long, List<Double>> input, Tuple2<Long, Double> output) throws Exception {
+//        if (alpha == null) {    // set the initial alpha to a zero vector of an appropriate length (input length + 1)
+//            alpha = new ArrayList<>(input.f1.size());
+//            for (int i = 0; i < input.f1.size() + 1; i++) {
+//                alpha.add(0.0);
+//            }
+//        }
+//        List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
+//        inputVector.add(0, 1.0);    // add a value for the intercept
+//        List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, learningRate, numSamples);
+//
+//        alpha = newAlpha;
+//        return Tuple2.of(input.f0, newAlpha);
+//    }
+
     @Override
-    public Tuple2<Long, List<Double>> join(Tuple2<Long, List<Double>> input, Tuple2<Long, Double> output) throws Exception {
-        if (alpha == null) {    // set the initial alpha to a zero vector of an appropriate length (input length + 1)
-            alpha = new ArrayList<>(input.f1.size());
-            for (int i = 0; i < input.f1.size() + 1; i++) {
-                alpha.add(0.0);
+    public void coGroup(Iterable<Tuple2<Long, List<Double>>> inputGroup, Iterable<Tuple2<Long, Double>> outputGroup, Collector<Tuple2<Long, List<Double>>> out) throws Exception {
+        for (Tuple2<Long, List<Double>> input : inputGroup) {
+            for (Tuple2<Long, Double> output : outputGroup) {
+                if (alpha == null) {    // set the initial alpha to a zero vector of an appropriate length (input length + 1)
+                    alpha = new ArrayList<>(input.f1.size());
+                    for (int i = 0; i < input.f1.size() + 1; i++) {
+                        alpha.add(0.0);
+                    }
+                }
+                List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
+                inputVector.add(0, 1.0);    // add a value for the intercept
+                List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, learningRate, numSamples, out);
+
+                alpha = newAlpha;
+                out.collect(Tuple2.of(input.f0, newAlpha));
             }
         }
-        List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
-        inputVector.add(0, 1.0);    // add a value for the intercept
-        List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, learningRate, numSamples);
-
-        alpha = newAlpha;
-        return Tuple2.of(input.f0, newAlpha);
     }
 
     /**
@@ -95,7 +120,8 @@ class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tu
      * @throws InvalidArgumentException
      */
     protected List<Double> trainUsingGradientDescent(List<Double> alpha, List<Double> input, Double output,
-                                                     double learningRate, int numSamples) throws InvalidArgumentException {
+                                                     double learningRate, int numSamples, 
+                                                     Collector<Tuple2<Long, List<Double>>> out) throws InvalidArgumentException {
         Double yDiff = dotProduct(alpha, input) - output;
 //        try {
 //            Double MSE = MSEState.value();
@@ -107,8 +133,11 @@ class MLRFitJoinFunction extends RichJoinFunction<Tuple2<Long, List<Double>>, Tu
 //            e.printStackTrace();
 //            System.err.println("MSE state not accessible");
 //        }
-        MSE += yDiff*yDiff/numSamples;
-        System.out.println("current MSE: " + MSE);
+        if (includeMSE) {
+            MSE += yDiff*yDiff/numSamples;
+            System.out.println("current MSE: " + MSE);
+            out.collect(Tuple2.of(-1L, Collections.singletonList(MSE)));    // -1 index will signify the MSE values
+        }
         System.out.println("y_hat - y: " + yDiff);
         List<Double> gradient = scalarMultiplication(yDiff, input);
         System.out.println("gradient: " + gradient);

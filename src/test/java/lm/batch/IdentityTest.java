@@ -30,7 +30,7 @@ public class IdentityTest {
         
         DataSet<Tuple2<Long, List<Double>>> integers = env.fromCollection(integerList).map(x -> {
             List<Double> y = new ArrayList<>();
-            y.add(x.doubleValue()/500);
+            y.add(x.doubleValue()/500); // "normalize" the inputs
             return Tuple2.of(x.longValue(), y);
         }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
 
@@ -48,7 +48,7 @@ public class IdentityTest {
         lm.streaming.LinearRegression lr = new lm.streaming.LinearRegression();
         
         DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(integers, integersOut, null, 5, 
-                integerList.size());
+                integerList.size(), false);
         alphas.printOnTaskManager("ALPHA");
         
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
@@ -60,8 +60,10 @@ public class IdentityTest {
         results.print();
 
         ExampleOfflineUtilities.computeMSE(results, integersOut).print();
+//        System.out.println("MSE estimate:" + lr.getMSE());
         
-        ExampleOfflineUtilities.plotLRFit(integers, integersOut, results, 0, 0, "x", "y", "Identity Test", ExampleOfflineUtilities.PlotType.POINTS);
+        ExampleOfflineUtilities.plotLRFit(integers, integersOut, results, 0, 0, "x", "y", 
+                "Identity Test", ExampleOfflineUtilities.PlotType.POINTS);
         
 //        List<Double> mseTrend = ExampleOfflineUtilities.computeMSETrend(alphaList, integers, integersOut);
         

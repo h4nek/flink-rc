@@ -90,29 +90,27 @@ public class GlacierMeltdownExample {
             alphaInit.add(0.0);
             
             DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(glaciersInput, glaciersOutput, alphaInit, learningRate,
-                    glaciers.collect().size());
+                    glaciers.collect().size(), false);
 
             List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
             Alpha = alphaList.get(alphaList.size() - 1);
             
-            /*Check the whole trend of MSE*/
-            ExampleOfflineUtilities.showMSETrend(alphaList, glaciersInput, glaciersOutput);
 
             /*Choose the best Alpha*/
-            List<Double> mseTrend = ExampleOfflineUtilities.computeMSETrend(alphaList, glaciersInput, glaciersOutput);
-//            int minIdx = mseTrend.indexOf(Collections.min(mseTrend));
-            int minIdx = -1;
-            double minMSE = Double.POSITIVE_INFINITY;
-            for (int i = 0; i < mseTrend.size(); ++i) {
-                if (mseTrend.get(i) < minMSE) {
-                    minMSE = mseTrend.get(i);
-                    minIdx = i;
-                }
-            }
-            Alpha = alphaList.get(minIdx);
-            
-            /*PLot the MSE trend*/
-            ExampleOfflineUtilities.plotLearningCurve(mseTrend);
+//            List<Double> mseTrend = ExampleOfflineUtilities.computeMSETrend(alphaList, glaciersInput, glaciersOutput);
+////            int minIdx = mseTrend.indexOf(Collections.min(mseTrend));
+//            int minIdx = -1;
+//            double minMSE = Double.POSITIVE_INFINITY;
+//            for (int i = 0; i < mseTrend.size(); ++i) {
+//                if (mseTrend.get(i) < minMSE) {
+//                    minMSE = mseTrend.get(i);
+//                    minIdx = i;
+//                }
+//            }
+//            Alpha = alphaList.get(minIdx);
+//            
+//            /*PLot the MSE trend*/
+//            ExampleOfflineUtilities.plotLearningCurve(mseTrend);
         }
 
         /* Testing phase - use the input values and the Alpha vector to compute the predictions */
@@ -147,8 +145,6 @@ public class GlacierMeltdownExample {
         mseLast.add(mseList.get(mseList.size() - 1));
         ExampleOnlineUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + 
                 learningType + "_" + learningRate + ".csv", mseLast);
-//        mse.writeAsText(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + learningType + "_" + learningRate + 
-//                ".csv", FileSystem.WriteMode.OVERWRITE);
 
         ExampleOfflineUtilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
         
@@ -187,7 +183,7 @@ public class GlacierMeltdownExample {
         }
         else {  // online LR using GD
             DataSet<Tuple2<Long, List<Double>>> alphas = mlr.fit(glaciersFirstHalfInput, glaciersFirstHalfOutput, 
-                    Arrays.asList(ArrayUtils.toObject(ALPHA_INIT)), LEARNING_RATE, SPLIT_SIZE);
+                    Arrays.asList(ArrayUtils.toObject(ALPHA_INIT)), LEARNING_RATE, SPLIT_SIZE, false);
 
             alphas.printOnTaskManager("ALPHA");
             List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();

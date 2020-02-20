@@ -57,8 +57,9 @@ public class LinearRegression implements Serializable {
      * Create a linear model with default parameters. An initial alpha is set to a zero vector.
      */
     public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
-                                                          DataSet<Tuple2<Long, Double>> outputSet, int numSamples, boolean includeMSE) {
-        return fit(inputSet, outputSet, null, .00001, numSamples,includeMSE);
+                                                          DataSet<Tuple2<Long, Double>> outputSet, int numSamples, 
+                                                          boolean includeMSE) {
+        return fit(inputSet, outputSet, null, .00001, numSamples, includeMSE);
     }
     
 //    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, Double>> inputSet,
@@ -69,21 +70,46 @@ public class LinearRegression implements Serializable {
 //    }
 
     /**
-     * Create a general linear model from training DataSets using Gradient Descent.
+     * Create a general linear model from training DataSets using Gradient Descent, without learning rate decay.
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
                                                    double learningRate, int numSamples, boolean includeMSE) {
+
+//        return inputSet.coGroup(outputSet).where(0).equalTo(0).with(new MLRFitCoGroupFunction(
+//                this, alphaInit, learningRate, numSamples, includeMSE, stepsDecay, 32));
+        return fit(inputSet, outputSet, alphaInit, learningRate, numSamples, includeMSE, false, Double.NaN, Double.NaN);
+    }
+
+    /**
+     * A version with default decay values.
+     */
+    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
+                                                   DataSet<Tuple2<Long, Double>> outputSet,
+                                                   List<Double> alphaInit,
+                                                   double learningRate, int numSamples, boolean includeMSE, boolean stepsDecay) {
+        return fit(inputSet, outputSet, alphaInit, learningRate, numSamples, includeMSE,
+                stepsDecay, 32, 1.0/16);
+    }
+
+    /**
+     * Create a general linear model from training DataSets using Gradient Descent.
+     */
+    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
+                                                   DataSet<Tuple2<Long, Double>> outputSet,
+                                                   List<Double> alphaInit,
+                                                   double learningRate, int numSamples, boolean includeMSE, 
+                                                   boolean stepsDecay, double decayGranularity, double decayAmount) {
 //        MLRFitJoinFunction = new MLRFitJoinFunction(this, alphaInit, learningRate, numSamples, includeMSE);
 //        DataSet<Tuple2<Long, List<Double>>> alphas = inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
 //                .with(MLRFitJoinFunction);
 
-        
+
 //        System.out.println("MSE estimate: " + getMSE(alphas.collect().get(0).f1));
 //        return alphas;
         return inputSet.coGroup(outputSet).where(0).equalTo(0).with(new MLRFitCoGroupFunction(
-                this, alphaInit, learningRate, numSamples, includeMSE));
+                this, alphaInit, learningRate, numSamples, includeMSE, stepsDecay, decayGranularity, decayAmount));
     }
     
 

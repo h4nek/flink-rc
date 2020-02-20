@@ -1,28 +1,29 @@
 package lm.streaming;
 
 import com.sun.javaws.exceptions.InvalidArgumentException;
-import org.apache.flink.api.common.functions.CoGroupFunction;
-import org.apache.flink.api.common.functions.RichJoinFunction;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.accumulators.IntCounter;
+import org.apache.flink.api.common.functions.RichCoGroupFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.checkpoint.ListCheckpointed;
 import org.apache.flink.util.Collector;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-class MLRFitCoGroupFunction implements CoGroupFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>,
-        Tuple2<Long, List<Double>>>, ListCheckpointed<Double> {
+class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>,
+        Tuple2<Long, List<Double>>> implements ListCheckpointed<Double> {
     private final LinearRegression linearRegression;
     private double learningRate;
     private List<Double> alpha;
     private int numSamples;
     private boolean includeMSE;
     private double MSE; // stores the current MSE - it's a rough estimate of the real MSE as it uses different Alpha vectors
+    boolean stepsDecay; // signifies if we should be introducing a step-based decay to the learning rate
+    int decayPeriod;    // how often should we decrease the learning rate
+    double decayCoeff;
+    private IntCounter iterationCounter;    // current iteration number (used for the learning rate decay)
 //    private ValueState<Double> MSEState;
 
 
@@ -39,15 +40,26 @@ class MLRFitCoGroupFunction implements CoGroupFunction<Tuple2<Long, List<Double>
     }
 
     MLRFitCoGroupFunction(LinearRegression linearRegression, List<Double> alphaInit, double learningRate, int numSamples,
-                          boolean includeMSE) {
+                          boolean includeMSE, boolean stepsDecay, double decayGranularity, double decayAmount) {
         this.linearRegression = linearRegression;
         this.alpha = alphaInit;
         this.learningRate = learningRate;
         this.numSamples = numSamples;
         this.includeMSE = includeMSE;
+        this.stepsDecay = stepsDecay;
+        decayPeriod = (int) Math.ceil((double) numSamples/decayGranularity);
+        this.decayCoeff = 1 - decayAmount; // ex.: if we decay by 1/16 every time, it's easier to multiply 
+        // the current learning rate by 15/16
     }
 
-//    @Override
+    @Override
+    public void open(Configuration parameters) throws Exception {
+        super.open(parameters);
+
+        iterationCounter = getRuntimeContext().getIntCounter("iteration counter");
+    }
+
+    //    @Override
 //    public void open(Configuration parameters) throws Exception {
 //        super.open(parameters);
 //
@@ -92,6 +104,10 @@ class MLRFitCoGroupFunction implements CoGroupFunction<Tuple2<Long, List<Double>
 
     @Override
     public void coGroup(Iterable<Tuple2<Long, List<Double>>> inputGroup, Iterable<Tuple2<Long, Double>> outputGroup, Collector<Tuple2<Long, List<Double>>> out) throws Exception {
+        iterationCounter.add(1);    // starts from 1
+        if (stepsDecay && iterationCounter.getLocalValuePrimitive()%decayPeriod == 0) {   // introduce a decay with given "granularity"
+            learningRate = learningRate* decayCoeff; // reduce the learning rate by a given amount
+        }
         for (Tuple2<Long, List<Double>> input : inputGroup) {
             for (Tuple2<Long, Double> output : outputGroup) {
                 if (alpha == null) {    // set the initial alpha to a zero vector of an appropriate length (input length + 1)

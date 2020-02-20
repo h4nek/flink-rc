@@ -47,8 +47,8 @@ public class IdentityTest {
         
         lm.streaming.LinearRegression lr = new lm.streaming.LinearRegression();
         
-        DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(integers, integersOut, null, 5, 
-                integerList.size(), false);
+        DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(integers, integersOut, null, 8.5, 
+                integerList.size(), false, true);
         alphas.printOnTaskManager("ALPHA");
         
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();

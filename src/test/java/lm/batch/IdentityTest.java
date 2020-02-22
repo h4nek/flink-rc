@@ -23,10 +23,6 @@ public class IdentityTest {
         env.setParallelism(1);
 
         List<Integer> integerList = IntStream.rangeClosed(1, 500).boxed().collect(Collectors.toList());
-//        List<Double> doubleIntegerList = new ArrayList<>();
-//        for (Integer integer : integerList) {
-//            doubleIntegerList.add(integer.doubleValue());
-//        }
         
         DataSet<Tuple2<Long, List<Double>>> integers = env.fromCollection(integerList).map(x -> {
             List<Double> y = new ArrayList<>();
@@ -47,8 +43,12 @@ public class IdentityTest {
         
         lm.streaming.LinearRegression lr = new lm.streaming.LinearRegression();
         
-        DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(integers, integersOut, null, 8.5, 
-                integerList.size(), false, true);
+        DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integers, integersOut, null, 8.5, 
+                integerList.size(), true, true);
+        
+        DataSet<Double> mse = alphasWithMSE.filter(x -> x.f0 == -1).map(x -> x.f1.get(0));
+        mse.printOnTaskManager("MSE Estimate: ");
+        DataSet<Tuple2<Long, List<Double>>> alphas = alphasWithMSE.filter(x -> x.f0 != -1);
         alphas.printOnTaskManager("ALPHA");
         
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();

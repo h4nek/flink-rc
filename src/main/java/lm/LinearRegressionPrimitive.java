@@ -1,4 +1,4 @@
-package lm.batch;
+package lm;
 
 import Jama.Matrix;
 import com.sun.javaws.exceptions.InvalidArgumentException;
@@ -10,10 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A general function computing the training phase (fitting) and the testing phase (predicting) of (multiple) linear regression.
- * A solution using Flinks' DataSets.
+ * A general class computing the training phase (fitting) and the testing phase (predicting) of (multiple) linear regression.
+ * A solution using primitive arrays (and Jama Matrix objects) in the background.
  */
-public class LinearRegression {
+public class LinearRegressionPrimitive {
     
     public enum TrainingMethod {
         PSEUDOINVERSE,

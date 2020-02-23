@@ -1,4 +1,4 @@
-package lm.streaming;
+package lm;
 
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.state.ListState;
@@ -18,10 +18,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A DataStream utility class that is used as an input for a Linear Model.
- * After the linear model is established using linear regression, the input stream can be used to predict some 
+ * A combined DataSet/DataStream class computing the training phase (fitting) and the testing phase (predicting) of 
+ * (multiple) linear regression.
+ * After the linear model is established using linear regression (training), an input stream can be used to predict some 
  * feature (output variable) based on the values of each input element.
- * Offline learning...
+ * 
+ * Fitting is realized using DataSets, while predicting is realized using DataStreams.
  * 
  * The input stream has to have elements with lists of the same length, otherwise an exception will be thrown.
  */
@@ -65,14 +67,14 @@ public class LinearRegression implements Serializable {
                                                    double learningRate, int numSamples, boolean includeMSE, 
                                                    boolean stepsDecay, double decayGranularity, double decayAmount) {
         return inputSet.coGroup(outputSet).where(0).equalTo(0).with(new MLRFitCoGroupFunction(
-                this, alphaInit, learningRate, numSamples, includeMSE, stepsDecay, decayGranularity, decayAmount));
+                alphaInit, learningRate, numSamples, includeMSE, stepsDecay, decayGranularity, decayAmount));
     }
     
 
     /**
      * Starts predicting an output based on the fitted model...
      * Predicts the dependent (scalar) variable from the independent (vector) variable using a single non-updateable 
-     * list of optimal alpha parameters. Such model can be trained using methods from {@link lm.batch.LinearRegression} class 
+     * list of optimal alpha parameters. Such model can be trained using methods from {@link LinearRegressionPrimitive} class 
      * or {@link LinearRegression} class.
      * @param alpha The List (vector) of optimal alpha parameters, computed beforehand.
      * @return

@@ -1,6 +1,7 @@
 package lm.batch;
 
-import lm.batch.ExampleOfflineUtilities;
+import lm.LinearRegression;
+import lm.LinearRegressionPrimitive;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -41,7 +42,7 @@ public class IdentityTest {
                 .map(x -> Tuple2.of(x.longValue(), 5 + x.doubleValue()*Math.sin(x)/500 + (Math.pow(x.doubleValue()/500, 2)))) // x*sin(x) ...
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         
-        lm.streaming.LinearRegression lr = new lm.streaming.LinearRegression();
+        LinearRegression lr = new LinearRegression();
         
         DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integers, integersOut, null, 8.5, 
                 integerList.size(), true, true);
@@ -54,7 +55,7 @@ public class IdentityTest {
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
         List<Double> Alpha = alphaList.get(alphaList.size() - 1);
         
-        DataSet<Tuple2<Long, Double>> results = lm.batch.LinearRegression.predict(integers, Alpha);
+        DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(integers, Alpha);
         
         
         results.print();

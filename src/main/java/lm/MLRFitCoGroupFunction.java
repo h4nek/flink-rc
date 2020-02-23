@@ -1,4 +1,4 @@
-package lm.streaming;
+package lm;
 
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.accumulators.IntCounter;
@@ -14,7 +14,6 @@ import java.util.List;
 
 class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>,
         Tuple2<Long, List<Double>>> implements ListCheckpointed<Double> {
-    private final LinearRegression linearRegression;
     private double learningRate;
     private List<Double> alpha;
     private int numSamples;
@@ -26,9 +25,8 @@ class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double
     private IntCounter iterationCounter;    // current iteration number (used for the learning rate decay)
 //    private ValueState<Double> MSEState;
 
-    MLRFitCoGroupFunction(LinearRegression linearRegression, List<Double> alphaInit, double learningRate, int numSamples,
+    MLRFitCoGroupFunction(List<Double> alphaInit, double learningRate, int numSamples,
                           boolean includeMSE, boolean stepsDecay, double decayGranularity, double decayAmount) {
-        this.linearRegression = linearRegression;
         this.alpha = alphaInit;
         this.learningRate = learningRate;
         this.numSamples = numSamples;

@@ -1,5 +1,7 @@
 package lm.batch;
 
+import lm.LinearRegression;
+import lm.LinearRegressionPrimitive;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
@@ -23,7 +25,7 @@ import java.util.stream.Collectors;
  */
 public class PM2Point5PollutionInArea {
     public static final String INPUT_FILE_PATH = "src/test/resources/pm2.5_pollution/transformed_input/PM2.5 for Seattle-Tacoma-Bellevue, WA Transformed.csv";
-    public static final double LEARNING_RATE = 0.001;
+    public static final double LEARNING_RATE = 0.004;   // 0.001 - without decay (MSE ~ 12.6)
 
 
     public static void main(String[] args) throws Exception {
@@ -79,9 +81,9 @@ public class PM2Point5PollutionInArea {
         outputSet.printOnTaskManager("OUTPUT"); //TEST
         
         
-        lm.streaming.LinearRegression lr = new lm.streaming.LinearRegression();
+        LinearRegression lr = new LinearRegression();
         DataSet<Tuple2<Long, List<Double>>> alphasAndMSEs = lr.fit(inputSet, outputSet, null, LEARNING_RATE,
-                dataSet.collect().size(), true);
+                dataSet.collect().size(), true, true);
         DataSet<Double> mse = alphasAndMSEs.filter(x -> x.f0 == -1).map(x -> x.f1.get(0));
         DataSet<Tuple2<Long, List<Double>>> alphas = alphasAndMSEs.filter(x -> x.f0 != -1);
         alphas.printOnTaskManager("ALPHA"); //TEST
@@ -89,7 +91,7 @@ public class PM2Point5PollutionInArea {
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
         List<Double> Alpha = alphaList.get(alphaList.size() - 1);
         
-        DataSet<Tuple2<Long, Double>> results = lm.batch.LinearRegression.predict(inputSet, Alpha);
+        DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(inputSet, Alpha);
         outputSet.join(results).where(0).equalTo(0)
                 .with((x, y) -> Tuple3.of(x.f0+1, x.f1, y.f1))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE, Types.DOUBLE))

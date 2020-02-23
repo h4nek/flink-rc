@@ -1,5 +1,7 @@
 package lm.batch;
 
+import lm.LinearRegression;
+import lm.LinearRegressionPrimitive;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -54,7 +56,7 @@ public class CO2EmissionsByNationExample {
         inputSet.printOnTaskManager("IN");  //TEST
         outputSet.printOnTaskManager("OUT");    //TEST
 
-        lm.streaming.LinearRegression lr = new lm.streaming.LinearRegression();
+        LinearRegression lr = new LinearRegression();
         DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(inputSet, outputSet, null, LEARNING_RATE, 
                 inputSet.collect().size(), false);
         alphas.printOnTaskManager("ALPHA"); //TEST
@@ -62,7 +64,7 @@ public class CO2EmissionsByNationExample {
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
         List<Double> Alpha = alphaList.get(alphaList.size() - 1);
 
-        DataSet<Tuple2<Long, Double>> results = lm.batch.LinearRegression.predict(inputSet, Alpha);
+        DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(inputSet, Alpha);
 
         indexedDataSet.join(results).where(0).equalTo(0)
                 .with((x,y) -> Tuple5.of(x.f0, x.f1.f0, x.f1.f1, x.f1.f2, y.f1))

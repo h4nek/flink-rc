@@ -1,5 +1,6 @@
 package lm.batch;
 
+import lm.LinearRegressionPrimitive;
 import lm.streaming.ExampleOnlineUtilities;
 import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -18,8 +19,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class ExampleOfflineUtilities {
     
@@ -80,7 +79,7 @@ public class ExampleOfflineUtilities {
         List<Double> mseTrend = new ArrayList<>();
         for (int i = 0; i < alphaList.size(); i++) {
             List<Double> curAlpha = alphaList.get(i);
-            DataSet<Tuple2<Long, Double>> predictions = lm.batch.LinearRegression.predict(inputSet, curAlpha);
+            DataSet<Tuple2<Long, Double>> predictions = LinearRegressionPrimitive.predict(inputSet, curAlpha);
             
             double mse = ExampleOfflineUtilities.computeMSE(predictions, outputSet).collect().get(alphaList.size() - 1);
             System.out.println(i + ". MSE: " + mse);    //TEST

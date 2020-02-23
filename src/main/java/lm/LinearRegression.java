@@ -23,7 +23,7 @@ import java.util.List;
  * After the linear model is established using linear regression (training), an input stream can be used to predict some 
  * feature (output variable) based on the values of each input element.
  * 
- * Fitting is realized using DataSets, while predicting is realized using DataStreams.
+ * Fitting is realized using DataSets (and gradient descent), while predicting is realized using DataStreams.
  * 
  * The input stream has to have elements with lists of the same length, otherwise an exception will be thrown.
  */
@@ -32,13 +32,13 @@ public class LinearRegression implements Serializable {
     /**
      * Create a linear model with default parameters. An initial alpha is set to a zero vector.
      */
-    public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
+    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                           DataSet<Tuple2<Long, Double>> outputSet, int numSamples) {
         return fit(inputSet, outputSet, null, .00001, numSamples, false);
     }
 
     /**
-     * Create a general linear model from training DataSets using Gradient Descent, without learning rate decay.
+     * Create a linear model from training DataSets using Gradient Descent, without learning rate decay.
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
@@ -48,7 +48,7 @@ public class LinearRegression implements Serializable {
     }
 
     /**
-     * A version with default decay values.
+     * Create a linear model from training DataSets using Gradient Descent. A version with default decay values.
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
@@ -59,7 +59,7 @@ public class LinearRegression implements Serializable {
     }
 
     /**
-     * Create a general linear model from training DataSets using Gradient Descent.
+     * Create a linear model from training DataSets using Gradient Descent.
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
@@ -72,7 +72,7 @@ public class LinearRegression implements Serializable {
     
 
     /**
-     * Starts predicting an output based on the fitted model...
+     * Starts predicting an output based on the fitted (MLR) model...
      * Predicts the dependent (scalar) variable from the independent (vector) variable using a single non-updateable 
      * list of optimal alpha parameters. Such model can be trained using methods from {@link LinearRegressionPrimitive} class 
      * or {@link LinearRegression} class.
@@ -105,63 +105,5 @@ public class LinearRegression implements Serializable {
             out.collect(Tuple2.of(input.f0, y_pred));
         }
     }
-
-    /**
-     * Separate and probably more effective implementation than the above <i>predict()</i>.
-     * Realizing polynomial regression of one variable.
-     * The function is of form: f(x) = alpha_0 + alpha_1*x + ... + alpha_n*x^n, where n = degree
-     * @param alphaStream
-     * @param degree
-     * @param alphaInit
-     * @return
-     * @throws InvalidArgumentException
-     */
-    public DataStream<Double> predictSimplePolynomial(DataStream<Tuple2<Long, List<Double>>> inputStream, 
-                                                      DataStream<List<Double>> alphaStream, int degree, 
-                                                      List<Double> alphaInit) 
-            throws InvalidArgumentException {
-        if (alphaInit.size() != degree + 1) {
-            throw new InvalidArgumentException(new String[] {"Degree + 1 must be the same as the length of alphaInit array!"});
-        }
-
-        return inputStream.connect(alphaStream).process(new CoProcessFunction<Tuple2<Long, List<Double>>, List<Double>, Double>() {
-            private ListState<Double> alphaState;
-            private Long timestamp;
-
-            @Override
-            public void open(Configuration parameters) throws Exception {
-                super.open(parameters);
-                alphaState = getRuntimeContext().getListState(new ListStateDescriptor<Double>(
-                        "alpha parameters", Double.class));
-                alphaState.update(alphaInit);
-                timestamp = Long.MIN_VALUE; //TODO Change to current watermark?
-            }
-
-            @Override
-            public void processElement1(Tuple2<Long, List<Double>> input, Context ctx, Collector<Double> out) throws Exception {
-                double val = 1;
-                double y_pred = 0;
-                List<Double> alpha = (List<Double>) alphaState.get();
-                List<Double> inputList = input.f1;
-
-                for (int i = 0; i <= degree; ++i) {
-                    y_pred += alpha.get(i)*val;
-                    val *= inputList.get(0);    // this way we don't have to compute the power from scratch every time
-                                                // in this simple version of polynomial regression, we expect the input 
-                                                // variable to be scalar
-                }
-
-                out.collect(y_pred);
-            }
-
-            @Override
-            public void processElement2(List<Double> alpha, Context ctx, Collector<Double> out) throws Exception {
-                if (ctx.timestamp() > timestamp) {
-                    alphaState.update(alpha);
-                    timestamp = ctx.timestamp();
-                }
-            }
-        });
-    }
-
+    
 }

@@ -26,19 +26,6 @@ class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double
     private IntCounter iterationCounter;    // current iteration number (used for the learning rate decay)
 //    private ValueState<Double> MSEState;
 
-
-    public double getMSE() {
-        
-        try {
-            return snapshotState(100, 120).get(0);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("State doesn't exist?");
-        }
-        return -1;
-    }
-
     MLRFitCoGroupFunction(LinearRegression linearRegression, List<Double> alphaInit, double learningRate, int numSamples,
                           boolean includeMSE, boolean stepsDecay, double decayGranularity, double decayAmount) {
         this.linearRegression = linearRegression;
@@ -160,7 +147,7 @@ class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double
 
         alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate/numSamples, gradient));
 //        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/
-//                numSamples, input));  // one liner
+//                numSamples, input));  // one-liner
         return alpha;
     }
 

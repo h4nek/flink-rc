@@ -26,48 +26,14 @@ import java.util.List;
  * The input stream has to have elements with lists of the same length, otherwise an exception will be thrown.
  */
 public class LinearRegression implements Serializable {
-//    private int inputLength = -1;   // length of each inputStream vector element
-    private static final int DELAY_THRESHOLD = 150000;
-//    private double MSE; 
-    private MLRFitCoGroupFunction MLRFitCoGroupFunction;
-
-    public double getMSE(List<Double> lastAlpha) {
-        System.out.println("last Alpha: " + lastAlpha);
-        if (MLRFitCoGroupFunction == null) {
-            System.out.println("BEFORE FIT");
-            return 0.0;
-        }
-        return MLRFitCoGroupFunction.getMSE(); // we need to return this after the fit
-    }
-
-    //    public int getInputLength() {
-//        return inputLength;
-//    }
-
-//    /**
-//     * Set the length of input to a value >= 0.
-//     * (Otherwise it will be determined from the first element of the inputStream.)
-//     * @param inputLength
-//     */
-//    public void setInputLength(int inputLength) {
-//        this.inputLength = inputLength;
-//    }
 
     /**
      * Create a linear model with default parameters. An initial alpha is set to a zero vector.
      */
     public DataSet<Tuple2<Long, List<Double>>> fitDefault(DataSet<Tuple2<Long, List<Double>>> inputSet,
-                                                          DataSet<Tuple2<Long, Double>> outputSet, int numSamples, 
-                                                          boolean includeMSE) {
-        return fit(inputSet, outputSet, null, .00001, numSamples, includeMSE);
+                                                          DataSet<Tuple2<Long, Double>> outputSet, int numSamples) {
+        return fit(inputSet, outputSet, null, .00001, numSamples, false);
     }
-    
-//    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, Double>> inputSet,
-//                                                   DataSet<Tuple2<Long, Double>> outputSet,
-//                                                   Double alphaInit,
-//                                                   double learningRate) {
-//        inputSet.map(x -> )
-//    }
 
     /**
      * Create a general linear model from training DataSets using Gradient Descent, without learning rate decay.
@@ -76,9 +42,6 @@ public class LinearRegression implements Serializable {
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
                                                    double learningRate, int numSamples, boolean includeMSE) {
-
-//        return inputSet.coGroup(outputSet).where(0).equalTo(0).with(new MLRFitCoGroupFunction(
-//                this, alphaInit, learningRate, numSamples, includeMSE, stepsDecay, 32));
         return fit(inputSet, outputSet, alphaInit, learningRate, numSamples, includeMSE, false, Double.NaN, Double.NaN);
     }
 
@@ -101,13 +64,6 @@ public class LinearRegression implements Serializable {
                                                    List<Double> alphaInit,
                                                    double learningRate, int numSamples, boolean includeMSE, 
                                                    boolean stepsDecay, double decayGranularity, double decayAmount) {
-//        MLRFitJoinFunction = new MLRFitJoinFunction(this, alphaInit, learningRate, numSamples, includeMSE);
-//        DataSet<Tuple2<Long, List<Double>>> alphas = inputSet.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
-//                .with(MLRFitJoinFunction);
-
-
-//        System.out.println("MSE estimate: " + getMSE(alphas.collect().get(0).f1));
-//        return alphas;
         return inputSet.coGroup(outputSet).where(0).equalTo(0).with(new MLRFitCoGroupFunction(
                 this, alphaInit, learningRate, numSamples, includeMSE, stepsDecay, decayGranularity, decayAmount));
     }

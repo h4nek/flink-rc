@@ -1,8 +1,9 @@
 package lm.streaming;
 
+import lm.LinearRegression;
 import lm.batch.ExampleOfflineUtilities;
-import lm.batch.LinearRegression.TrainingMethod;
-import org.apache.commons.io.FileUtils;
+import lm.LinearRegressionPrimitive;
+import lm.LinearRegressionPrimitive.TrainingMethod;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
@@ -14,7 +15,6 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,7 +29,7 @@ public class GlacierMeltdownExample {
     public static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
     private static final int SPLIT_SIZE = 35;  // is equal to the half of the number of records
     public static final double[] ALPHA_INIT = {1, 1, 1};
-    public static final double LEARNING_RATE = 0.0000001;
+    public static final double LEARNING_RATE = 0.000004;
     public static final String EXAMPLE_ABSOLUTE_DIR_PATH = System.getProperty("user.dir") + "/src/test/resources/glaciers";
     public static final String INPUTS_ABSOLUTE_DIR_PATH = System.getProperty("user.dir") + "/src/test/resources/glaciers/periodical_input/inputs_online";   // absolute path to the inputs directory
     public static final String INPUTS_PREFIX = "/input_";
@@ -39,16 +39,16 @@ public class GlacierMeltdownExample {
     private static List<Double> Alpha;
     
     public static void main(String[] args) throws Exception {
-//        training(null); // online LR
-//        testing();
+        training(null); // online LR
+        testing();
 
-        /* Clean the output directory from a previous run */
-        FileUtils.cleanDirectory(new File(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab"));
-
-        /* Online learning (GD) */
-        for (double learningRate : new double[]{0.0018}) {   // 0.0000004 -- originally ~ best
-            fitLRForMatlab(learningRate, TrainingMethod.GRADIENT_DESCENT);
-        }
+//        /* Clean the output directory from a previous run */
+//        FileUtils.cleanDirectory(new File(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab"));
+//
+//        /* Online learning (GD) */
+//        for (double learningRate : new double[]{0.0018}) {   // 0.0000004 -- originally ~ best
+//            fitLRForMatlab(learningRate, TrainingMethod.GRADIENT_DESCENT);
+//        }
         
         /* Offline learning (PINV)*/ //-- Seems to be working well
 //        for (double regularizationFactor : new double[]{0, 0.000005, 0.00006, 0.0001, 0.0004, 0.001}) {
@@ -81,7 +81,7 @@ public class GlacierMeltdownExample {
         LinearRegression lr = new LinearRegression();
         /* Training phase - compute the Alpha parameters */
         if (trainingMethod == TrainingMethod.PSEUDOINVERSE) {   // offline LR
-            Alpha = lm.batch.LinearRegression.fit(glaciersInput, glaciersOutput,
+            Alpha = LinearRegressionPrimitive.fit(glaciersInput, glaciersOutput,
                     TrainingMethod.PSEUDOINVERSE, 1, learningRate);
         }
         else {  // online LR using GD
@@ -114,7 +114,7 @@ public class GlacierMeltdownExample {
         }
 
         /* Testing phase - use the input values and the Alpha vector to compute the predictions */
-        DataSet<Tuple2<Long, Double>> predictions = lm.batch.LinearRegression.predict(glaciersInput, Alpha);
+        DataSet<Tuple2<Long, Double>> predictions = LinearRegressionPrimitive.predict(glaciersInput, Alpha);
 
         predictions.printOnTaskManager("PREDICTION");
         System.out.println("\n\n\n\n-------------------------------------------------");
@@ -124,7 +124,7 @@ public class GlacierMeltdownExample {
         
         /* Save the inputs, predictions and outputs to a CSV */
         String learningType = "";
-        if (trainingMethod == lm.batch.LinearRegression.TrainingMethod.PSEUDOINVERSE) {
+        if (trainingMethod == LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE) {
             learningType = "offline";
         }
         else if (trainingMethod == TrainingMethod.GRADIENT_DESCENT) {
@@ -159,7 +159,6 @@ public class GlacierMeltdownExample {
         /* 1. Read the input */
         DataSet<Tuple3<Long, Double, Double>> glaciers = env.readCsvFile(inputFilePath)
                 .ignoreInvalidLines()
-                //.includeFields("111")
                 .types(Long.class, Double.class, Double.class);
 
         /* Transform the data */
@@ -178,10 +177,10 @@ public class GlacierMeltdownExample {
         LinearRegression mlr = new LinearRegression();
         /* 2. Training phase - compute the Alpha parameters */
         if (trainingMethod == TrainingMethod.PSEUDOINVERSE) {   // offline LR
-            Alpha = lm.batch.LinearRegression.fit(glaciersFirstHalfInput, glaciersFirstHalfOutput, 
+            Alpha = LinearRegressionPrimitive.fit(glaciersFirstHalfInput, glaciersFirstHalfOutput, 
                     TrainingMethod.PSEUDOINVERSE, 2, LEARNING_RATE);
         }
-        else {  // online LR using GD
+        else {  // online LR using SGD -- default
             DataSet<Tuple2<Long, List<Double>>> alphas = mlr.fit(glaciersFirstHalfInput, glaciersFirstHalfOutput, 
                     Arrays.asList(ArrayUtils.toObject(ALPHA_INIT)), LEARNING_RATE, SPLIT_SIZE, false);
 
@@ -231,7 +230,7 @@ public class GlacierMeltdownExample {
         
         /* 6. Save the inputs, predictions and outputs to a CSV */
 //        predictions.writeAsCsv(System.getProperty("user.dir") + "/src/test/resources/glaciers/output/predictions_online",
-//                FileSystem.WriteMode.OVERWRITE);
+//                FileSystem.WriteMode.OVERWRITE);  // doesn't work for some reason
         
         ExampleOnlineUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/alpha_parameters.csv", Alpha);
         
@@ -243,7 +242,7 @@ public class GlacierMeltdownExample {
 //                .withBucketAssigner(new DateTimeBucketAssigner<>("yyyy-MM-dd--HH-mm-ss")).build();
 //        predictions.addSink(sink);
 //        
-//        mse.writeAsText(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/mse_online.csv");
+        mse.writeAsText(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/mse_online.csv", FileSystem.WriteMode.OVERWRITE);
 //        predictions.writeUsingOutputFormat();
 
         see.execute("LM - Testing phase");

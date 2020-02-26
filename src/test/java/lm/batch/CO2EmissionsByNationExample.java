@@ -87,7 +87,8 @@ public class CO2EmissionsByNationExample {
 //        DataSet<Double> minMse = ExampleOfflineUtilities.computeMSE(minResults, outputSet);
 //        System.out.println(minMse.collect().get(alphaList.size() - 1));
 
-        ExampleOfflineUtilities.plotLRFit(inputSet, outputSet, results, 0);
+        ExampleOfflineUtilities utilities = new ExampleOfflineUtilities();
+        utilities.plotLRFit(inputSet, outputSet, results, 0);
     }
 
     /**

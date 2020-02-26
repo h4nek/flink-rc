@@ -146,7 +146,8 @@ public class GlacierMeltdownExample {
         ExampleOnlineUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + 
                 learningType + "_" + learningRate + ".csv", mseLast);
 
-        ExampleOfflineUtilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
+        ExampleOfflineUtilities utilities = new ExampleOfflineUtilities();
+        utilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
         
 //        env.execute("Glacier Meltdown Example for Matlab");
     }

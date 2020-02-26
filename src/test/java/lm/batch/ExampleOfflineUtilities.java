@@ -11,6 +11,7 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.Counter;
 import org.math.plot.Plot2DPanel;
+import org.math.plot.PlotPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -119,8 +120,11 @@ public class ExampleOfflineUtilities {
         LINE,
         POINTS
     }
+    
+    private JFrame frame; // keeps the current state of the plot
 
-    public static void plotLRFit(DataSet<Tuple2<Long, List<Double>>> inputSet, DataSet<Tuple2<Long, Double>> outputSet,
+
+    public void plotLRFit(DataSet<Tuple2<Long, List<Double>>> inputSet, DataSet<Tuple2<Long, Double>> outputSet,
                                  DataSet<Tuple2<Long, Double>> predictions, int inputIndex) throws Exception {
         plotLRFit(inputSet, outputSet, predictions, inputIndex, 0, "x", "y", "Linear Regression", 
                 PlotType.POINTS);
@@ -133,7 +137,7 @@ public class ExampleOfflineUtilities {
      * @param inputIndex Index of the input variable that we want to plot (in the Doubles List).
      * @throws Exception
      */
-    public static void plotLRFit(DataSet<Tuple2<Long, List<Double>>> inputSet, DataSet<Tuple2<Long, Double>> outputSet,
+    public void plotLRFit(DataSet<Tuple2<Long, List<Double>>> inputSet, DataSet<Tuple2<Long, Double>> outputSet,
                                  DataSet<Tuple2<Long, Double>> predictions, int inputIndex, int shiftData, String xlabel, String ylabel,
                                  String title, PlotType plotType)
             throws Exception {
@@ -167,15 +171,46 @@ public class ExampleOfflineUtilities {
             plot.addLinePlot("original output", inputArr, outputArr);
         }
         plot.addLinePlot("LR fit", Color.RED, inputArr, predArr);
+        plot.addLegend(PlotPanel.NORTH);
         plot.getAxis(0).setLabelText(xlabel);
         plot.getAxis(1).setLabelText(ylabel);
 
         // put the PlotPanel in a JFrame, as a JPanel
-        JFrame frame = new JFrame(title);
+        frame = new JFrame(title);
         frame.setContentPane(plot);
         frame.setMinimumSize(new Dimension(800, 600));
         frame.toFront();
         frame.setVisible(true);
+    }
+    
+    public void addLRFitToPlot(DataSet<Tuple2<Long, List<Double>>> inputSet, DataSet<Tuple2<Long, Double>> predictions,
+                               int inputIndex) throws Exception {
+        addLRFitToPlot(inputSet, predictions, inputIndex, 0, "Pseudoinverse LR Fit", Color.GREEN);
+    }
+
+    /**
+     * Add a LR fit to the existing plot (stored as a field of this class).
+     */
+    public void addLRFitToPlot(DataSet<Tuple2<Long, List<Double>>> inputSet, DataSet<Tuple2<Long, Double>> predictions, 
+                               int inputIndex, int shiftData, String name, Color color) throws Exception {
+        List<Tuple2<Long, List<Double>>> inputList = inputSet.collect();
+        List<Tuple2<Long, Double>> predictionsList = predictions.collect();
+        double[] inputArr = new double[inputList.size()];
+        double[] inputPredArr = new double[predictionsList.size()];
+        double[] predArr = new double[predictionsList.size()];
+
+        for (int i = 0; i < inputList.size(); ++i) {
+            Tuple2<Long, List<Double>> input = inputList.get(i);
+            Tuple2<Long, Double> prediction = predictionsList.get(i);
+
+            inputArr[i] = input.f1.get(inputIndex);
+
+            inputPredArr[i] = input.f1.get(inputIndex) + shiftData;
+            predArr[i] = prediction.f1;
+        }
+        Plot2DPanel plot = (Plot2DPanel) frame.getContentPane();
+        plot.addLinePlot(name, color, inputArr, predArr);
+        frame.setContentPane(plot); // the JFrame is automatically refreshed
     }
     
     public static void plotLearningCurve(List<Double> mseTrend) {

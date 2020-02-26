@@ -103,7 +103,8 @@ public class PM2Point5PollutionInArea {
 
 
         /*Graph the original data & results*/
-        ExampleOfflineUtilities.plotLRFit(inputSet, outputSet, results, 0, 1, "Day", 
+        ExampleOfflineUtilities utilities = new ExampleOfflineUtilities();
+        utilities.plotLRFit(inputSet, outputSet, results, 0, 1, "Day", 
                 "PM2.5 Pollution", "PM2.5 Pollution in Seattle", ExampleOfflineUtilities.PlotType.LINE);
 
 //        System.out.println("MSE estimate: " + lr.getMSE(Alpha));

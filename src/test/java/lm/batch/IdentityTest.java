@@ -72,10 +72,16 @@ public class IdentityTest {
 
         ExampleOfflineUtilities.computeMSE(results, integersOut).print();
 //        System.out.println("MSE estimate:" + lr.getMSE());
-        
-        ExampleOfflineUtilities.plotLRFit(integers, integersOut, results, 0, 0, "x", "y", 
+
+        ExampleOfflineUtilities utils = new ExampleOfflineUtilities();
+        utils.plotLRFit(integers, integersOut, results, 0, 0, "x", "y", 
                 "Identity Test", ExampleOfflineUtilities.PlotType.POINTS);
-        
+
+        /* Add the offline (pseudoinverse) fitting for comparison */
+        Alpha = LinearRegressionPrimitive.fit(integers, integersOut, TrainingMethod.PSEUDOINVERSE, 1, 0.001);
+        results = LinearRegressionPrimitive.predict(integers, Alpha);
+        utils.addLRFitToPlot(integers, results, 0);
+
 //        List<Double> mseTrend = ExampleOfflineUtilities.computeMSETrend(alphaList, integers, integersOut);
         
 //        ExampleOfflineUtilities.plotLearningCurve(mseTrend);

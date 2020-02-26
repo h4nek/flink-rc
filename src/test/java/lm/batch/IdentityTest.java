@@ -70,7 +70,7 @@ public class IdentityTest {
         
         results.print();
 
-        ExampleOfflineUtilities.computeMSE(results, integersOut).print();
+//        DataSet<Double> mse = ExampleOfflineUtilities.computeMSE(results, integersOut);
 //        System.out.println("MSE estimate:" + lr.getMSE());
 
         ExampleOfflineUtilities utils = new ExampleOfflineUtilities();
@@ -79,8 +79,12 @@ public class IdentityTest {
 
         /* Add the offline (pseudoinverse) fitting for comparison */
         Alpha = LinearRegressionPrimitive.fit(integers, integersOut, TrainingMethod.PSEUDOINVERSE, 1, 0.001);
-        results = LinearRegressionPrimitive.predict(integers, Alpha);
-        utils.addLRFitToPlot(integers, results, 0);
+        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integers, Alpha);
+        utils.addLRFitToPlot(integers, resultsOffline, 0);
+        ExampleOfflineUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, integersOut);
+//        Double mseOffline = ExampleOfflineUtilities.computeMSE(results, integersOut).collect().get(NUM_SAMPLES - 1);
+//        System.out.println("MSE offline: " + mseOffline);
+//        System.out.println("MSE online:  " + mse.collect().get(NUM_SAMPLES - 1));
 
 //        List<Double> mseTrend = ExampleOfflineUtilities.computeMSETrend(alphaList, integers, integersOut);
         

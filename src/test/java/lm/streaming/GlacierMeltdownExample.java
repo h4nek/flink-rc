@@ -39,16 +39,16 @@ public class GlacierMeltdownExample {
     private static List<Double> Alpha;
     
     public static void main(String[] args) throws Exception {
-        training(null); // online LR
-        testing();
+//        training(null); // online LR
+//        testing();
 
 //        /* Clean the output directory from a previous run */
 //        FileUtils.cleanDirectory(new File(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab"));
 //
-//        /* Online learning (GD) */
-//        for (double learningRate : new double[]{0.0018}) {   // 0.0000004 -- originally ~ best
-//            fitLRForMatlab(learningRate, TrainingMethod.GRADIENT_DESCENT);
-//        }
+        /* Online learning (GD) */
+        for (double learningRate : new double[]{0.0018}) {   // 0.0000004 -- originally ~ best
+            fitLRForMatlab(learningRate, TrainingMethod.GRADIENT_DESCENT);
+        }
         
         /* Offline learning (PINV)*/ //-- Seems to be working well
 //        for (double regularizationFactor : new double[]{0, 0.000005, 0.00006, 0.0001, 0.0004, 0.001}) {
@@ -148,6 +148,14 @@ public class GlacierMeltdownExample {
 
         ExampleOfflineUtilities utilities = new ExampleOfflineUtilities();
         utilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
+        
+        /* Adding offline (pseudoinverse) fitting for comparison */
+        Alpha = LinearRegressionPrimitive.fit(glaciersInput, glaciersOutput,
+                TrainingMethod.PSEUDOINVERSE, 1, learningRate);
+        DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInput, Alpha);
+        utilities.addLRFitToPlot(glaciersInput, predictionsOffline, 0);
+        
+        ExampleOfflineUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutput);
         
 //        env.execute("Glacier Meltdown Example for Matlab");
     }

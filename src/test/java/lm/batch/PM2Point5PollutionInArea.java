@@ -3,6 +3,7 @@ package lm.batch;
 import lm.LinearRegression;
 import lm.LinearRegressionPrimitive;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -106,6 +107,18 @@ public class PM2Point5PollutionInArea {
         ExampleOfflineUtilities utilities = new ExampleOfflineUtilities();
         utilities.plotLRFit(inputSet, outputSet, results, 0, 1, "Day", 
                 "PM2.5 Pollution", "PM2.5 Pollution in Seattle", ExampleOfflineUtilities.PlotType.LINE);
+
+        /* Adding offline (pseudoinverse) fitting for comparison */
+        Alpha = LinearRegressionPrimitive.fit(inputSet, outputSet, LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, 
+                4);
+        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSet, Alpha);
+        resultsOffline.join(outputSet).where(0).equalTo(0).projectFirst(0, 1).projectSecond(1)
+                .printOnTaskManager("OFFLINE PREDS AND OUTS");
+        utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
+
+        ExampleOfflineUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline.map(x -> Tuple2.of(x.f0 - 1, x.f1))
+                        .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)), 
+                results, outputSet);
 
 //        System.out.println("MSE estimate: " + lr.getMSE(Alpha));
 //        env.execute();

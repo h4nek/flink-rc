@@ -35,6 +35,16 @@ public class ExampleOfflineUtilities {
         }
         writer.close();
     }
+    
+    public static void computeAndPrintOfflineOnlineMSE(DataSet<Tuple2<Long, Double>> predictionsOffline, 
+                                                       DataSet<Tuple2<Long, Double>> predictionsOnline,
+                                                       DataSet<Tuple2<Long, Double>> outputSet) throws Exception {
+        List<Double> mseOfflineList = computeMSE(predictionsOffline, outputSet).collect();
+        List<Double> mseOnlineList = computeMSE(predictionsOnline, outputSet).collect();
+
+        System.out.println("MSE offline: " + mseOfflineList.get(mseOfflineList.size() - 1));
+        System.out.println("MSE online:  " + mseOnlineList.get(mseOnlineList.size() - 1));
+    }
 
     public static DataSet<Double> computeMSE(DataSet<Tuple2<Long, Double>> predictions, DataSet<Tuple2<Long, Double>> outputSet) {
 

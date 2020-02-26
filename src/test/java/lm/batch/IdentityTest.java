@@ -12,18 +12,21 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
+import lm.LinearRegressionPrimitive.TrainingMethod;
 /**
  * Testing GD on the simplest dataset - representing an identity function (f(x) = x).
  * We chose integers from 1 to 500.
  * Adding some randomness and complexity to the simple function with alternative dataset outputs.
  */
 public class IdentityTest {
+    private static final int NUM_SAMPLES = 500;
+    private static TrainingMethod trainingMethod = TrainingMethod.GRADIENT_DESCENT;
+    
     public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment();
         env.setParallelism(1);
 
-        List<Integer> integerList = IntStream.rangeClosed(1, 500).boxed().collect(Collectors.toList());
+        List<Integer> integerList = IntStream.rangeClosed(1, NUM_SAMPLES).boxed().collect(Collectors.toList());
         
         DataSet<Tuple2<Long, List<Double>>> integers = env.fromCollection(integerList).map(x -> {
             List<Double> y = new ArrayList<>();
@@ -41,19 +44,26 @@ public class IdentityTest {
 //                        Math.pow(x.doubleValue(), 2) + Math.pow(x.doubleValue(), 1))) // ~ x^3
                 .map(x -> Tuple2.of(x.longValue(), 5 + x.doubleValue()*Math.sin(x)/500 + (Math.pow(x.doubleValue()/500, 2)))) // x*sin(x) ...
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+
+        List<Double> Alpha;
+        if (trainingMethod == TrainingMethod.PSEUDOINVERSE) {
+            Alpha = LinearRegressionPrimitive.fit(integers, integersOut, TrainingMethod.PSEUDOINVERSE, 1, 0.001);
+        }
+        else {  //default -- online with SGD
+            LinearRegression lr = new LinearRegression();
+
+            DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integers, integersOut, null, 8.5,
+                    integerList.size(), true, true);
+
+            DataSet<Double> mse = alphasWithMSE.filter(x -> x.f0 == -1).map(x -> x.f1.get(0));
+            mse.printOnTaskManager("MSE Estimate: ");
+            DataSet<Tuple2<Long, List<Double>>> alphas = alphasWithMSE.filter(x -> x.f0 != -1);
+            alphas.printOnTaskManager("ALPHA");
+
+            List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
+            Alpha = alphaList.get(alphaList.size() - 1);
+        }
         
-        LinearRegression lr = new LinearRegression();
-        
-        DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integers, integersOut, null, 8.5, 
-                integerList.size(), true, true);
-        
-        DataSet<Double> mse = alphasWithMSE.filter(x -> x.f0 == -1).map(x -> x.f1.get(0));
-        mse.printOnTaskManager("MSE Estimate: ");
-        DataSet<Tuple2<Long, List<Double>>> alphas = alphasWithMSE.filter(x -> x.f0 != -1);
-        alphas.printOnTaskManager("ALPHA");
-        
-        List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
-        List<Double> Alpha = alphaList.get(alphaList.size() - 1);
         
         DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(integers, Alpha);
         

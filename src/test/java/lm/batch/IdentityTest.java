@@ -20,7 +20,6 @@ import lm.LinearRegressionPrimitive.TrainingMethod;
  */
 public class IdentityTest {
     private static final int NUM_SAMPLES = 500;
-    private static TrainingMethod trainingMethod = TrainingMethod.GRADIENT_DESCENT;
     
     public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment();
@@ -46,31 +45,20 @@ public class IdentityTest {
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
 
         List<Double> Alpha;
-        if (trainingMethod == TrainingMethod.PSEUDOINVERSE) {
-            Alpha = LinearRegressionPrimitive.fit(integers, integersOut, TrainingMethod.PSEUDOINVERSE, 1, 0.001);
-        }
-        else {  //default -- online with SGD
-            LinearRegression lr = new LinearRegression();
+        LinearRegression lr = new LinearRegression();
 
-            DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integers, integersOut, null, 8.5,
-                    integerList.size(), true, true);
+        DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integers, integersOut, null, 8.5,
+                integerList.size(), true, true);
 
-            DataSet<Double> mse = alphasWithMSE.filter(x -> x.f0 == -1).map(x -> x.f1.get(0));
-            mse.printOnTaskManager("MSE Estimate: ");
-            DataSet<Tuple2<Long, List<Double>>> alphas = alphasWithMSE.filter(x -> x.f0 != -1);
-            alphas.printOnTaskManager("ALPHA");
+        DataSet<Double> mse = alphasWithMSE.filter(x -> x.f0 == -1).map(x -> x.f1.get(0));
+        mse.printOnTaskManager("MSE Estimate: ");
+        DataSet<Tuple2<Long, List<Double>>> alphas = alphasWithMSE.filter(x -> x.f0 != -1);
+        alphas.printOnTaskManager("ALPHA");
 
-            List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
-            Alpha = alphaList.get(alphaList.size() - 1);
-            
-            /* Plotting Alpha Training */
-            ExampleBatchUtilities.plotAllAlphas(alphaList);
-        }
-        
+        List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
+        Alpha = alphaList.get(alphaList.size() - 1);
         
         DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(integers, Alpha);
-        
-        
         results.print();
 
 //        DataSet<Double> mse = ExampleOfflineUtilities.computeMSE(results, integersOut);
@@ -85,6 +73,7 @@ public class IdentityTest {
         DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integers, Alpha);
         utils.addLRFitToPlot(integers, resultsOffline, 0);
         ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, integersOut);
+        ExampleBatchUtilities.plotAllAlphas(alphaList); // Plotting Alpha Training
 //        Double mseOffline = ExampleOfflineUtilities.computeMSE(results, integersOut).collect().get(NUM_SAMPLES - 1);
 //        System.out.println("MSE offline: " + mseOffline);
 //        System.out.println("MSE online:  " + mse.collect().get(NUM_SAMPLES - 1));

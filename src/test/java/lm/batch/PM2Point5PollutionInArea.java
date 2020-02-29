@@ -91,6 +91,9 @@ public class PM2Point5PollutionInArea {
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
         List<Double> Alpha = alphaList.get(alphaList.size() - 1);
         
+        /* Plotting Alpha training trend */
+        ExampleBatchUtilities.plotAllAlphas(alphaList);
+        
         DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(inputSet, Alpha);
         outputSet.join(results).where(0).equalTo(0)
                 .with((x, y) -> Tuple3.of(x.f0+1, x.f1, y.f1))

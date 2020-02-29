@@ -243,6 +243,43 @@ public class ExampleBatchUtilities {
         frame.toFront();
         frame.setVisible(true);
     }
+    
+    public static void plotAlphaParameter(List<Double> alphaInTime, String suffix) {
+        double[] alphaArr = new double[alphaInTime.size()];
+        for (int i = 0; i < alphaInTime.size(); i++) {
+            alphaArr[i] = alphaInTime.get(i);
+        }
+
+        // create your PlotPanel (you can use it as a JPanel)
+        Plot2DPanel plot = new Plot2DPanel();
+        // add line plot to the PlotPanel
+        plot.addLinePlot("Alpha" + suffix + " Trend", alphaArr);
+        plot.getAxis(0).setLabelText("Iteration");
+        plot.getAxis(1).setLabelText("Alpha " + suffix);
+
+        // put the PlotPanel in a JFrame, as a JPanel
+        JFrame frame = new JFrame("Alpha " + suffix + " parameter training");
+        frame.setContentPane(plot);
+        frame.setMinimumSize(new Dimension(800, 600));
+        frame.toFront();
+        frame.setVisible(true);
+    }
+
+    /**
+     * Plot training trend of each coordinate of the Alpha vector 
+     * Default suffix (0-based index) will be used for individual coordinates.
+     * @param alphaList
+     */
+    public static void plotAllAlphas(List<List<Double>> alphaList) {
+        List<Double> alphaInTime = new ArrayList<>();
+        for (int j = 0; j < alphaList.get(0).size(); ++j) {  // iterate over all alpha values from i-th step
+            for (int i = 0; i < alphaList.size(); ++i) {    // iterate over alphas from all training steps
+                alphaInTime.add(alphaList.get(i).get(j));
+            }
+            ExampleBatchUtilities.plotAlphaParameter(alphaInTime, "" + j);
+            alphaInTime.clear();
+        }
+    }
 
     /**
      * Index the elements of the dataset/datastream.

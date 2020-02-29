@@ -62,6 +62,9 @@ public class IdentityTest {
 
             List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
             Alpha = alphaList.get(alphaList.size() - 1);
+            
+            /* Plotting Alpha Training */
+            ExampleBatchUtilities.plotAllAlphas(alphaList);
         }
         
         

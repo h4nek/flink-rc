@@ -8,7 +8,7 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple5;
-import lm.batch.ExampleOfflineUtilities.*;
+import lm.batch.ExampleBatchUtilities.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +55,7 @@ public class ExampleTemplate {
                 .returns(Types.TUPLE(Types.LONG, Types.LONG, Types.STRING, Types.DOUBLE, Types.DOUBLE))
                 .printOnTaskManager("PREDS");
         
-        DataSet<Double> mse = ExampleOfflineUtilities.computeMSE(results, outputSet);
+        DataSet<Double> mse = ExampleBatchUtilities.computeMSE(results, outputSet);
         mse.printOnTaskManager("MSE");
         
         env.execute();

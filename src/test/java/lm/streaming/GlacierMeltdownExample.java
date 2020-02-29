@@ -1,7 +1,7 @@
 package lm.streaming;
 
 import lm.LinearRegression;
-import lm.batch.ExampleOfflineUtilities;
+import lm.batch.ExampleBatchUtilities;
 import lm.LinearRegressionPrimitive;
 import lm.LinearRegressionPrimitive.TrainingMethod;
 import org.apache.commons.lang3.ArrayUtils;
@@ -120,7 +120,7 @@ public class GlacierMeltdownExample {
         System.out.println("\n\n\n\n-------------------------------------------------");
 //        outputStream.print("REAL JO");
 
-        DataSet<Double> mse = ExampleOfflineUtilities.computeMSE(predictions, glaciersOutput); //ExampleOnlineUtilities.computeMSE(predictions, glaciersOutput);
+        DataSet<Double> mse = ExampleBatchUtilities.computeMSE(predictions, glaciersOutput); //ExampleOnlineUtilities.computeMSE(predictions, glaciersOutput);
         
         /* Save the inputs, predictions and outputs to a CSV */
         String learningType = "";
@@ -131,7 +131,7 @@ public class GlacierMeltdownExample {
             learningType = "online";
         }
         
-        ExampleOnlineUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/alpha_parameters_" + 
+        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/alpha_parameters_" + 
                 learningType + "_" + learningRate + ".csv", Alpha);
 
         predictions.writeAsCsv(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/predictions_" +
@@ -143,10 +143,10 @@ public class GlacierMeltdownExample {
 
         List<Double> mseLast = new ArrayList<>();
         mseLast.add(mseList.get(mseList.size() - 1));
-        ExampleOnlineUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + 
+        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + 
                 learningType + "_" + learningRate + ".csv", mseLast);
 
-        ExampleOfflineUtilities utilities = new ExampleOfflineUtilities();
+        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
         utilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
         
         /* Adding offline (pseudoinverse) fitting for comparison */
@@ -155,7 +155,7 @@ public class GlacierMeltdownExample {
         DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInput, Alpha);
         utilities.addLRFitToPlot(glaciersInput, predictionsOffline, 0);
         
-        ExampleOfflineUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutput);
+        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutput);
         
 //        env.execute("Glacier Meltdown Example for Matlab");
     }
@@ -198,14 +198,14 @@ public class GlacierMeltdownExample {
             Alpha = alphaList.get(alphaList.size() - 1);
         }
 
-        System.out.println(ExampleOnlineUtilities.listToString(Alpha)); // Check the optimal Alpha value
+        System.out.println(ExampleStreamingUtilities.listToString(Alpha)); // Check the optimal Alpha value
 
         /* 3. Periodically output the 2nd part of the input DataSet and the output DataSet into another file */
         List<Tuple2<Long, List<Double>>> inputsList = glaciersSecondHalfInput.collect();
         List<Tuple2<Long, Double>> outputsList = glaciersSecondHalfOutput.collect();
 
-        ExampleOnlineUtilities.writeDataPeriodicallyMultithreaded(inputsList, INPUTS_ABSOLUTE_DIR_PATH, INPUTS_PREFIX);
-        ExampleOnlineUtilities.writeDataPeriodicallyMultithreaded(outputsList, OUTPUTS_ABSOLUTE_DIR_PATH, OUTPUTS_PREFIX);
+        ExampleStreamingUtilities.writeDataPeriodicallyMultithreaded(inputsList, INPUTS_ABSOLUTE_DIR_PATH, INPUTS_PREFIX);
+        ExampleStreamingUtilities.writeDataPeriodicallyMultithreaded(outputsList, OUTPUTS_ABSOLUTE_DIR_PATH, OUTPUTS_PREFIX);
 
     }
     
@@ -216,10 +216,10 @@ public class GlacierMeltdownExample {
         see.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
         /* 4. Read the data incoming periodically "online" into a DataStream */
-        DataStream<Tuple2<Long, List<Double>>> inputStream = ExampleOnlineUtilities.readCsvInput(see, 
+        DataStream<Tuple2<Long, List<Double>>> inputStream = ExampleStreamingUtilities.readCsvInput(see, 
                 INPUTS_ABSOLUTE_DIR_PATH, 2);
 
-        DataStream<Tuple2<Long, Double>> outputStream = ExampleOnlineUtilities.readCsvOutput(see, OUTPUTS_ABSOLUTE_DIR_PATH);
+        DataStream<Tuple2<Long, Double>> outputStream = ExampleStreamingUtilities.readCsvOutput(see, OUTPUTS_ABSOLUTE_DIR_PATH);
 
 //        inputStream.print("Read input");
 //        outputStream.print("Read output");
@@ -233,7 +233,7 @@ public class GlacierMeltdownExample {
 //        predictions.print("PREDICTION");
 //        outputStream.print("REAL JO");
 
-        DataStream<Double> mse = ExampleOnlineUtilities.computeMSE(predictions, outputStream);
+        DataStream<Double> mse = ExampleStreamingUtilities.computeMSE(predictions, outputStream);
         
         mse.print("MSE");
         
@@ -241,9 +241,9 @@ public class GlacierMeltdownExample {
 //        predictions.writeAsCsv(System.getProperty("user.dir") + "/src/test/resources/glaciers/output/predictions_online",
 //                FileSystem.WriteMode.OVERWRITE);  // doesn't work for some reason
         
-        ExampleOnlineUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/alpha_parameters.csv", Alpha);
+        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/alpha_parameters.csv", Alpha);
         
-        ExampleOnlineUtilities.writeStreamToBucketedFileSink(EXAMPLE_ABSOLUTE_DIR_PATH +
+        ExampleStreamingUtilities.writeStreamToBucketedFileSink(EXAMPLE_ABSOLUTE_DIR_PATH +
                 "/output/predictions_online", predictions);
         
 //        StreamingFileSink sink = StreamingFileSink.forRowFormat(new Path(EXAMPLE_ABSOLUTE_DIR_PATH + 

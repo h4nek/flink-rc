@@ -3,7 +3,6 @@ package lm.batch;
 import lm.LinearRegression;
 import lm.LinearRegressionPrimitive;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -48,7 +47,7 @@ public class PM2Point5PollutionInArea {
                     return list;
                 }).returns(Types.LIST(Types.DOUBLE))
                 .filter(Objects::nonNull) // skip the header (and potentially any other invalid line)
-                .map(new ExampleOfflineUtilities.IndicesMapper<>());
+                .map(new ExampleBatchUtilities.IndicesMapper<>());
         dataSet.printOnTaskManager("DATA"); //TEST
         
         /*Predicting the average PM2.5*/
@@ -98,15 +97,15 @@ public class PM2Point5PollutionInArea {
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE, Types.DOUBLE))
                 .printOnTaskManager("PREDS");
 
-        DataSet<Double> mse2 = ExampleOfflineUtilities.computeMSE(results, outputSet);
+        DataSet<Double> mse2 = ExampleBatchUtilities.computeMSE(results, outputSet);
         System.out.println("final MSE: " + mse2.collect().get(alphaList.size() - 1));
         System.out.println("MSE estimate: " + mse.collect().get(alphaList.size() - 1));
 
 
         /*Graph the original data & results*/
-        ExampleOfflineUtilities utilities = new ExampleOfflineUtilities();
+        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
         utilities.plotLRFit(inputSet, outputSet, results, 0, 1, "Day", 
-                "PM2.5 Pollution", "PM2.5 Pollution in Seattle", ExampleOfflineUtilities.PlotType.LINE);
+                "PM2.5 Pollution", "PM2.5 Pollution in Seattle", ExampleBatchUtilities.PlotType.LINE);
 
         /* Adding offline (pseudoinverse) fitting for comparison */
         Alpha = LinearRegressionPrimitive.fit(inputSet, outputSet, LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, 
@@ -116,7 +115,7 @@ public class PM2Point5PollutionInArea {
                 .printOnTaskManager("OFFLINE PREDS AND OUTS");
         utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
 
-        ExampleOfflineUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline.map(x -> Tuple2.of(x.f0 - 1, x.f1))
+        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline.map(x -> Tuple2.of(x.f0 - 1, x.f1))
                         .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)), 
                 results, outputSet);
 
@@ -183,7 +182,7 @@ public class PM2Point5PollutionInArea {
             for (int i = 1; i <= siteIDs.size(); i++) {
                 headers.add(siteIDs.get(i-1).toString());
             }
-            ExampleOfflineUtilities.writeListDataSetToFile(TRANSFORMED_INPUT_PATH, reducedSet.collect(), headers);
+            ExampleBatchUtilities.writeListDataSetToFile(TRANSFORMED_INPUT_PATH, reducedSet.collect(), headers);
         }
     }
 }

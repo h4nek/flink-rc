@@ -1,7 +1,7 @@
 package lm.batch;
 
 import lm.LinearRegressionPrimitive;
-import lm.streaming.ExampleOnlineUtilities;
+import lm.streaming.ExampleStreamingUtilities;
 import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.RichMapFunction;
@@ -21,17 +21,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ExampleOfflineUtilities {
+public class ExampleBatchUtilities {
     
     public static <T> void writeListDataSetToFile(String pathToFile, List<List<T>> list, List<String> headers) throws IOException {
         File file = new File(pathToFile);
         file.getParentFile().mkdirs();
         file.createNewFile();
         FileWriter writer = new FileWriter(file);
-        writer.write(ExampleOnlineUtilities.listToString(headers) + '\n');
+        writer.write(ExampleStreamingUtilities.listToString(headers) + '\n');
         for (int i = 0; i < list.size(); ++i) {
             List<T> elem = list.get(i);
-            writer.write(i + "," + ExampleOnlineUtilities.listToString(elem) + '\n');
+            writer.write(i + "," + ExampleStreamingUtilities.listToString(elem) + '\n');
         }
         writer.close();
     }
@@ -92,7 +92,7 @@ public class ExampleOfflineUtilities {
             List<Double> curAlpha = alphaList.get(i);
             DataSet<Tuple2<Long, Double>> predictions = LinearRegressionPrimitive.predict(inputSet, curAlpha);
             
-            double mse = ExampleOfflineUtilities.computeMSE(predictions, outputSet).collect().get(alphaList.size() - 1);
+            double mse = ExampleBatchUtilities.computeMSE(predictions, outputSet).collect().get(alphaList.size() - 1);
             System.out.println(i + ". MSE: " + mse);    //TEST
             mseTrend.add(mse);
         }

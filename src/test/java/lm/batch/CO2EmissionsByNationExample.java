@@ -8,7 +8,7 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple5;
-import lm.batch.ExampleOfflineUtilities.*;
+import lm.batch.ExampleBatchUtilities.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,21 +73,21 @@ public class CO2EmissionsByNationExample {
 
         /*Compute the MSE for last Alpha*/
         System.out.println("last Alpha: " + Alpha);
-        DataSet<Double> mse = ExampleOfflineUtilities.computeMSE(results, outputSet);
+        DataSet<Double> mse = ExampleBatchUtilities.computeMSE(results, outputSet);
         System.out.println(mse.collect().get(alphaList.size() - 1));
         
         /*Check the whole trend of MSE*/
 //        ExampleOfflineUtilities.computeMSETrend(alphaList, inputSet, outputSet);
         
         /*Attempt to select best Alpha*/
-        List<Double> minAlpha = ExampleOfflineUtilities.selectMinAlpha(alphaList, inputSet, outputSet);
+        List<Double> minAlpha = ExampleBatchUtilities.selectMinAlpha(alphaList, inputSet, outputSet);
         System.out.println("min Alpha: " + minAlpha);
         
 //        DataSet<Tuple2<Long, Double>> minResults = lm.batch.LinearRegression.predict(inputSet, minAlpha);
 //        DataSet<Double> minMse = ExampleOfflineUtilities.computeMSE(minResults, outputSet);
 //        System.out.println(minMse.collect().get(alphaList.size() - 1));
 
-        ExampleOfflineUtilities utilities = new ExampleOfflineUtilities();
+        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
         utilities.plotLRFit(inputSet, outputSet, results, 0);
 
         /* Adding offline (pseudoinverse) fitting for comparison */
@@ -96,7 +96,7 @@ public class CO2EmissionsByNationExample {
         DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSet, Alpha);
         utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
         
-        ExampleOfflineUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, outputSet);
+        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, outputSet);
     }
 
     /**

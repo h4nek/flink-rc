@@ -78,15 +78,14 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
             List<Double> W_column = scalarMultiplication(output_previous.get(i), W_internal.get(i));
             output = vectorAddition(output, W_column);
         }
-        for (int i = 0; i < N_x; i++) {
-//            double transformed =  Math.tanh(output.get(i));
-            System.out.println("value before (tanh) transformation: " + output.get(i));
-            double transformed = transformation.transform(output.get(i));
-            System.out.println("value after (tanh) transformation: " + transformed);
-            output.remove(i);
-            output.add(i, transformed);
-        }
-//        output = output.stream().map(Math::tanh).collect(Collectors.toList());
+//        for (int i = 0; i < N_x; i++) {
+//            System.out.println("value before (tanh) transformation: " + output.get(i));
+//            double transformed = transformation.transform(output.get(i));
+//            System.out.println("value after (tanh) transformation: " + transformed);
+//            output.remove(i);
+//            output.add(i, transformed);
+//        }
+        output = output.stream().map(transformation::transform).collect(Collectors.toList());
         return output;
     }
 

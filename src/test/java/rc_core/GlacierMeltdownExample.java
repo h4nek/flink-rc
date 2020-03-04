@@ -38,6 +38,7 @@ public class GlacierMeltdownExample {
                     List<Double> inputVector = new ArrayList<>();
                     for (String item : items) {
                         inputVector.add(Double.parseDouble(item) / 2000);   // "normalize" the data to be in some 
+                        // reasonable range for the transformation
                     }
                     return inputVector;
                 }).returns(Types.LIST(Types.DOUBLE));

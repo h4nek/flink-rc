@@ -97,7 +97,7 @@ public class GlacierMeltdownExample {
             
 
             /*Choose the best Alpha*/
-//            List<Double> mseTrend = ExampleOfflineUtilities.computeMSETrend(alphaList, glaciersInput, glaciersOutput);
+//            List<Double> mseTrend = ExampleBatchUtilities.computeMSETrend(alphaList, glaciersInput, glaciersOutput);
 ////            int minIdx = mseTrend.indexOf(Collections.min(mseTrend));
 //            int minIdx = -1;
 //            double minMSE = Double.POSITIVE_INFINITY;
@@ -108,9 +108,9 @@ public class GlacierMeltdownExample {
 //                }
 //            }
 //            Alpha = alphaList.get(minIdx);
-//            
+//
 //            /*PLot the MSE trend*/
-//            ExampleOfflineUtilities.plotLearningCurve(mseTrend);
+//            ExampleBatchUtilities.plotLearningCurve(mseTrend);
         }
 
         /* Testing phase - use the input values and the Alpha vector to compute the predictions */

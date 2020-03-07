@@ -222,7 +222,12 @@ public class ExampleBatchUtilities {
         plot.addLinePlot(name, color, inputArr, predArr);
         frame.setContentPane(plot); // the JFrame is automatically refreshed
     }
-    
+
+    /**
+     * Plot the trend of MSE associated with the Alpha vector state at the time.
+     * Shows us how well (in our measures) the model was trained throughout fitting.
+     * @param mseTrend
+     */
     public static void plotLearningCurve(List<Double> mseTrend) {
         double[] mseArr = new double[mseTrend.size()];
         for (int i = 0; i < mseTrend.size(); i++) {
@@ -243,7 +248,10 @@ public class ExampleBatchUtilities {
         frame.toFront();
         frame.setVisible(true);
     }
-    
+
+    /**
+     * Plot a single Alpha vector value (scalar) in relation to the number of iterations.
+     */
     public static void plotAlphaParameter(List<Double> alphaInTime, String suffix) {
         double[] alphaArr = new double[alphaInTime.size()];
         for (int i = 0; i < alphaInTime.size(); i++) {

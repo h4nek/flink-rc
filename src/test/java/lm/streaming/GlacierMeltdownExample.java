@@ -14,6 +14,7 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import utilities.PythonPlotting;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -147,15 +148,19 @@ public class GlacierMeltdownExample {
                 learningType + "_" + learningRate + ".csv", mseLast);
 
         ExampleBatchUtilities utilities = new ExampleBatchUtilities();
-        utilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
-        
-        /* Adding offline (pseudoinverse) fitting for comparison */
-        Alpha = LinearRegressionPrimitive.fit(glaciersInput, glaciersOutput,
-                TrainingMethod.PSEUDOINVERSE, 1, learningRate);
-        DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInput, Alpha);
-        utilities.addLRFitToPlot(glaciersInput, predictionsOffline, 0);
-        
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutput);
+//        utilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
+//        
+//        /* Adding offline (pseudoinverse) fitting for comparison */
+//        Alpha = LinearRegressionPrimitive.fit(glaciersInput, glaciersOutput,
+//                TrainingMethod.PSEUDOINVERSE, 1, learningRate);
+//        DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInput, Alpha);
+//        utilities.addLRFitToPlot(glaciersInput, predictionsOffline, 0);
+//        
+//        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutput);
+
+        PythonPlotting.plotLRFit(glaciersInput.collect(), glaciersOutput.collect(), predictions.collect(), 0, 
+                0, "input", "Mean cumulative mass balance", "Glaciers Meltdown", 
+                PythonPlotting.PlotType.LINE, "b");
         
 //        env.execute("Glacier Meltdown Example for Matlab");
     }

@@ -2,6 +2,7 @@ package lm.batch;
 
 import lm.LinearRegression;
 import lm.LinearRegressionPrimitive;
+import lm.streaming.ExampleStreamingUtilities;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -13,6 +14,8 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lm.LinearRegressionPrimitive.TrainingMethod;
+import utilities.PythonPlotting;
+
 /**
  * Testing GD on the simplest dataset - representing an identity function (f(x) = x).
  * We chose integers from 1 to 500.
@@ -64,16 +67,17 @@ public class IdentityTest {
 //        DataSet<Double> mse = ExampleOfflineUtilities.computeMSE(results, integersOut);
 //        System.out.println("MSE estimate:" + lr.getMSE());
 
-        ExampleBatchUtilities utils = new ExampleBatchUtilities();
-        utils.plotLRFit(integers, integersOut, results, 0, 0, "x", "y", 
-                "Identity Test", ExampleBatchUtilities.PlotType.POINTS);
-
-        /* Add the offline (pseudoinverse) fitting for comparison */
-        Alpha = LinearRegressionPrimitive.fit(integers, integersOut, TrainingMethod.PSEUDOINVERSE, 1, 0.001);
-        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integers, Alpha);
-        utils.addLRFitToPlot(integers, resultsOffline, 0);
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, integersOut);
-        ExampleBatchUtilities.plotAllAlphas(alphaList); // Plotting Alpha Training
+//        ExampleBatchUtilities utils = new ExampleBatchUtilities();
+//        utils.plotLRFit(integers, integersOut, results, 0, 0, "x", "y", 
+//                "Identity Test", ExampleBatchUtilities.PlotType.POINTS);
+//
+//        /* Add the offline (pseudoinverse) fitting for comparison */
+//        Alpha = LinearRegressionPrimitive.fit(integers, integersOut, TrainingMethod.PSEUDOINVERSE, 1, 0.001);
+//        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integers, Alpha);
+//        utils.addLRFitToPlot(integers, resultsOffline, 0);
+//        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, integersOut);
+//        ExampleBatchUtilities.plotAllAlphas(alphaList); // Plotting Alpha Training
+        
 //        Double mseOffline = ExampleOfflineUtilities.computeMSE(results, integersOut).collect().get(NUM_SAMPLES - 1);
 //        System.out.println("MSE offline: " + mseOffline);
 //        System.out.println("MSE online:  " + mse.collect().get(NUM_SAMPLES - 1));
@@ -82,5 +86,25 @@ public class IdentityTest {
         
 //        ExampleOfflineUtilities.plotLearningCurve(mseTrend);
         //env.execute();
+        
+        
+        /*Testing Python plotting*/
+//        List<List<Double>> testOut = integersOut.map(x -> {
+//            List<Double> y = new ArrayList<>();
+//            y.add(x.f0.doubleValue());
+//            y.add(x.f1);
+//            return y;
+//        }).returns(Types.LIST(Types.DOUBLE)).collect();
+//        List<String> headers = new ArrayList<>();
+//        headers.add("arrayIndex");
+//        headers.add("index");
+//        headers.add("output");
+////        ExampleStreamingUtilities.writeListToFile("D:\\Programy\\BachelorThesis\\Development\\python_plots\\test.csv",
+////                integers.collect());
+//        ExampleBatchUtilities.writeListDataSetToFile("D:\\Programy\\BachelorThesis\\Development\\python_plots\\test.csv", 
+//                testOut, headers);
+        
+        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
+                "x", "f(x) = x", "Identity", null, "b", true);
     }
 }

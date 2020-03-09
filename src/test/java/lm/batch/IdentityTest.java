@@ -105,6 +105,7 @@ public class IdentityTest {
 //                testOut, headers);
         
         PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
-                "x", "f(x) = x", "Identity", null, "b", true);
+                "x", "f(x) = x", "Identity", null);
+//        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), "Identity");
     }
 }

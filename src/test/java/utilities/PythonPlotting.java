@@ -34,23 +34,15 @@ public class PythonPlotting {
      */
     public static void plotLRFit(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
                                  List<Tuple2<Long, Double>> predictionList, int inputIndex, int shiftData, String xlabel, 
-                                 String ylabel, String title, PlotType plotType, String color, 
-                                 boolean borderTicks) throws IOException {
+                                 String ylabel, String title, PlotType plotType) throws IOException {
         String plotTypeString = "-";
-        if (plotType != null) {
-            switch (plotType) {
-                case LINE:
-                    plotTypeString = "-";
-                    break;
-                case POINTS:
-                    plotTypeString = ".";
-                    break;
-            }
+        if (plotType == PlotType.POINTS) {
+            plotTypeString = ".";
         }
-        String borderTicksString = "False";
-        if (borderTicks) {
-            borderTicksString = "True";
-        }
+//        String borderTicksString = "False";
+//        if (borderTicks) {
+//            borderTicksString = "True";
+//        }
         
         ExampleBatchUtilities.writeInputDataSetToFile( pathToDataOutputDir + "lrFitInputData.csv", inputList);
         ExampleBatchUtilities.writeOutputDataSetToFile( pathToDataOutputDir + "lrFitOutputData.csv", outputList);
@@ -67,15 +59,19 @@ public class PythonPlotting {
                 xlabel,
                 ylabel,
                 title,
-                plotTypeString,
-                color,
-                borderTicksString
+                plotTypeString
         };
         Process process = Runtime.getRuntime().exec(params);
         /*Read input streams*/ // TEST
         printStream(process.getInputStream());
         printStream(process.getErrorStream());
         System.out.println(process.exitValue());
+    }
+
+    public static void plotLRFit(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
+                                 List<Tuple2<Long, Double>> predictionList, String title) throws IOException {
+        plotLRFit(inputList, outputList, predictionList, 0, 0, "input", "output", title, 
+                null);
     }
     
     private static void printStream(InputStream stream) throws IOException {

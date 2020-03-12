@@ -3,10 +3,6 @@ package utilities;
 import lm.batch.ExampleBatchUtilities;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.python.antlr.ast.Str;
-import org.python.core.PyList;
-import org.python.core.PyObject;
-import org.python.util.PythonInterpreter;
 
 import java.awt.*;
 import java.io.BufferedReader;

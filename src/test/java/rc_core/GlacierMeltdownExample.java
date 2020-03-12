@@ -44,7 +44,9 @@ public class GlacierMeltdownExample {
                 }).returns(Types.LIST(Types.DOUBLE));
 //        inputStream.print("Read input");
         
-        inputStream.map(new ESNReservoir(2, 5)).print("Reservoir output");
+        inputStream.print("input");
+        
+        inputStream.map(new ESNReservoir(3, 5)).print("Reservoir output");
 
         see.execute("Reservoir Computing - Glaciers Meltdown Example");
     }

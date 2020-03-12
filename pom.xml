@@ -88,6 +88,12 @@
             <artifactId>JMathPlot</artifactId>
             <version>1.0.1</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.ojalgo</groupId>
+            <artifactId>ojalgo</artifactId>
+            <version>48.1.0</version>
+        </dependency>
     </dependencies>
 
 

@@ -7,21 +7,24 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.ojalgo.matrix.Primitive64Matrix;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @State(Scope.Benchmark)
 public class GlacierMeltdownExample {
     public static final String INPUT_FILE_PATH = "src/test/resources/glaciers/input_data/glaciers.csv";
-    @Param({"ojAlgo", "basic", "jama"})
+    @Param({"ojAlgo", "basic"})
     public static String esnReservoirType;
-    private static MapFunction<List<Double>, List<Double>> esnReservoir;
+    private static MapFunction<List<Double>, ?> esnReservoir;
     private static DataStream<List<Double>> inputStreamParam;
     private static final int N_u = 3;
     private static final int N_x = 5000;
@@ -37,6 +40,7 @@ public class GlacierMeltdownExample {
                 break;
             case "jama":
                 esnReservoir = new ESNReservoirJama(N_u, N_x);
+                break;
         }
     }
     
@@ -57,28 +61,15 @@ public class GlacierMeltdownExample {
         StreamExecutionEnvironment see = StreamExecutionEnvironment.getExecutionEnvironment();
         see.setParallelism(1);
         see.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-
-        /* Read the data incoming periodically "online" into a DataStream */
-//        DataStream<Tuple2<Long, List<Double>>> inputStream = ExampleStreamingUtilities.readCsvInput(see,
-//                INPUT_FILE_PATH, 2);
-////        inputStream = see.readFile();
-//        
-//        inputStream.map(x -> x.f1).map(new ESNReservoir(2, 5));
-
-//        DataStream<List<Double>> inputStream = see.readFile(new CsvInputFormat<List<Double>>(new Path(INPUT_FILE_PATH)) {
-//            @Override
-//            protected List<Double> fillRecord(List<Double> reuse, Object[] parsedValues) {
-//                return null;
-//            }
-//        }, INPUT_FILE_PATH);
+        
         DataStream<List<Double>> inputStream = see.readFile(new TextInputFormat(new Path(INPUT_FILE_PATH)), INPUT_FILE_PATH)
                 .filter(line -> line.matches("[^a-zA-Z]+")) // match only "non-word" lines
                 .map(line -> {
                     String[] items = line.split(",");
                     List<Double> inputVector = new ArrayList<>();
                     for (String item : items) {
-                        inputVector.add(Double.parseDouble(item) / 2000);   // "normalize" the data to be in some 
-                        // reasonable range for the transformation
+                        // "normalize" the data to be in some reasonable range for the transformation
+                        inputVector.add(Double.parseDouble(item) / 2000);
                     }
                     return inputVector;
                 }).returns(Types.LIST(Types.DOUBLE));
@@ -94,7 +85,7 @@ public class GlacierMeltdownExample {
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
-    public static DataStream<List<Double>> executeESNReservoir(){
+    public static DataStream<?> executeESNReservoir(){
         return inputStreamParam.map(esnReservoir);
     }
 }

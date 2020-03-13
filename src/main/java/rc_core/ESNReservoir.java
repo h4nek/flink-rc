@@ -136,5 +136,5 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
 }
 
 interface Transformation extends Serializable {
-    public double transform(double d);
+    double transform(double d);
 }

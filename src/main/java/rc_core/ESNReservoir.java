@@ -113,23 +113,6 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         return outputList; //Collections.list(outputArr);
     }
 
-
-    private static Double dotProduct(List<Double> X, List<Double> Y) throws InvalidArgumentException {
-        double result = 0;
-
-        if (X.size() != Y.size()) {
-            throw new InvalidArgumentException(new String[] {"Length of X: " + X.size(), "Length of Y: " + Y.size(),
-                    "Contents of X: " + listToString(X),
-                    "Contents of Y: " + listToString(Y),
-                    "Lengths must agree!"});
-        }
-
-        for (int i = 0; i < X.size(); i++) {
-            result += X.get(i)*Y.get(i);
-        }
-        return result;
-    }
-
     /**
      * A convenience method that creates a comma-separated string of list contents.
      * @param list
@@ -149,26 +132,6 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         listString.append('}');
 
         return listString.toString();
-    }
-
-    private static List<Double> scalarMultiplication(Double a, List<Double> X) {
-        List<Double> result = new ArrayList<>(X.size());
-        for (Double x : X) {
-            result.add(x * a);
-        }
-        return result;
-    }
-
-    private static List<Double> vectorAddition(List<Double> X, List<Double> Y) throws InvalidArgumentException {
-        if (X.size() != Y.size()) {
-            throw new InvalidArgumentException(new String[] {"Lengths must agree!"});
-        }
-
-        List<Double> result = new ArrayList<>(X.size());
-        for (int i = 0; i < X.size(); i++) {
-            result.add(X.get(i) + Y.get(i));
-        }
-        return result;
     }
 }
 

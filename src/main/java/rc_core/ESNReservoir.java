@@ -14,6 +14,7 @@ import org.ojalgo.random.Weibull;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 
@@ -68,6 +69,20 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         output_previous = matrixFactory.columns(init_vector);
         W_input = matrixFactory.makeFilled(N_x, N_u, new Uniform(-0.5, 1));
         W_internal = matrixFactory.makeFilled(N_x, N_x, new Uniform(-0.5, 1));
+        
+        /* Computing the spectral radius of W_internal */
+        List<Eigenvalue.Eigenpair> eigenpairs = W_internal.getEigenpairs();
+//        long startTime = System.nanoTime();
+//        Double spectralRadius = eigenpairs.parallelStream().map(x -> x.value.norm()).max(Comparator.naturalOrder()).get();
+//        long endTime = System.nanoTime();
+//        System.out.println("time of stream approach: " + TimeUnit.NANOSECONDS.toMicros(endTime - startTime));
+//        System.out.println("spectral radius: " + spectralRadius);
+//        startTime = System.nanoTime();
+        eigenpairs.sort(Comparator.comparing(x -> x.value));
+        Double spectralRadius = eigenpairs.get(eigenpairs.size() - 1).value.norm();
+//        endTime = System.nanoTime();
+//        System.out.println("time of orig. approach: " + TimeUnit.NANOSECONDS.toMicros(endTime - startTime));
+        System.out.println("spectral radius: " + spectralRadius);
     }
 
     @Override
@@ -82,8 +97,6 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         Primitive64Matrix output = vector_input.add(vector_internal);   // N_x*1 vector
         
 //        MatrixDecomposition decomposition;
-//        List<Eigenvalue.Eigenpair> eigenpairs = W_internal.getEigenpairs();
-//        System.out.println(eigenpairs.get(eigenpairs.size() - 1).value);
 //        System.out.println(output);
         Primitive64Matrix.DenseReceiver outputBuilder = output.copy();
 //        Primitive64Matrix outputTransformed = Primitive64Matrix.FACTORY.make(N_x, 1);

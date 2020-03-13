@@ -15,6 +15,7 @@ import org.ojalgo.random.Weibull;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 
 /**
  * A Flink map function that transforms a stream of input vectors (u) to a stream of output vectors (x).
@@ -78,7 +79,7 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
 
         Primitive64Matrix vector_input = W_input.multiply(inputOj);
         Primitive64Matrix vector_internal = W_internal.multiply(output_previous);
-        Primitive64Matrix output = vector_input.add(vector_internal);
+        Primitive64Matrix output = vector_input.add(vector_internal);   // N_x*1 vector
         
 //        MatrixDecomposition decomposition;
 //        List<Eigenvalue.Eigenpair> eigenpairs = W_internal.getEigenpairs();
@@ -107,10 +108,10 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         outputBuilder.modifyAll(unaryFunction);
         output = outputBuilder.build();
 //        System.out.println(output);
-        double[][] outputArr = output.toRawCopy2D();
-        List<Double> outputList = Arrays.stream(outputArr).flatMapToDouble(Arrays::stream).boxed()
-                .collect(Collectors.toList());
-        return outputList; //Collections.list(outputArr);
+//        double[][] outputArr = output.toRawCopy2D();
+//        List<Double> outputList = Arrays.stream(outputArr).flatMapToDouble(Arrays::stream).boxed()
+//                .collect(Collectors.toList());
+        return DoubleStream.of(output.toRawCopy1D()).boxed().collect(Collectors.toList());
     }
 
     /**

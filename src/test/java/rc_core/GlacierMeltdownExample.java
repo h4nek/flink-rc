@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @State(Scope.Benchmark)
 public class GlacierMeltdownExample {
     public static final String INPUT_FILE_PATH = "src/test/resources/glaciers/input_data/glaciers.csv";
-    @Param({"ojAlgo", "basic"})
+    @Param({"basic", "ojAlgo"})
     public static String esnReservoirType;
     private static MapFunction<List<Double>, ?> esnReservoir;
     private static DataStream<List<Double>> inputStreamParam;
@@ -48,8 +48,8 @@ public class GlacierMeltdownExample {
         Options opt = new OptionsBuilder()
                 .include(GlacierMeltdownExample.class.getSimpleName())
                 .forks(1)
-                .warmupIterations(1)
-                .measurementIterations(1)
+                .warmupIterations(2)
+                .measurementIterations(2)
                 .timeUnit(TimeUnit.MICROSECONDS)
                 .build();
 

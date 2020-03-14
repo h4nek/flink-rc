@@ -4,11 +4,16 @@ import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.configuration.Configuration;
+import org.ojalgo.function.NullaryFunction;
 import org.ojalgo.function.PrimitiveFunction;
 import org.ojalgo.function.UnaryFunction;
 import org.ojalgo.matrix.Primitive64Matrix;
+import org.ojalgo.matrix.decomposition.Bidiagonal;
 import org.ojalgo.matrix.decomposition.Eigenvalue;
 import org.ojalgo.matrix.decomposition.MatrixDecomposition;
+import org.ojalgo.matrix.decomposition.Tridiagonal;
+import org.ojalgo.matrix.store.DiagonalStore;
+import org.ojalgo.matrix.store.MatrixStore;
 import org.ojalgo.random.Uniform;
 import org.ojalgo.random.Weibull;
 
@@ -68,7 +73,31 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         Primitive64Matrix.Factory matrixFactory = Primitive64Matrix.FACTORY;
         output_previous = matrixFactory.columns(init_vector);
         W_input = matrixFactory.makeFilled(N_x, N_u, new Uniform(-0.5, 1));
-        W_internal = matrixFactory.makeFilled(N_x, N_x, new Uniform(-0.5, 1));
+//        W_internal = matrixFactory.makeFilled(N_x, N_x, new Uniform(-0.5, 1));
+        CyclicMatrix cyclicMatrix = new CyclicMatrix(N_x, 3);
+        System.out.println(cyclicMatrix.get());
+        System.out.println(new CyclicMatrixWithJumps(N_x, 4, 2));
+        System.out.println(new JumpsSaturatedMatrix(N_x, 10, 3));
+        
+        /* Create Cycle Reservoir with Jumps */
+        NullaryFunction<Double> cyclicReservoirWithJumps = new NullaryFunction<Double>() {
+            @Override
+            public double doubleValue() {
+                return 13;
+            }
+
+            @Override
+            public Double invoke() {
+                return 13.0;
+            }
+        };
+        Primitive64Matrix.LogicalBuilder matrixBuilder = matrixFactory.makeFilled(N_x, N_x, cyclicReservoirWithJumps).logical();
+        Primitive64Matrix.DenseReceiver matrixReceiver = matrixFactory.makeFilled(N_x, N_x, cyclicReservoirWithJumps).copy();
+        W_internal = matrixBuilder.bidiagonal(false).get(); // attempt for subdiagonal matrix creation
+        System.out.println(Tridiagonal.PRIMITIVE.make(N_x, N_x).getD());
+//        System.out.println(Bidiagonal.PRIMITIVE.make(N_x, N_x).getD());
+        System.out.println(W_internal);
+//        W_internal = matrixFactory.makeFilled(N_x, N_x, )
         
         /* Computing the spectral radius of W_internal */
         List<Eigenvalue.Eigenpair> eigenpairs = W_internal.getEigenpairs();

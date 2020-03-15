@@ -22,7 +22,7 @@ public class CyclicMatrix implements MatrixStore<Double> {
 //        this.cols = cols;
         
         Random random = new Random();
-        cycleVal = random.nextDouble() - (range/2);  // a random number from given range (symmetric around 0), constant
+        cycleVal = random.nextDouble()*range - (range/2);  // a random number from given range (symmetric around 0), constant
     }
 
     @Override

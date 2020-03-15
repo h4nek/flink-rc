@@ -25,7 +25,7 @@ public class JumpsSaturatedMatrix implements MatrixStore<Double> {
         this.jumpSize = jumpSize;
         
         Random random = new Random();
-        jumpVal = random.nextDouble() - (range/2);
+        jumpVal = random.nextDouble()*range - (range/2);
     }
 
 

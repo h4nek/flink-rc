@@ -14,8 +14,10 @@ import org.ojalgo.matrix.decomposition.MatrixDecomposition;
 import org.ojalgo.matrix.decomposition.Tridiagonal;
 import org.ojalgo.matrix.store.DiagonalStore;
 import org.ojalgo.matrix.store.MatrixStore;
+import org.ojalgo.matrix.store.SparseStore;
 import org.ojalgo.random.Uniform;
 import org.ojalgo.random.Weibull;
+import org.ojalgo.type.Stopwatch;
 
 import java.io.Serializable;
 import java.util.*;
@@ -28,20 +30,23 @@ import java.util.stream.DoubleStream;
  * Represents the reservoir of reservoir computing framework.
  * It realizes the formula x(t) = f(W_in*u(t) + W*x(t-1)). Which is a recurrent neural network (RNN).
  * f can be any (generally non-linear) transformation (function).
- * W_in is the matrix of input weights.
- * W is the matrix of internal connections (weights).
- * Both matrices are randomly initialized at the beginning of computation.
+ * W_in is the matrix of input weights; (randomly) initialized with uniform distribution from [-0.5; 0.5], dense.
+ * W is the matrix of internal connections (weights); initialized similarly to W_in (weights come from the same 
+ * distribution and interval), but sparse.
+ *      One option is to just control sparsity (e.g. 20% of non-zero elements), another is to have a deterministic 
+ *      structure containing cycles.
+ * Both matrices are initialized once at the beginning of computation.
  * 
  * Utilizing ojAlgo libraries.
  */
 public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
     private Primitive64Matrix W_input;   // represents a matrix of input weights (N_x*N_u)
-    private Primitive64Matrix W_internal;    // N_x*N_x
-    private Primitive64Matrix output_previous;   // result of the computation in time "t-1"
+    private Primitive64Matrix W_internal;    // represents a matrix of internal weights (N_x*N_x)
+    private Primitive64Matrix output_previous;   // (internal) state vector (x(t-1)) -- result of the computation in previous time 
     private final int N_u;  // input vector (u) size -- an exception is thrown if the input size is different
-    private final int N_x;
-    private final Transformation transformation;
-    private final List<Double> init_vector;
+    private final int N_x;  // (internal) state vector (x) size -- should be higher than N_u
+    private final Transformation transformation;    // a function (f) to be applied on a vector (dim N_x*1) element-wise
+    private final List<Double> init_vector; // an initial (internal) state vector (x(0)); has to have size N_x*1
 
     public ESNReservoir(int N_u, int N_x, List<Double> init_vector, Transformation transformation) {
         if (init_vector.size() != N_x) {
@@ -71,9 +76,10 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         super.open(parameters);
 
         Primitive64Matrix.Factory matrixFactory = Primitive64Matrix.FACTORY;
-        output_previous = matrixFactory.columns(init_vector);
+        output_previous = matrixFactory.columns(init_vector);   // convert the vector type from List to Primitive64Matrix
         W_input = matrixFactory.makeFilled(N_x, N_u, new Uniform(-0.5, 1));
 //        W_internal = matrixFactory.makeFilled(N_x, N_x, new Uniform(-0.5, 1));
+        /* Tests */
         CyclicMatrix cyclicMatrix = new CyclicMatrix(N_x, 3);
         System.out.println(cyclicMatrix.get());
         System.out.println(new CyclicMatrixWithJumps(N_x, 4, 2));
@@ -97,20 +103,28 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         System.out.println(Tridiagonal.PRIMITIVE.make(N_x, N_x).getD());
 //        System.out.println(Bidiagonal.PRIMITIVE.make(N_x, N_x).getD());
         System.out.println(W_internal);
-//        W_internal = matrixFactory.makeFilled(N_x, N_x, )
+//        W_internal = matrixFactory.makeSparse(N_x, N_x).fillMatching(x -> ).build();
+        System.out.println("sparse version: " + W_internal);
+//        W_input = new JumpsSaturatedMatrix(N_x, 1, 3);
         
         /* Computing the spectral radius of W_internal */
-        List<Eigenvalue.Eigenpair> eigenpairs = W_internal.getEigenpairs();
-//        long startTime = System.nanoTime();
-//        Double spectralRadius = eigenpairs.parallelStream().map(x -> x.value.norm()).max(Comparator.naturalOrder()).get();
-//        long endTime = System.nanoTime();
-//        System.out.println("time of stream approach: " + TimeUnit.NANOSECONDS.toMicros(endTime - startTime));
-//        System.out.println("spectral radius: " + spectralRadius);
-//        startTime = System.nanoTime();
-        eigenpairs.sort(Comparator.comparing(x -> x.value));
-        Double spectralRadius = eigenpairs.get(eigenpairs.size() - 1).value.norm();
-//        endTime = System.nanoTime();
-//        System.out.println("time of orig. approach: " + TimeUnit.NANOSECONDS.toMicros(endTime - startTime));
+        Stopwatch.TimedResult<Double> timedResult = Stopwatch.meassure(() -> RCUtilities.spectralRadius(W_internal));
+        System.out.println("result for spectral radius: " + timedResult.result);
+        System.out.println("duration for spectral radius: " + timedResult.duration);
+        double spectralRadius = RCUtilities.spectralRadius(W_internal);
+//        List<Eigenvalue.Eigenpair> eigenpairs = W_internal.getEigenpairs();
+//        System.out.println("eigenvalues of W_internal:\n" + listToString(eigenpairs.stream().map(x -> x.value)
+//                .collect(Collectors.toList())));
+////        long startTime = System.nanoTime();
+////        Double spectralRadius = eigenpairs.parallelStream().map(x -> x.value.norm()).max(Comparator.naturalOrder()).get();
+////        long endTime = System.nanoTime();
+////        System.out.println("time of stream approach: " + TimeUnit.NANOSECONDS.toMicros(endTime - startTime));
+////        System.out.println("spectral radius: " + spectralRadius);
+////        startTime = System.nanoTime();
+//        eigenpairs.sort(Comparator.comparing(x -> x.value));
+//        Double spectralRadius = eigenpairs.get(eigenpairs.size() - 1).value.norm();
+////        endTime = System.nanoTime();
+////        System.out.println("time of orig. approach: " + TimeUnit.NANOSECONDS.toMicros(endTime - startTime));
         System.out.println("spectral radius: " + spectralRadius);
     }
 

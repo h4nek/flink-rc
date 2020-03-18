@@ -4,6 +4,7 @@ import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.configuration.Configuration;
+import org.ojalgo.array.SparseArray;
 import org.ojalgo.function.NullaryFunction;
 import org.ojalgo.function.PrimitiveFunction;
 import org.ojalgo.function.UnaryFunction;
@@ -17,6 +18,7 @@ import org.ojalgo.matrix.store.MatrixStore;
 import org.ojalgo.matrix.store.SparseStore;
 import org.ojalgo.random.Uniform;
 import org.ojalgo.random.Weibull;
+import org.ojalgo.type.CalendarDateUnit;
 import org.ojalgo.type.Stopwatch;
 
 import java.io.Serializable;
@@ -80,52 +82,155 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         W_input = matrixFactory.makeFilled(N_x, N_u, new Uniform(-0.5, 1));
 //        W_internal = matrixFactory.makeFilled(N_x, N_x, new Uniform(-0.5, 1));
         /* Tests */
-        CyclicMatrix cyclicMatrix = new CyclicMatrix(N_x, 3);
-        System.out.println(cyclicMatrix.get());
-        System.out.println(new CyclicMatrixWithJumps(N_x, 4, 2));
-        System.out.println(new JumpsSaturatedMatrix(N_x, 10, 3));
+//        CyclicMatrix cyclicMatrix = new CyclicMatrix(N_x, 3);
+//        System.out.println(cyclicMatrix.get());
+//        System.out.println(new CyclicMatrixWithJumps(N_x, 4, 2));
+//        System.out.println(new JumpsSaturatedMatrix(N_x, 10, 3));
         
         /* Create Cycle Reservoir with Jumps */
+
+        Random random = new Random();
+        double valueW = random.nextDouble();
+        final Stopwatch stopwatch = new Stopwatch();
+        
+        /* Primitive64Matrix (Dense) */
         NullaryFunction<Double> cyclicReservoirWithJumps = new NullaryFunction<Double>() {
             @Override
             public double doubleValue() {
-                return 13;
+                return valueW;
             }
 
             @Override
             public Double invoke() {
-                return 13.0;
+                return valueW;
             }
         };
         Primitive64Matrix.LogicalBuilder matrixBuilder = matrixFactory.makeFilled(N_x, N_x, cyclicReservoirWithJumps).logical();
+        Primitive64Matrix identity = Primitive64Matrix.FACTORY.makeEye(N_x, N_x);
+        W_internal = matrixBuilder.bidiagonal(false).get().subtract(identity.multiply(valueW)); // attempt for subdiagonal matrix creation
+        System.out.println("time: " + stopwatch.stop(CalendarDateUnit.MICROS));
+        System.out.println("dense version: " + W_internal);
+
         Primitive64Matrix.DenseReceiver matrixReceiver = matrixFactory.makeFilled(N_x, N_x, cyclicReservoirWithJumps).copy();
-        W_internal = matrixBuilder.bidiagonal(false).get(); // attempt for subdiagonal matrix creation
-        System.out.println(Tridiagonal.PRIMITIVE.make(N_x, N_x).getD());
-//        System.out.println(Bidiagonal.PRIMITIVE.make(N_x, N_x).getD());
-        System.out.println(W_internal);
-//        W_internal = matrixFactory.makeSparse(N_x, N_x).fillMatching(x -> ).build();
-        System.out.println("sparse version: " + W_internal);
-//        W_input = new JumpsSaturatedMatrix(N_x, 1, 3);
-        
+
+        stopwatch.reset();
+        /* Primitive64Matrix (Sparse) */
+        Primitive64Matrix.SparseReceiver W_sparse_receiver = matrixFactory.makeSparse(N_x, N_x);
+        W_internal.loopAll((i, j) -> {if (i-1 == j) W_sparse_receiver.add(i, j, valueW);});
+        System.out.println("time: " + stopwatch.stop(CalendarDateUnit.MICROS));
+        System.out.println("sparse version: " + W_sparse_receiver.get());
+
+        stopwatch.reset();
+        /* SparseStore */
+        SparseStore<Double> W_sparse_store = SparseStore.PRIMITIVE64.make(N_x, N_x);
+        W_sparse_store.modifyAll(new UnaryFunction<Double>() {
+            @Override
+            public double invoke(double arg) {
+                return valueW;
+            }
+
+            @Override
+            public float invoke(float arg) {
+                return (float) valueW;
+            }
+
+            @Override
+            public Double invoke(Double arg) {
+                return valueW;
+            }
+        });
+        MatrixStore.LogicalBuilder<Double> storeBuilder  = W_sparse_store.logical();
+        MatrixStore<Double> W_internal_store = storeBuilder.bidiagonal(false).get();
+        SparseStore<Double> identityStore = SparseStore.makePrimitive(N_x, N_x);
+        identityStore.fillDiagonal(1.0);
+        W_internal_store = W_internal_store.subtract(identityStore.multiply(valueW));
+        System.out.println("time: " + stopwatch.stop(CalendarDateUnit.MICROS));
+        System.out.println("sparse store version: " + W_internal_store);
+
+        stopwatch.reset();
+        /* Sparse Matrix */
+        W_internal_store = SparseStore.makePrimitive(N_x, N_x);
+        W_internal_store = W_internal_store.operateOnAll(new UnaryFunction<Double>() {
+            @Override
+            public double invoke(double arg) {
+                return valueW;
+            }
+
+            @Override
+            public float invoke(float arg) {
+                return (float) valueW;
+            }
+
+            @Override
+            public Double invoke(Double arg) {
+                return valueW;
+            }
+        });
+        W_internal_store = W_internal_store.logical().bidiagonal(false).get();
+        SparseStore<Double> identitySparse = MatrixStore.PRIMITIVE64.makeSparse(N_x, N_x);
+//        SparseStore<Double> identitySparse2 = SparseStore.PRIMITIVE64.make(N_x, N_x);
+        identitySparse.fillDiagonal(1.0);
+        W_internal_store = W_internal_store.subtract(identitySparse.multiply(valueW));
+        System.out.println("time: " + stopwatch.stop(CalendarDateUnit.MICROS));
+        System.out.println("sparse store (2): " + W_internal_store);
+
+
+        stopwatch.reset();
+        /* SparseStore Quick */
+        SparseStore<Double> W_internal_sparse_alt = SparseStore.makePrimitive(N_x, N_x);
+        W_internal_sparse_alt.loopAll((x, y) -> {if(x-1 == y) W_internal_sparse_alt.add(x, y, valueW);});
+        System.out.println("time " + stopwatch.stop(CalendarDateUnit.MICROS));
+        System.out.println("sparse quick version: " + W_internal_sparse_alt);
+
+        stopwatch.reset();
+        /* SparseStore Quicker */
+        SparseStore<Double> W_internal_sparse_alt2 = SparseStore.makePrimitive(N_x, N_x);
+        for (int i = 0; i < N_x; ++i) {
+            W_internal_sparse_alt2.add(i, i-1, valueW);
+        }
+        System.out.println("time " + stopwatch.stop(CalendarDateUnit.MICROS));
+        System.out.println("sparse quicker version: " + W_internal_sparse_alt2);
+
+        stopwatch.reset();
+        /* Custom MatrixStore */
+        JumpsSaturatedMatrix W_input_jumps = new JumpsSaturatedMatrix(N_x, 1, 3);
+        System.out.println("time: " + stopwatch.stop(CalendarDateUnit.MICROS));
+        System.out.println("custom store w/ jumps: " + W_input_jumps);
+
+
+
+
         /* Computing the spectral radius of W_internal */
-        Stopwatch.TimedResult<Double> timedResult = Stopwatch.meassure(() -> RCUtilities.spectralRadius(W_internal));
-        System.out.println("result for spectral radius: " + timedResult.result);
-        System.out.println("duration for spectral radius: " + timedResult.duration);
-        double spectralRadius = RCUtilities.spectralRadius(W_internal);
 //        List<Eigenvalue.Eigenpair> eigenpairs = W_internal.getEigenpairs();
+//        Stopwatch.TimedResult<Double> timedResult = Stopwatch.meassure(() -> RCUtilities.spectralRadius(W_internal));
+//        Stopwatch.TimedResult<Primitive64Matrix> timedResult2 = Stopwatch.meassure(() -> RCUtilities.testCopy(W_internal));
+//        System.out.println("result for spectral radius: " + timedResult.result);
+//        System.out.println("duration for spectral radius: " + timedResult.duration);
+//        double spectralRadius = RCUtilities.spectralRadius(W_internal);
+//        System.out.println("spectral radius: " + spectralRadius);
+        
 //        System.out.println("eigenvalues of W_internal:\n" + listToString(eigenpairs.stream().map(x -> x.value)
 //                .collect(Collectors.toList())));
-////        long startTime = System.nanoTime();
-////        Double spectralRadius = eigenpairs.parallelStream().map(x -> x.value.norm()).max(Comparator.naturalOrder()).get();
-////        long endTime = System.nanoTime();
-////        System.out.println("time of stream approach: " + TimeUnit.NANOSECONDS.toMicros(endTime - startTime));
-////        System.out.println("spectral radius: " + spectralRadius);
-////        startTime = System.nanoTime();
-//        eigenpairs.sort(Comparator.comparing(x -> x.value));
-//        Double spectralRadius = eigenpairs.get(eigenpairs.size() - 1).value.norm();
-////        endTime = System.nanoTime();
-////        System.out.println("time of orig. approach: " + TimeUnit.NANOSECONDS.toMicros(endTime - startTime));
+//        timedResult = Stopwatch.meassure(() -> eigenpairs.parallelStream().map(x -> x.value.norm())
+//                .max(Comparator.naturalOrder()).get());
+//        spectralRadius = timedResult.result;
+//        System.out.println("time of stream approach: " + timedResult.duration);
+//        System.out.println("spectral radius: " + spectralRadius);
+//        timedResult = Stopwatch.meassure(() -> {
+//            List<Eigenvalue.Eigenpair> eigpairs = W_internal.getEigenpairs();
+//            eigpairs.sort(Comparator.comparing(x -> x.value));
+//            return eigpairs.get(eigpairs.size() - 1).value.norm();});
+//        spectralRadius = timedResult.result;
+//        System.out.println("time of orig. approach: " + timedResult.duration);
+//        System.out.println("spectral radius: " + spectralRadius);
+        
+        double spectralRadius = RCUtilities.spectralRadius(W_internal);
         System.out.println("spectral radius: " + spectralRadius);
+        
+        /* Scaling W */
+        double alpha = 0.5;   // scaling hyperparameter
+        W_internal = W_internal.multiply(alpha/spectralRadius);
+        System.out.println("scaled W: " + W_internal);
     }
 
     @Override

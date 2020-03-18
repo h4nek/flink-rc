@@ -1,0 +1,8 @@
+Dense: 102791.9µs		-- 4.
+Sparse: 77722.9µs		-- 3.
+SparseStore: 105548.7µs		-- 5.
+SparseStore2: 110353.8µs	-- 6.
+SparseStoreQuick: 75189.3µs	-- 2.
+SparseStoreQuicker: 73181.3µs	-- 1.
+
+CustomMatrixStore (specific): 8593.9µs

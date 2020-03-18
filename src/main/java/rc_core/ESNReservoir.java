@@ -88,7 +88,6 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
 
         Random random = new Random();
         double valueW = random.nextDouble();
-        final Stopwatch stopwatch = new Stopwatch();
 
         /* SparseStore Quicker */
         SparseStore<Double> W_internal_sparse_alt2 = SparseStore.makePrimitive(N_x, N_x);
@@ -105,30 +104,10 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         System.out.println("custom store w/ jumps: " + W_input_jumps);
 
         /* Computing the spectral radius of W_internal */
-        List<Eigenvalue.Eigenpair> eigenpairs = W_internal.getEigenpairs();
-
-        stopwatch.reset();
-        double spectralRadius1 = RCUtilities.spectralRadius(W_internal);
-        System.out.println("duration for spectral radius: " + stopwatch.stop(CalendarDateUnit.MICROS));
-        System.out.println("spectral radius: " + spectralRadius1);
-        
-//        System.out.println("eigenvalues of W_internal:\n" + listToString(eigenpairs.stream().map(x -> x.value)
-//                .collect(Collectors.toList())));
-        
-        stopwatch.reset();
-        double spectralRadius2 = eigenpairs.parallelStream().map(x -> x.value.norm())
-                .max(Comparator.naturalOrder()).get();
-        System.out.println("time of stream approach: " + stopwatch.stop(CalendarDateUnit.MILLIS));
-        System.out.println("spectral radius: " + spectralRadius2);
-        
-        stopwatch.reset();
-        eigenpairs.sort(Comparator.comparing(x -> x.value));
-        double spectralRadius3 = eigenpairs.get(eigenpairs.size() - 1).value.norm();
-        System.out.println("time of orig. approach: " + stopwatch.stop(CalendarDateUnit.MILLIS));
-        System.out.println("spectral radius: " + spectralRadius3);
-
         double spectralRadius = RCUtilities.spectralRadius(W_internal);
         System.out.println("spectral radius: " + spectralRadius);
+//        System.out.println("eigenvalues of W_internal:\n" + listToString(W_internal.getEigenpairs().stream()
+//                .map(x -> x.value).collect(Collectors.toList())));
         
         /* Scaling W */
         double alpha = 0.5;   // scaling hyperparameter

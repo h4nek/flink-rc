@@ -1,12 +1,10 @@
 package rc_core;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.configuration.Configuration;
 import org.ojalgo.array.SparseArray;
 import org.ojalgo.function.*;
-import org.ojalgo.function.constant.BigMath;
 import org.ojalgo.function.constant.PrimitiveMath;
 import org.ojalgo.matrix.BasicMatrix;
 import org.ojalgo.matrix.Primitive64Matrix;
@@ -17,9 +15,6 @@ import org.ojalgo.matrix.store.MatrixStore;
 import org.ojalgo.matrix.store.PhysicalStore;
 import org.ojalgo.matrix.store.SparseStore;
 import org.ojalgo.random.Uniform;
-import org.ojalgo.structure.Structure2D;
-import org.ojalgo.type.CalendarDateUnit;
-import org.ojalgo.type.Stopwatch;
 
 import java.io.Serializable;
 import java.util.*;
@@ -92,9 +87,9 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         double valueW = random.nextDouble();
 
         /* SparseStore Quicker */
-        SparseStore<Double> W_internal_sparse_alt2 = SparseStore.makePrimitive(N_x, N_x);
+        SparseStore<Double> W_internal_sparse = SparseStore.makePrimitive(N_x, N_x);
         for (int i = 0; i < N_x; ++i) {
-            W_internal_sparse_alt2.add(i, i-1, valueW);
+            W_internal_sparse.add(i, i-1, valueW);
         }
         
         /* Custom MatrixStore */
@@ -122,8 +117,8 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         /* Computing the spectral radius of W_internal */
         double spectralRadius = RCUtilities.spectralRadius(W_internal);
         System.out.println("spectral radius: " + spectralRadius);
-        System.out.println("eigenvalues of W_internal:\n" + listToString(W_internal.getEigenpairs().stream()
-                .map(x -> x.value).collect(Collectors.toList())));
+//        System.out.println("eigenvalues of W_internal:\n" + listToString(W_internal.getEigenpairs().stream()
+//                .map(x -> x.value).collect(Collectors.toList())));
         
         /* Scaling W */
         double alpha = 0.5;   // scaling hyperparameter
@@ -141,9 +136,8 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         Primitive64Matrix vector_input = W_input.multiply(inputOj);
         Primitive64Matrix vector_internal = W_internal.multiply(output_previous);
         Primitive64Matrix output = vector_input.add(vector_internal);   // N_x*1 vector
-        
-//        MatrixDecomposition decomposition;
 //        System.out.println(output);
+        
         Primitive64Matrix.DenseReceiver outputBuilder = output.copy();
 //        Primitive64Matrix outputTransformed = Primitive64Matrix.FACTORY.make(N_x, 1);
 //        output.loopAll(x -> outputBuilder.));

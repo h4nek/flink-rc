@@ -8,6 +8,7 @@ import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.*;
 import org.apache.flink.util.Collector;
+import utilities.PythonPlotting;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -105,22 +106,25 @@ public class PM2Point5PollutionInArea {
         System.out.println("MSE estimate: " + mse.collect().get(alphaList.size() - 1));
 
 
-        /*Graph the original data & results*/
-        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
-        utilities.plotLRFit(inputSet, outputSet, results, 0, 1, "Day", 
-                "PM2.5 Pollution", "PM2.5 Pollution in Seattle", ExampleBatchUtilities.PlotType.LINE);
+//        /*Graph the original data & results*/
+//        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
+//        utilities.plotLRFit(inputSet, outputSet, results, 0, 1, "Day", 
+//                "PM2.5 Pollution", "PM2.5 Pollution in Seattle", ExampleBatchUtilities.PlotType.LINE);
+//
+//        /* Adding offline (pseudoinverse) fitting for comparison */
+//        Alpha = LinearRegressionPrimitive.fit(inputSet, outputSet, LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, 
+//                4);
+//        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSet, Alpha);
+//        resultsOffline.join(outputSet).where(0).equalTo(0).projectFirst(0, 1).projectSecond(1)
+//                .printOnTaskManager("OFFLINE PREDS AND OUTS");
+//        utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
+//
+//        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline.map(x -> Tuple2.of(x.f0 - 1, x.f1))
+//                        .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)), 
+//                results, outputSet);
 
-        /* Adding offline (pseudoinverse) fitting for comparison */
-        Alpha = LinearRegressionPrimitive.fit(inputSet, outputSet, LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, 
-                4);
-        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSet, Alpha);
-        resultsOffline.join(outputSet).where(0).equalTo(0).projectFirst(0, 1).projectSecond(1)
-                .printOnTaskManager("OFFLINE PREDS AND OUTS");
-        utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
-
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline.map(x -> Tuple2.of(x.f0 - 1, x.f1))
-                        .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)), 
-                results, outputSet);
+        PythonPlotting.plotLRFit(inputSet.collect(), outputSet.collect(), results.collect(), 0, 0, 
+                "Day", "PPM", "PM 2.5 Pollution in Seattle Area", PythonPlotting.PlotType.POINTS);
 
 //        System.out.println("MSE estimate: " + lr.getMSE(Alpha));
 //        env.execute();

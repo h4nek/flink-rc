@@ -36,6 +36,32 @@ public class ExampleBatchUtilities {
         writer.close();
     }
     
+    public static <T> void writeInputDataSetToFile(String pathToFile, List<Tuple2<Long, List<T>>> list) throws IOException {
+        File file = new File(pathToFile);
+        file.getParentFile().mkdirs();
+        file.createNewFile();
+        FileWriter writer = new FileWriter(file);
+        for (int i = 0; i < list.size(); ++i) {
+            Tuple2<Long, List<T>> tuple = list.get(i);
+            
+            writer.write(tuple.f0 + "," + ExampleStreamingUtilities.listToString(tuple.f1) + '\n');
+        }
+        writer.close();
+    }
+    
+    public static <T> void writeOutputDataSetToFile(String pathToFile, List<Tuple2<Long, T>> list) throws IOException {
+        File file = new File(pathToFile);
+        file.getParentFile().mkdirs();
+        file.createNewFile();
+        FileWriter writer = new FileWriter(file);
+        for (int i = 0; i < list.size(); ++i) {
+            Tuple2<Long, T> tuple = list.get(i);
+
+            writer.write(tuple.f0 + "," + tuple.f1 + '\n');
+        }
+        writer.close();
+    }
+    
     public static void computeAndPrintOfflineOnlineMSE(DataSet<Tuple2<Long, Double>> predictionsOffline, 
                                                        DataSet<Tuple2<Long, Double>> predictionsOnline,
                                                        DataSet<Tuple2<Long, Double>> outputSet) throws Exception {

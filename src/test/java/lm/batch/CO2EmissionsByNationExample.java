@@ -9,6 +9,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple5;
 import lm.batch.ExampleBatchUtilities.*;
+import utilities.PythonPlotting;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -87,18 +88,21 @@ public class CO2EmissionsByNationExample {
 //        DataSet<Double> minMse = ExampleOfflineUtilities.computeMSE(minResults, outputSet);
 //        System.out.println(minMse.collect().get(alphaList.size() - 1));
 
-        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
-        utilities.plotLRFit(inputSet, outputSet, results, 0);
-
-        /* Adding offline (pseudoinverse) fitting for comparison */
-        Alpha = LinearRegressionPrimitive.fit(inputSet, outputSet, LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE,
-                selectNations.length + 1);
-        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSet, Alpha);
-        utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
+        /*Plotting in Java*/
+//        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
+//        utilities.plotLRFit(inputSet, outputSet, results, 0);
+//
+//        /* Adding offline (pseudoinverse) fitting for comparison */
+//        Alpha = LinearRegressionPrimitive.fit(inputSet, outputSet, LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE,
+//                selectNations.length + 1);
+//        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSet, Alpha);
+//        utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
+//        
+//        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, outputSet);
+//        
+//        ExampleBatchUtilities.plotAllAlphas(alphaList);
         
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, outputSet);
-        
-        ExampleBatchUtilities.plotAllAlphas(alphaList);
+        PythonPlotting.plotLRFit(inputSet.collect(), outputSet.collect(), results.collect(), "CO2 Emissions By Nation");
     }
 
     /**

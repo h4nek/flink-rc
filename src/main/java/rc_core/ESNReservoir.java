@@ -5,17 +5,19 @@ import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.configuration.Configuration;
 import org.ojalgo.array.SparseArray;
-import org.ojalgo.function.NullaryFunction;
-import org.ojalgo.function.PrimitiveFunction;
-import org.ojalgo.function.UnaryFunction;
+import org.ojalgo.function.*;
+import org.ojalgo.function.constant.BigMath;
+import org.ojalgo.function.constant.PrimitiveMath;
 import org.ojalgo.matrix.BasicMatrix;
 import org.ojalgo.matrix.Primitive64Matrix;
 import org.ojalgo.matrix.decomposition.Eigenvalue;
 import org.ojalgo.matrix.decomposition.MatrixDecomposition;
 import org.ojalgo.matrix.store.DiagonalStore;
 import org.ojalgo.matrix.store.MatrixStore;
+import org.ojalgo.matrix.store.PhysicalStore;
 import org.ojalgo.matrix.store.SparseStore;
 import org.ojalgo.random.Uniform;
+import org.ojalgo.structure.Structure2D;
 import org.ojalgo.type.CalendarDateUnit;
 import org.ojalgo.type.Stopwatch;
 
@@ -95,19 +97,33 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
             W_internal_sparse_alt2.add(i, i-1, valueW);
         }
         
-        /* PrimitiveMatrix Quick */
-//        BasicMatrix<Double> W_internal_basic = matrixFactory.makeSparse(N_x, N_x);
-        W_internal = matrixFactory.makeEye(N_x, N_x);
-        
         /* Custom MatrixStore */
         JumpsSaturatedMatrix W_input_jumps = new JumpsSaturatedMatrix(N_x, 1, 3);
         System.out.println("custom store w/ jumps: " + W_input_jumps);
+        // spectral radius
+        final Eigenvalue<Double> eigenvalueDecomposition = Eigenvalue.PRIMITIVE.make(N_x, N_x);
+        eigenvalueDecomposition.decompose(W_input_jumps);
+        final MatrixStore<Double> W_spectrum = eigenvalueDecomposition.getD();
+        System.out.println("Diagonal matrix of W eigenvalues: " + W_spectrum);
+        double max = Double.MIN_VALUE;
+        for (int i = 0; i < N_x; ++i) { // selecting the largest absolute value of an eigenvalue
+            double val = Math.abs(W_spectrum.get(i, i));    // iterate over every eigenvalue of W and compute its absolute value
+            if (max < val) {
+                max = val;
+            }
+        }
+        System.out.println("spectral radius: " + max);
+
+        /* PrimitiveMatrix Conversion */
+        Primitive64Matrix.SparseReceiver W_sparse_receiver = matrixFactory.makeSparse(N_x, N_x);
+        W_sparse_receiver.modifyMatching(PrimitiveMath.ADD, W_input_jumps);
+        W_internal = W_sparse_receiver.get();
 
         /* Computing the spectral radius of W_internal */
         double spectralRadius = RCUtilities.spectralRadius(W_internal);
         System.out.println("spectral radius: " + spectralRadius);
-//        System.out.println("eigenvalues of W_internal:\n" + listToString(W_internal.getEigenpairs().stream()
-//                .map(x -> x.value).collect(Collectors.toList())));
+        System.out.println("eigenvalues of W_internal:\n" + listToString(W_internal.getEigenpairs().stream()
+                .map(x -> x.value).collect(Collectors.toList())));
         
         /* Scaling W */
         double alpha = 0.5;   // scaling hyperparameter

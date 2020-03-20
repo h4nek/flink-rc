@@ -3,10 +3,6 @@ package utilities;
 import lm.batch.ExampleBatchUtilities;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.python.antlr.ast.Str;
-import org.python.core.PyList;
-import org.python.core.PyObject;
-import org.python.util.PythonInterpreter;
 
 import java.awt.*;
 import java.io.BufferedReader;
@@ -39,10 +35,6 @@ public class PythonPlotting {
         if (plotType == PlotType.POINTS) {
             plotTypeString = ".";
         }
-//        String borderTicksString = "False";
-//        if (borderTicks) {
-//            borderTicksString = "True";
-//        }
         
         ExampleBatchUtilities.writeInputDataSetToFile( pathToDataOutputDir + "lrFitInputData.csv", inputList);
         ExampleBatchUtilities.writeOutputDataSetToFile( pathToDataOutputDir + "lrFitOutputData.csv", outputList);
@@ -62,7 +54,8 @@ public class PythonPlotting {
                 plotTypeString
         };
         Process process = Runtime.getRuntime().exec(params);
-        /*Read input streams*/ // TEST
+        
+        /*Read input streams*/ // Debugging
         printStream(process.getInputStream());
         printStream(process.getErrorStream());
         System.out.println(process.exitValue());
@@ -76,7 +69,7 @@ public class PythonPlotting {
     
     private static void printStream(InputStream stream) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        String line = null;
+        String line;
         while ((line = reader.readLine()) != null) {
             System.out.println(line);
         }

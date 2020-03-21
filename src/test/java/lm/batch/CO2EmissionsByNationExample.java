@@ -34,12 +34,13 @@ public class CO2EmissionsByNationExample {
                 .ignoreInvalidLines()
                 .includeFields("1110000000")
                 .types(Long.class, String.class, Double.class)
-                .filter(x -> {for (int i = 0; i < selectNations.length; i++) {
-//                    if (x.f0 == 2000 && x.f1.equals("UNITED KINGDOM"))  //TEST
+                .filter(x -> {for (String nation : selectNations) {
+//                    if (x.f0 == 2000 && x.f1.equals("UNITED KINGDOM"))  //TEST - number of dataSet copies
 //                        System.err.println("We're doing one read of the input data.");
-                    if (x.f1.equals(selectNations[i]))
+                    if (x.f1.equals(nation))
                         return true;
-                } return false;});
+                    }
+                    return false;});
         dataSet.printOnTaskManager("DATA"); //TEST
         
         DataSet<Tuple2<Long, Tuple3<Long, String, Double>>> indexedDataSet = dataSet.map(new IndicesMapper<>());

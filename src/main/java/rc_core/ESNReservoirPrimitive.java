@@ -96,18 +96,7 @@ public class ESNReservoirPrimitive extends RichMapFunction<List<Double>, List<Do
 //        System.out.println("custom store w/ jumps: " + W_input_jumps);
         
         // spectral radius
-        final Eigenvalue<Double> eigenvalueDecomposition = Eigenvalue.PRIMITIVE.make(N_x, N_x);
-        eigenvalueDecomposition.decompose(W_internal_sparse);
-        final MatrixStore<Double> W_spectrum = eigenvalueDecomposition.getD();
-        System.out.println("Diagonal matrix of W eigenvalues: " + W_spectrum);
-        double spectralRadius = Double.MIN_VALUE;
-        for (int i = 0; i < N_x; ++i) { // selecting the largest absolute value of an eigenvalue
-            double val = Math.abs(W_spectrum.get(i, i));    // iterate over every eigenvalue of W and compute its absolute value
-            if (spectralRadius < val) {
-                spectralRadius = val;
-            }
-        }
-        System.out.println("spectral radius: " + spectralRadius);
+        double spectralRadius = RCUtilities.spectralRadius(W_internal_sparse);
 
         /* PrimitiveMatrix Conversion */
         Primitive64Matrix.SparseReceiver W_sparse_receiver = matrixFactory.makeSparse(N_x, N_x);

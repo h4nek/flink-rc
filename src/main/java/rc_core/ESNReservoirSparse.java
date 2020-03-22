@@ -100,18 +100,7 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
 //        System.out.println("custom store w/ jumps: " + W_input_jumps);  // produces different values because of independent rnd number
         
         /* Computing the spectral radius of W_internal */
-        final Eigenvalue<Double> eigenvalueDecomposition = Eigenvalue.PRIMITIVE.make(N_x, N_x);
-        eigenvalueDecomposition.decompose(W_internal);
-        final MatrixStore<Double> W_spectrum = eigenvalueDecomposition.getD();
-        System.out.println("Diagonal matrix of W eigenvalues: " + W_spectrum);
-        double spectralRadius = Double.MIN_VALUE;
-        for (int i = 0; i < N_x; ++i) { // selecting the largest absolute value of an eigenvalue
-            double val = Math.abs(W_spectrum.get(i, i));    // iterate over every eigenvalue of W and compute its absolute value
-            if (spectralRadius < val) {
-                spectralRadius = val;
-            }
-        }
-        System.out.println("spectral radius: " + spectralRadius);
+        double spectralRadius = RCUtilities.spectralRadius(W_internal); 
 
         /* Scaling W */
         double alpha = 0.5;   // scaling hyperparameter

@@ -1,18 +1,12 @@
 package rc_core;
 
 import org.apache.flink.api.common.functions.RichMapFunction;
-import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.configuration.Configuration;
-import org.ojalgo.array.SparseArray;
 import org.ojalgo.function.*;
 import org.ojalgo.function.constant.PrimitiveMath;
-import org.ojalgo.matrix.BasicMatrix;
 import org.ojalgo.matrix.Primitive64Matrix;
 import org.ojalgo.matrix.decomposition.Eigenvalue;
-import org.ojalgo.matrix.decomposition.MatrixDecomposition;
-import org.ojalgo.matrix.store.DiagonalStore;
 import org.ojalgo.matrix.store.MatrixStore;
-import org.ojalgo.matrix.store.PhysicalStore;
 import org.ojalgo.matrix.store.SparseStore;
 import org.ojalgo.random.Uniform;
 
@@ -35,7 +29,7 @@ import java.util.stream.DoubleStream;
  * 
  * Utilizing ojAlgo libraries.
  */
-public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
+public class ESNReservoirPrimitive extends RichMapFunction<List<Double>, List<Double>> {
     private Primitive64Matrix W_input;   // represents a matrix of input weights (N_x*N_u)
     private Primitive64Matrix W_internal;    // represents a matrix of internal weights (N_x*N_x)
     private Primitive64Matrix output_previous;   // (internal) state vector (x(t-1)) -- result of the computation in previous time 
@@ -44,7 +38,7 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
     private final Transformation transformation;    // a function (f) to be applied on a vector (dim N_x*1) element-wise
     private final List<Double> init_vector; // an initial (internal) state vector (x(0)); has to have size N_x*1
 
-    public ESNReservoir(int N_u, int N_x, List<Double> init_vector, Transformation transformation) {
+    public ESNReservoirPrimitive(int N_u, int N_x, List<Double> init_vector, Transformation transformation) {
         if (init_vector.size() != N_x) {
             throw new IllegalArgumentException("The length of the initial vector must be N_x.");
         }
@@ -54,15 +48,15 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
         this.transformation = transformation;
     }
 
-    public ESNReservoir(int N_u, int N_x, List<Double> init_vector) {
+    public ESNReservoirPrimitive(int N_u, int N_x, List<Double> init_vector) {
         this(N_u, N_x, init_vector, Math::tanh);
     }
 
-    public ESNReservoir(int N_u, int N_x) {
+    public ESNReservoirPrimitive(int N_u, int N_x) {
         this(N_u, N_x, Collections.nCopies(N_x, 0.0));
     }
 
-    public ESNReservoir(int N_u, int N_x, Transformation transformation) {
+    public ESNReservoirPrimitive(int N_u, int N_x, Transformation transformation) {
         this(N_u, N_x, Collections.nCopies(N_x, 0.0), transformation);
     }
 

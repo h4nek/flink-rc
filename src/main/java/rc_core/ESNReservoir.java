@@ -82,41 +82,47 @@ public class ESNReservoir extends RichMapFunction<List<Double>, List<Double>> {
 //        System.out.println(new JumpsSaturatedMatrix(N_x, 10, 3));
         
         /* Create Cycle Reservoir with Jumps */
-
+        double range = 1;
+        long jumpSize = 3;
         Random random = new Random();
-        double valueW = random.nextDouble();
+        double valueW = random.nextDouble()*range - (range/2);
 
         /* SparseStore Quicker */
         SparseStore<Double> W_internal_sparse = SparseStore.makePrimitive(N_x, N_x);
-        for (int i = 0; i < N_x; ++i) {
+        for (int i = 1; i < N_x; ++i) {
             W_internal_sparse.add(i, i-1, valueW);
+        }
+        for (int i = 0; i < N_x; i++) { // creates a symmetric matrix that has exactly two values in each row/col
+            W_internal_sparse.add(i, (i + jumpSize) % N_x, valueW);
+            W_internal_sparse.add(i, (i - jumpSize + N_x) % N_x, valueW);
         }
         
         /* Custom MatrixStore */
-        JumpsSaturatedMatrix W_input_jumps = new JumpsSaturatedMatrix(N_x, 1, 3);
-        System.out.println("custom store w/ jumps: " + W_input_jumps);
+//        JumpsSaturatedMatrix W_input_jumps = new JumpsSaturatedMatrix(N_x, 1, 3);
+//        System.out.println("custom store w/ jumps: " + W_input_jumps);
+        
         // spectral radius
         final Eigenvalue<Double> eigenvalueDecomposition = Eigenvalue.PRIMITIVE.make(N_x, N_x);
-        eigenvalueDecomposition.decompose(W_input_jumps);
+        eigenvalueDecomposition.decompose(W_internal_sparse);
         final MatrixStore<Double> W_spectrum = eigenvalueDecomposition.getD();
         System.out.println("Diagonal matrix of W eigenvalues: " + W_spectrum);
-        double max = Double.MIN_VALUE;
+        double spectralRadius = Double.MIN_VALUE;
         for (int i = 0; i < N_x; ++i) { // selecting the largest absolute value of an eigenvalue
             double val = Math.abs(W_spectrum.get(i, i));    // iterate over every eigenvalue of W and compute its absolute value
-            if (max < val) {
-                max = val;
+            if (spectralRadius < val) {
+                spectralRadius = val;
             }
         }
-        System.out.println("spectral radius: " + max);
+        System.out.println("spectral radius: " + spectralRadius);
 
         /* PrimitiveMatrix Conversion */
         Primitive64Matrix.SparseReceiver W_sparse_receiver = matrixFactory.makeSparse(N_x, N_x);
-        W_sparse_receiver.modifyMatching(PrimitiveMath.ADD, W_input_jumps);
+        W_sparse_receiver.modifyMatching(PrimitiveMath.ADD, W_internal_sparse);
         W_internal = W_sparse_receiver.get();
 
         /* Computing the spectral radius of W_internal */
-        double spectralRadius = RCUtilities.spectralRadius(W_internal);
-        System.out.println("spectral radius: " + spectralRadius);
+//        double spectralRadius = RCUtilities.spectralRadius(W_internal);
+//        System.out.println("spectral radius: " + spectralRadius);
 //        System.out.println("eigenvalues of W_internal:\n" + listToString(W_internal.getEigenpairs().stream()
 //                .map(x -> x.value).collect(Collectors.toList())));
         

@@ -85,7 +85,7 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         /* SparseStore Quicker */   // fastest
         W_internal = SparseStore.makePrimitive(N_x, N_x);
         // simple cycle reservoir
-//        for (int i = 0; i < N_x; ++i) {
+//        for (int i = 1; i < N_x; ++i) {
 //            W_internal.add(i, i-1, valueW);
 //        }
         // jumps saturated matrix

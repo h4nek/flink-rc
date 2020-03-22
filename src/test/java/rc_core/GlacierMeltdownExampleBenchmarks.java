@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class GlacierMeltdownExampleBenchmarks {
     public static final String INPUT_FILE_PATH = "src/test/resources/glaciers/input_data/glaciers.csv";
-    @Param({"basic", "ojAlgo"})
+    @Param({"sparse", "ojAlgo"})
     public static String esnReservoirType;
     private static MapFunction<List<Double>, ?> esnReservoir;
     private static DataStream<List<Double>> inputStreamParam;
@@ -37,6 +37,9 @@ public class GlacierMeltdownExampleBenchmarks {
                 break;
             case "jama":
                 esnReservoir = new ESNReservoirJama(N_u, N_x);
+                break;
+            case "sparse":
+                esnReservoir = new ESNReservoirSparse(N_u, N_x);
                 break;
         }
     }

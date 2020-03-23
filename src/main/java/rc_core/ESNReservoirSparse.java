@@ -75,6 +75,7 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         
         W_input = matrixFactory.make(N_x, N_u);
         W_input.fillAll(new Uniform(-0.5, 1));
+        System.out.println("random W_in: " + W_input);
 
         /* Create Cycle Reservoir with Jumps */
         double range = 1;
@@ -93,7 +94,7 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
             W_internal.add(i, (i + jumpSize) % N_x, valueW);
             W_internal.add(i, (i - jumpSize + N_x) % N_x, valueW);
         }
-//        System.out.println("sparse store w/ jumps: " + W_internal);
+        System.out.println("sparse store w/ jumps: " + W_internal);
 
         /* Custom MatrixStore */    // alternative
 //        JumpsSaturatedMatrix W_input_jumps = new JumpsSaturatedMatrix(N_x, range, jumpSize);

@@ -70,6 +70,23 @@ public class PythonPlotting {
                 null);
     }
     
+    public static void  plotMatrixHeatmap(double[][] matrix, String title) throws IOException {
+        String filePath = pathToDataOutputDir + "heatmap_data\\" + title + ".csv";
+        Utilities.write2DArrayToCSV(filePath, matrix);
+
+        String[] params = {
+                "python",
+                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotReservoirHeatmap.py",
+                title,
+        };
+        Process process = Runtime.getRuntime().exec(params);
+
+        /*Read input streams*/ // TEST
+        printStream(process.getInputStream());
+        printStream(process.getErrorStream());
+        System.out.println(process.exitValue());
+    }
+    
     private static void printStream(InputStream stream) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         String line = null;

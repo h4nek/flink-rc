@@ -38,17 +38,30 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
     private final int N_x;  // (internal) state vector (x) size -- should be higher than N_u
     private final Transformation transformation;    // a function (f) to be applied on a vector (dim N_x*1) element-wise
     private final List<Double> init_vector; // an initial (internal) state vector (x(0)); has to have size N_x*1
-
-    public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation) {
+    private final double range; // range in which the values of matrices will be randomly chosen, centered at 0
+    private final double shift; // shift of the interval for generating random values
+    private final long jumpSize; // the size of bidirectional jumps when W is initialized using a deterministic pattern
+    private final double alpha;   // scaling hyperparameter
+    
+    
+    public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation, double range, 
+                              double shift, long jumpSize, double alpha) {
         if (init_vector.size() != N_x) {
             throw new IllegalArgumentException("The length of the initial vector must be N_x.");
         }
         this.N_u = N_u;
         this.N_x = N_x;
         this.transformation = transformation;
-
         // Matrices not initialized here because of serializability (solved by moving initialization to open() method)
         this.init_vector = init_vector;
+        this.range = range;
+        this.shift = shift;
+        this.jumpSize = jumpSize;
+        this.alpha = alpha;
+    }
+    
+    public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation) {
+        this(N_u, N_x, init_vector, transformation, 1, 0, 3, 0.5);
     }
 
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector) {
@@ -74,14 +87,12 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         output_previous.fillColumn(0, converted_init_vector);
         
         W_input = matrixFactory.make(N_x, N_u);
-        W_input.fillAll(new Uniform(-0.5, 1));
+        W_input.fillAll(new Uniform(-0.5*range + shift, range));
         System.out.println("random W_in: " + W_input);
 
         /* Create Cycle Reservoir with Jumps */
-        double range = 1;
-        long jumpSize = 3;
         Random random = new Random();
-        double valueW = random.nextDouble()*range - (range/2);
+        double valueW = random.nextDouble()*range - (range/2) + shift;
 
         /* SparseStore Quicker */   // fastest
         W_internal = SparseStore.makePrimitive(N_x, N_x);
@@ -104,7 +115,6 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         double spectralRadius = RCUtilities.spectralRadius(W_internal); 
 
         /* Scaling W */
-        double alpha = 0.5;   // scaling hyperparameter
         W_internal = (SparseStore<Double>) W_internal.multiply(alpha/spectralRadius);
         System.out.println("scaled W: " + W_internal);
     }

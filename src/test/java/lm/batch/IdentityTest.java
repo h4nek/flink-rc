@@ -19,7 +19,7 @@ import utilities.PythonPlotting;
 /**
  * Testing GD on the simplest dataset - representing an identity function (f(x) = x).
  * We chose integers from 1 to 500.
- * Adding some randomness and complexity to the simple function with alternative dataset outputs.
+ * Adding some randomness and complexity to the simple function with alternative dataset outputs (no longer identities).
  */
 public class IdentityTest {
     private static final int NUM_SAMPLES = 500;
@@ -89,23 +89,21 @@ public class IdentityTest {
         
         
         /*Testing Python plotting*/
-//        List<List<Double>> testOut = integersOut.map(x -> {
-//            List<Double> y = new ArrayList<>();
-//            y.add(x.f0.doubleValue());
-//            y.add(x.f1);
-//            return y;
-//        }).returns(Types.LIST(Types.DOUBLE)).collect();
-//        List<String> headers = new ArrayList<>();
-//        headers.add("arrayIndex");
-//        headers.add("index");
-//        headers.add("output");
-////        ExampleStreamingUtilities.writeListToFile("D:\\Programy\\BachelorThesis\\Development\\python_plots\\test.csv",
-////                integers.collect());
-//        ExampleBatchUtilities.writeListDataSetToFile("D:\\Programy\\BachelorThesis\\Development\\python_plots\\test.csv", 
-//                testOut, headers);
+        List<String> headers = new ArrayList<>();
+        headers.add("index");
+        headers.add("normalized input");
+        
+        List<String> headersOut = new ArrayList<>();
+        headersOut.add("index");
+        headersOut.add("output");
         
         PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
-                "x", "f(x) = x", "Identity", null);
+//                "x", "f(x) = x", "Identity", null, headers, headersOut);
+                "x", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity'", null, 
+                headers, headersOut);
+        
+//        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
+//                "x", "f(x) = x", "Identity", null);
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), "Identity");
     }
 }

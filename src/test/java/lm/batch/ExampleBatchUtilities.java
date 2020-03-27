@@ -22,8 +22,34 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ExampleBatchUtilities {
+
+    /**
+     * Writing LR DataSet to a text file (following CSV conventions).
+     * @param pathToFile absolute path to the file to write to
+     * @param list the collected DataSet
+     * @param headers List of headers for individual columns; the whole line is omitted if null
+     * @param input specify whether its an input (true) or output (false) DataSet
+     * @param <T> the type of DataSet elements (typically Double)
+     * @throws IOException
+     */
+    public static <T> void writeDataSetToFile(String pathToFile, List<Tuple2<Long, T>> list, List<String> headers, 
+                                              boolean input) throws IOException {
+        File file = new File(pathToFile);
+        file.getParentFile().mkdirs();
+        file.createNewFile();
+        FileWriter writer = new FileWriter(file);
+        if (headers != null)
+            writer.write(ExampleStreamingUtilities.listToString(headers) + '\n');
+        for (int i = 0; i < list.size(); ++i) {
+            Tuple2<Long, T> elem = list.get(i);
+            writer.write(elem.f0 + "," + (input ? ExampleStreamingUtilities.listToString((List<?>) 
+                    elem.f1) : elem.f1) + '\n');
+        }
+        writer.close();
+    }
     
-    public static <T> void writeListDataSetToFile(String pathToFile, List<List<T>> list, List<String> headers) throws IOException {
+    public static <T> void writeListDataSetToFile(String pathToFile, List<List<T>> list, List<String> headers) 
+            throws IOException {
         File file = new File(pathToFile);
         file.getParentFile().mkdirs();
         file.createNewFile();
@@ -35,32 +61,34 @@ public class ExampleBatchUtilities {
         }
         writer.close();
     }
-    
-    public static <T> void writeInputDataSetToFile(String pathToFile, List<Tuple2<Long, List<T>>> list) throws IOException {
-        File file = new File(pathToFile);
-        file.getParentFile().mkdirs();
-        file.createNewFile();
-        FileWriter writer = new FileWriter(file);
-        for (int i = 0; i < list.size(); ++i) {
-            Tuple2<Long, List<T>> tuple = list.get(i);
-            
-            writer.write(tuple.f0 + "," + ExampleStreamingUtilities.listToString(tuple.f1) + '\n');
-        }
-        writer.close();
-    }
-    
-    public static <T> void writeOutputDataSetToFile(String pathToFile, List<Tuple2<Long, T>> list) throws IOException {
-        File file = new File(pathToFile);
-        file.getParentFile().mkdirs();
-        file.createNewFile();
-        FileWriter writer = new FileWriter(file);
-        for (int i = 0; i < list.size(); ++i) {
-            Tuple2<Long, T> tuple = list.get(i);
-
-            writer.write(tuple.f0 + "," + tuple.f1 + '\n');
-        }
-        writer.close();
-    }
+//    
+//    public static <T> void writeInputDataSetToFile(String pathToFile, List<Tuple2<Long, List<T>>> list, 
+//                                                   List<String> headers) throws IOException {
+//        File file = new File(pathToFile);
+//        file.getParentFile().mkdirs();
+//        file.createNewFile();
+//        FileWriter writer = new FileWriter(file);
+//        for (int i = 0; i < list.size(); ++i) {
+//            Tuple2<Long, List<T>> tuple = list.get(i);
+//            
+//            writer.write(tuple.f0 + "," + ExampleStreamingUtilities.listToString(tuple.f1) + '\n');
+//        }
+//        writer.close();
+//    }
+//    
+//    public static <T> void writeOutputDataSetToFile(String pathToFile, List<Tuple2<Long, T>> list, 
+//                                                    List<String> headers) throws IOException {
+//        File file = new File(pathToFile);
+//        file.getParentFile().mkdirs();
+//        file.createNewFile();
+//        FileWriter writer = new FileWriter(file);
+//        for (int i = 0; i < list.size(); ++i) {
+//            Tuple2<Long, T> tuple = list.get(i);
+//
+//            writer.write(tuple.f0 + "," + tuple.f1 + '\n');
+//        }
+//        writer.close();
+//    }
     
     public static void computeAndPrintOfflineOnlineMSE(DataSet<Tuple2<Long, Double>> predictionsOffline, 
                                                        DataSet<Tuple2<Long, Double>> predictionsOnline,

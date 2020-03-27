@@ -146,7 +146,10 @@ public class PM2Point5PollutionInArea {
         }
         return -1.0;
     }
-    
+
+    /**
+     * Convert the original data into a format suitable for LR.
+     */
     public static class ConvertData {
         public static final String INPUT_FILE_PATH = "D:\\Programy\\BachelorThesis\\Development\\flink-rc\\src\\test\\resources\\pm2.5_pollution\\original_input\\Los Angeles-Long Beach-Anaheim, CA Redux.csv";
         public static final String TRANSFORMED_INPUT_PATH = "src/test/resources/pm2.5_pollution/transformed_input/PM2.5 for Los Angeles-Long Beach-Anaheim, CA Transformed.csv";
@@ -155,8 +158,7 @@ public class PM2Point5PollutionInArea {
         public static void main(String[] args) throws Exception {
             ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
             env.setParallelism(1);
-
-            /*Convert the original data into a format suitable for LR*/
+            
             DataSet<Tuple3<String, Integer, Double>> dataSet = env.readCsvFile(INPUT_FILE_PATH)
                     .ignoreInvalidLines()
                     .includeFields("111000000000")

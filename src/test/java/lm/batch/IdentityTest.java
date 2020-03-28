@@ -23,6 +23,7 @@ import utilities.PythonPlotting;
  */
 public class IdentityTest {
     private static final int NUM_SAMPLES = 500;
+    private static final double LEARNING_RATE = 8.5;    // 0.02 for identity
     
     public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment();
@@ -35,9 +36,8 @@ public class IdentityTest {
             y.add(x.doubleValue()/500); // "normalize" the inputs
             return Tuple2.of(x.longValue(), y);
         }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-
-        /*adding a random epsilon to each data point*/
-        Random random = new Random();
+        
+        Random random = new Random();   // adding a random epsilon to each data point
         DataSet<Tuple2<Long, Double>> integersOut = env.fromCollection(integerList)
 //                .map(x -> Tuple2.of(x.longValue(), x.doubleValue())) // identity function
 //                .map(x -> Tuple2.of(x.longValue(), x.doubleValue() + random.nextDouble() - 0.5)) // added a random epsilon
@@ -50,7 +50,7 @@ public class IdentityTest {
         List<Double> Alpha;
         LinearRegression lr = new LinearRegression();
 
-        DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integers, integersOut, null, 8.5,
+        DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integers, integersOut, null, LEARNING_RATE,
                 integerList.size(), true, true);
 
         DataSet<Double> mse = alphasWithMSE.filter(x -> x.f0 == -1).map(x -> x.f1.get(0));
@@ -64,18 +64,18 @@ public class IdentityTest {
         DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(integers, Alpha);
         results.print();
 
-//        DataSet<Double> mse = ExampleOfflineUtilities.computeMSE(results, integersOut);
-//        System.out.println("MSE estimate:" + lr.getMSE());
+//        DataSet<Double> mseExact = ExampleBatchUtilities.computeMSE(results, integersOut);
+//        System.out.println("MSE: " + mseExact.collect().get(NUM_SAMPLES - 1));
 
 //        ExampleBatchUtilities utils = new ExampleBatchUtilities();
 //        utils.plotLRFit(integers, integersOut, results, 0, 0, "x", "y", 
 //                "Identity Test", ExampleBatchUtilities.PlotType.POINTS);
 //
-//        /* Add the offline (pseudoinverse) fitting for comparison */
-//        Alpha = LinearRegressionPrimitive.fit(integers, integersOut, TrainingMethod.PSEUDOINVERSE, 1, 0.001);
-//        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integers, Alpha);
+        /* Add the offline (pseudoinverse) fitting for comparison */
+        Alpha = LinearRegressionPrimitive.fit(integers, integersOut, TrainingMethod.PSEUDOINVERSE, 1, 0);
+        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integers, Alpha);
 //        utils.addLRFitToPlot(integers, resultsOffline, 0);
-//        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, integersOut);
+        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, integersOut);
 //        ExampleBatchUtilities.plotAllAlphas(alphaList); // Plotting Alpha Training
         
 //        Double mseOffline = ExampleOfflineUtilities.computeMSE(results, integersOut).collect().get(NUM_SAMPLES - 1);
@@ -97,9 +97,16 @@ public class IdentityTest {
         headersOut.add("index");
         headersOut.add("output");
         
+        /* Plotting Online */
         PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
-//                "x", "f(x) = x", "Identity", null, headers, headersOut);
-                "x", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity'", null, 
+//                "$x$", "$f(x) = x$", "Identity", null, headers, headersOut);
+                "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity'", null, 
+                headers, headersOut);
+
+        /* Plotting Offline */
+        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), resultsOffline.collect(), 0, 0,
+//                "$x$", "$f(x) = x$", "Identity (Offline)", null, headers, headersOut);
+                "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity' (Offline)", null,
                 headers, headersOut);
         
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 

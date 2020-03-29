@@ -8,6 +8,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class GlacierMeltdownExample {
@@ -36,6 +37,9 @@ public class GlacierMeltdownExample {
 //        inputStream.print("input");
         
         inputStream.map(new ESNReservoirSparse(N_u, N_x)); //.print("Reservoir output");
+        
+//        inputStream.map(new ESNReservoirSparse(N_u, N_x, Collections.nCopies(N_x, 0.0), Math::tanh, 1, 0, 
+//                3, 0.5, true, true)).print("Reservoir output");
 
         see.execute("Reservoir Computing - Glaciers Meltdown Example");
     }

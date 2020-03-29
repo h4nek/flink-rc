@@ -42,13 +42,38 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
     private final double shift; // shift of the interval for generating random values
     private final long jumpSize; // the size of bidirectional jumps when W is initialized using a deterministic pattern
     private final double alpha;   // scaling hyperparameter
+    private final boolean randomized;  // signifies if W should consist of individually randomized weights 
+                                       // (or one random "constant" for jumps, one for the cycle)
+    private final boolean cycle;   // signifies if we want to include a unidirectional cycle (1->2->...->N_x->1)
+                                   // otherwise, the jumps will "supplement" this by leading from/to every node
+    
+    private void argumentsCheck() {
+        String exceptionString = null;
+        if (N_u < 1 || N_x < 1) {
+            exceptionString = "The input/internal vector size has to be positive";
+        }
+        else if (init_vector.size() != N_x) {
+            exceptionString = "The length of the initial vector must be N_x.";
+        }
+        else if (range < 0) {
+            exceptionString = "The range of weights has to be positive";
+        }
+        
+        if (exceptionString != null) {
+            throw new IllegalArgumentException(exceptionString);
+        }
+        
+        if (alpha < 0 || alpha > 1) {
+            System.err.println("WARNING: The W-scaling hyperparameter (alpha) should be between 0 and 1.");
+        }
+        if (jumpSize < 2 || jumpSize > N_x/2) {
+            System.err.println("WARNING: The jump size should satisfy 1 < jumpSize < N_x/2 (floored)");
+        }
+    }
     
     
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation, double range, 
-                              double shift, long jumpSize, double alpha) {
-        if (init_vector.size() != N_x) {
-            throw new IllegalArgumentException("The length of the initial vector must be N_x.");
-        }
+                              double shift, long jumpSize, double alpha, boolean randomized, boolean cycle) {
         this.N_u = N_u;
         this.N_x = N_x;
         this.transformation = transformation;
@@ -58,10 +83,14 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         this.shift = shift;
         this.jumpSize = jumpSize;
         this.alpha = alpha;
+        this.randomized = randomized;
+        this.cycle = cycle;
+
+        argumentsCheck();   // check the validity of all arguments after instantiating them, so no need to pass them
     }
     
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation) {
-        this(N_u, N_x, init_vector, transformation, 1, 0, 3, 0.5);
+        this(N_u, N_x, init_vector, transformation, 1, 0, 2, 0.5, false, true);
     }
 
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector) {
@@ -91,8 +120,8 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         System.out.println("random W_in: " + W_input);
 
         /* Create Cycle Reservoir with Jumps */
-        Random random = new Random();
-        double valueW = random.nextDouble()*range - (range/2) + shift;
+        double cycleWeight = getRandomWeight(); // a random constant for the unidirectional cycle
+        double jumpWeight = getRandomWeight(); // a random constant for all jumps
 
         /* SparseStore Quicker */   // fastest
         W_internal = SparseStore.makePrimitive(N_x, N_x);
@@ -100,10 +129,27 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
 //        for (int i = 1; i < N_x; ++i) {
 //            W_internal.add(i, i-1, valueW);
 //        }
-        // jumps saturated matrix
-        for (int i = 0; i < N_x; i++) { // creates a symmetric matrix that has exactly two values in each row/col
-            W_internal.add(i, (i + jumpSize) % N_x, valueW);
-            W_internal.add(i, (i - jumpSize + N_x) % N_x, valueW);
+        for (int i = 0; i < N_x; i++) {
+            if (cycle) {    // cycle reservoir with jumps
+                if (i % jumpSize == 0) {    // jumps will start at "node 0" and end there or before
+                    long nextPos = (i + jumpSize) % N_x;
+                    long prevPos = (i - jumpSize + N_x) % N_x;
+                    if (nextPos % jumpSize == 0)    // can be violated at the "last" node (if jumpSize ∤ N_x)
+                        W_internal.add(i, nextPos, randomized ? getRandomWeight() : jumpWeight);
+                    if (prevPos % jumpSize == 0)    // can be violated at the "node 0" (if jumpSize ∤ N_x)
+                        W_internal.add(i, prevPos, randomized ? getRandomWeight() : jumpWeight);
+                }
+                if (i == 0) {   // unidirectional cycle
+                    W_internal.add(i, N_x - 1, randomized ? getRandomWeight() : cycleWeight);
+                }
+                else {
+                    W_internal.add(i, i-1, randomized ? getRandomWeight() : cycleWeight);   // unidirectional cycle
+                }
+            }
+            else {  // jumps saturated matrix -- symmetric with exactly two values in each row/col
+                W_internal.add(i, (i + jumpSize) % N_x, randomized ? getRandomWeight() : jumpWeight);
+                W_internal.add(i, (i - jumpSize + N_x) % N_x, randomized ? getRandomWeight() : jumpWeight);
+            }
         }
         System.out.println("sparse store w/ jumps: " + W_internal);
 
@@ -117,6 +163,11 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         /* Scaling W */
         W_internal = (SparseStore<Double>) W_internal.multiply(alpha/spectralRadius);
         System.out.println("scaled W: " + W_internal);
+    }
+
+    private static final Random random = new Random();
+    private double getRandomWeight() {
+        return random.nextDouble()*range - (range/2) + shift;
     }
 
     @Override

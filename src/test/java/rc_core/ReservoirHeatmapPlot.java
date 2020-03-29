@@ -34,8 +34,10 @@ public class ReservoirHeatmapPlot {
         for (int i = 0; i < N_x; i++) {
             if (cycle) {    // cycle reservoir with jumps
                 if (i % jumpSize == 0) {    // jumps will start at "node 0" and end there or before
-                    W_internal.add(i, (i + jumpSize) % N_x, randomized ? getRandomWeight() : jumpWeight);
-                    W_internal.add(i, (i - jumpSize + N_x) % N_x, randomized ? getRandomWeight() : jumpWeight);
+                    if ((i+jumpSize) % N_x == 0)    // can be violated at the "last" node (if jumpSize ∤ N_x)
+                        W_internal.add(i, (i + jumpSize) % N_x, randomized ? getRandomWeight() : jumpWeight);
+                    if ((i-jumpSize) % N_x == 0)    // can be violated at the "node 0" (if jumpSize ∤ N_x)
+                        W_internal.add(i, (i - jumpSize + N_x) % N_x, randomized ? getRandomWeight() : jumpWeight);
                 }
                 if (i == 0) {   // unidirectional cycle
                     W_internal.add(i, N_x - 1, randomized ? getRandomWeight() : cycleWeight);

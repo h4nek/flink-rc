@@ -201,27 +201,6 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         
         return DoubleStream.of(output.toRawCopy1D()).boxed().collect(Collectors.toList());
     }
-
-    /**
-     * A convenience method that creates a comma-separated string of list contents.
-     * @param list
-     * @param <T>
-     * @return
-     */
-    private static <T> String listToString(List<T> list) {
-        StringBuilder listString = new StringBuilder("{");
-        for (int i = 0; i < list.size(); ++i) {
-            if (i == list.size() - 1) {
-                listString.append(list.get(i));
-            }
-            else {
-                listString.append(list.get(i)).append(", ");
-            }
-        }
-        listString.append('}');
-
-        return listString.toString();
-    }
 }
 
 //interface Transformation extends Serializable {

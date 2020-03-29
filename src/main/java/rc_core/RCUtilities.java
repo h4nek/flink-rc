@@ -4,6 +4,7 @@ import org.ojalgo.matrix.Primitive64Matrix;
 import org.ojalgo.matrix.decomposition.Eigenvalue;
 import org.ojalgo.matrix.store.MatrixStore;
 import org.ojalgo.matrix.store.SparseStore;
+import org.ojalgo.scalar.ComplexNumber;
 
 import java.util.Comparator;
 import java.util.List;
@@ -22,11 +23,11 @@ public class RCUtilities {
         final Eigenvalue<Double> eigenvalueDecomposition = Eigenvalue.PRIMITIVE.make((int) matrix.countRows(), 
                 (int) matrix.countColumns());
         eigenvalueDecomposition.decompose(matrix);
-        final MatrixStore<Double> matrix_spectrum = eigenvalueDecomposition.getD();
-        System.out.println("Diagonal matrix of eigenvalues: " + matrix_spectrum);
+        List<ComplexNumber> eigenvalues = eigenvalueDecomposition.getEigenvalues();
+        System.out.println(listToString(eigenvalues));
         double spectralRadius = Double.MIN_VALUE;
-        for (int i = 0; i < matrix.countRows(); ++i) { // selecting the largest absolute value of an eigenvalue
-            double val = Math.abs(matrix_spectrum.get(i, i));    // iterate over every eigenvalue and compute its absolute value
+        for (ComplexNumber eigenvalue : eigenvalues) {  // selecting the largest absolute value of an eigenvalue
+            double val = eigenvalue.norm();
             if (spectralRadius < val) {
                 spectralRadius = val;
             }
@@ -46,5 +47,27 @@ public class RCUtilities {
         // which is what we need
         eigenpairs.sort(Comparator.comparing(x -> x.value));
         return eigenpairs.get(eigenpairs.size() - 1).value.norm();
+    }
+
+    /**
+     * USED FOR DEBUGGING PURPOSES
+     * A convenience method that creates a comma-separated string of list contents.
+     * @param list
+     * @param <T>
+     * @return
+     */
+    public static <T> String listToString(List<T> list) {
+        StringBuilder listString = new StringBuilder("{");
+        for (int i = 0; i < list.size(); ++i) {
+            if (i == list.size() - 1) {
+                listString.append(list.get(i));
+            }
+            else {
+                listString.append(list.get(i)).append(", ");
+            }
+        }
+        listString.append('}');
+
+        return listString.toString();
     }
 }

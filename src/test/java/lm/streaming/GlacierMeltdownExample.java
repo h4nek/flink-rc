@@ -124,46 +124,50 @@ public class GlacierMeltdownExample {
         DataSet<Double> mse = ExampleBatchUtilities.computeMSE(predictions, glaciersOutput); //ExampleOnlineUtilities.computeMSE(predictions, glaciersOutput);
         
         /* Save the inputs, predictions and outputs to a CSV */
-        String learningType = "";
-        if (trainingMethod == LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE) {
-            learningType = "offline";
-        }
-        else if (trainingMethod == TrainingMethod.GRADIENT_DESCENT) {
-            learningType = "online";
-        }
-        
-        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/alpha_parameters_" + 
-                learningType + "_" + learningRate + ".csv", Alpha);
-
-        predictions.writeAsCsv(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/predictions_" +
-                learningType + "_" + learningRate + ".csv", FileSystem.WriteMode.OVERWRITE);
-
-        List<Double> mseList = mse.collect();
-        System.out.println("Alpha: " + Alpha);
-        System.out.println("MSE: " + mseList.get(mseList.size() - 1));
-
-        List<Double> mseLast = new ArrayList<>();
-        mseLast.add(mseList.get(mseList.size() - 1));
-        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + 
-                learningType + "_" + learningRate + ".csv", mseLast);
+//        String learningType = "";
+//        if (trainingMethod == LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE) {
+//            learningType = "offline";
+//        }
+//        else if (trainingMethod == TrainingMethod.GRADIENT_DESCENT) {
+//            learningType = "online";
+//        }
+//        
+//        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/alpha_parameters_" + 
+//                learningType + "_" + learningRate + ".csv", Alpha);
+//
+//        predictions.writeAsCsv(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/predictions_" +
+//                learningType + "_" + learningRate + ".csv", FileSystem.WriteMode.OVERWRITE);
+//
+//        List<Double> mseList = mse.collect();
+//        System.out.println("Alpha: " + Alpha);
+//        System.out.println("MSE: " + mseList.get(mseList.size() - 1));
+//
+//        List<Double> mseLast = new ArrayList<>();
+//        mseLast.add(mseList.get(mseList.size() - 1));
+//        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + 
+//                learningType + "_" + learningRate + ".csv", mseLast);
 
 //        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
 //        utilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
 //        
-//        /* Adding offline (pseudoinverse) fitting for comparison */
-//        Alpha = LinearRegressionPrimitive.fit(glaciersInput, glaciersOutput,
-//                TrainingMethod.PSEUDOINVERSE, 1, learningRate);
-//        DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInput, Alpha);
+        /* Adding offline (pseudoinverse) fitting for comparison */
+        List<Double> AlphaOffline = LinearRegressionPrimitive.fit(glaciersInput, glaciersOutput,
+                TrainingMethod.PSEUDOINVERSE, 1, 0);
+        DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInput, AlphaOffline);
 //        utilities.addLRFitToPlot(glaciersInput, predictionsOffline, 0);
-//        
-//        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutput);
+
+        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutput);
 
         List<Tuple2<Long, List<Double>>> inputTransformed = glaciersInput.map(x -> {x.f1.add(x.f1.get(0) + 1945); 
         x.f1.remove(0); return x;}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect();
 //        System.out.println("new input list: " + ExampleStreamingUtilities.listToString(inputTransformed));
-        PythonPlotting.plotLRFit(inputTransformed, glaciersOutput.collect(), predictions.collect(), 0, 
-                0, "input", "Mean cumulative mass balance", "Glaciers Meltdown", 
-                PythonPlotting.PlotType.LINE);
+//        PythonPlotting.plotLRFit(inputTransformed, glaciersOutput.collect(), predictions.collect(), 0, 
+//                0, "input", "Mean cumulative mass balance (mwe)", "Glaciers Meltdown", 
+//                PythonPlotting.PlotType.LINE);
+        
+        PythonPlotting.plotLRFit(inputTransformed, glaciersOutput.collect(), predictions.collect(), 0,
+                0, "input", "Mean cumulative mass balance (mwe)", "Glaciers Meltdown",
+                PythonPlotting.PlotType.LINE, null, null, predictionsOffline.collect());
         
 //        env.execute("Glacier Meltdown Example for Matlab");
     }

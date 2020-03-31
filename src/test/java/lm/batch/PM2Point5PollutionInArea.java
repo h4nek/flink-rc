@@ -124,7 +124,7 @@ public class PM2Point5PollutionInArea {
 //                results, outputSet);
 
         PythonPlotting.plotLRFit(inputSet.collect(), outputSet.collect(), results.collect(), 0, 0, 
-                "Day", "PPM", "PM 2.5 Pollution in Seattle Area", PythonPlotting.PlotType.POINTS);
+                "Day", "$\\mu g/m^3$", "PM 2pt5 Pollution in Seattle Area", PythonPlotting.PlotType.POINTS);
 
 //        System.out.println("MSE estimate: " + lr.getMSE(Alpha));
 //        env.execute();

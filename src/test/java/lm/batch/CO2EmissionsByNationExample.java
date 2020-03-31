@@ -103,7 +103,15 @@ public class CO2EmissionsByNationExample {
 //        
 //        ExampleBatchUtilities.plotAllAlphas(alphaList);
         
-        PythonPlotting.plotLRFit(inputSet.collect(), outputSet.collect(), results.collect(), "CO2 Emissions By Nation");
+        // transforming the data back to the correct form for plotting
+        PythonPlotting.plotLRFit(inputSet.map(x -> {
+                double y = x.f1.remove(0);
+                y = y*200 + 1750;
+                x.f1.add(0, y);
+                return x;
+            }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSet.collect(), 
+                results.collect(), 0, 0, "Year", "kt of CO\\textsubscript{2}", 
+                "CO2 Emissions By Nation", PythonPlotting.PlotType.POINTS);
     }
 
     /**

@@ -94,6 +94,19 @@ public class PythonPlotting {
                 plotType, null, null, null);
     }
 
+    /**
+     * Simple combined (online & offline) LR plotting.
+     */
+    public static void plotLRFit(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
+                                 List<Tuple2<Long, Double>> predictionList, 
+                                 List<Tuple2<Long, Double>> predictionsOfflineList, String title) throws IOException {
+        plotLRFit(inputList, outputList, predictionList, 0, 0, "input", "output", title,
+                null, null, null, predictionsOfflineList);
+    }
+
+    /**
+     * Simple LR plotting with default labels, etc.
+     */
     public static void plotLRFit(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
                                  List<Tuple2<Long, Double>> predictionList, String title) throws IOException {
         plotLRFit(inputList, outputList, predictionList, 0, 0, "input", "output", title, 

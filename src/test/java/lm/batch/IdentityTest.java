@@ -97,17 +97,22 @@ public class IdentityTest {
         headersOut.add("index");
         headersOut.add("output");
         
-        /* Plotting Online */
-        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
-//                "$x$", "$f(x) = x$", "Identity", null, headers, headersOut);
-                "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity'", null, 
-                headers, headersOut);
-
-        /* Plotting Offline */
-        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), resultsOffline.collect(), 0, 0,
-//                "$x$", "$f(x) = x$", "Identity (Offline)", null, headers, headersOut);
-                "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity' (Offline)", null,
-                headers, headersOut);
+//        /* Plotting Online */
+//        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
+////                "$x$", "$f(x) = x$", "Identity", null, headers, headersOut);
+//                "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity'", null, 
+//                headers, headersOut);
+//
+//        /* Plotting Offline */
+//        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), resultsOffline.collect(), 0, 0,
+////                "$x$", "$f(x) = x$", "Identity (Offline)", null, headers, headersOut);
+//                "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity' (Offline)", null,
+//                headers, headersOut);
+        
+        /* Plotting Online & Offline */
+        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0,
+                "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity' (Combined)", null,
+                headers, headersOut, resultsOffline.collect());
         
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
 //                "x", "f(x) = x", "Identity", null);

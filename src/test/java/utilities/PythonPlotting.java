@@ -33,7 +33,7 @@ public class PythonPlotting {
     public static void plotLRFit(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
                                  List<Tuple2<Long, Double>> predictionList, int inputIndex, int shiftData, String xlabel, 
                                  String ylabel, String title, PlotType plotType, List<String> inputHeaders, 
-                                 List<String> outputHeaders) throws IOException {
+                                 List<String> outputHeaders, List<Tuple2<Long, Double>> offlinePredsList) throws IOException {
         String plotTypeString = "-";
         if (plotType == PlotType.POINTS) {
             plotTypeString = ".";
@@ -45,6 +45,10 @@ public class PythonPlotting {
                 outputList, outputHeaders, false);
         ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + title + "_lrFitPredictionData.csv", 
                 predictionList, outputHeaders, false);
+        if (offlinePredsList != null) {
+            ExampleBatchUtilities.writeDataSetToFile(pathToDataOutputDir + title + "_lrFitOfflinePredictionData.csv", 
+                    offlinePredsList, outputHeaders, false);
+        }
         String[] params = {
                 "python",
                 "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotLRFit.py",
@@ -57,7 +61,8 @@ public class PythonPlotting {
                 xlabel,
                 ylabel,
                 title,
-                plotTypeString
+                plotTypeString, 
+                offlinePredsList == null ? "" : title + "_lrFitOfflinePredictionData",
         };
         Process process = Runtime.getRuntime().exec(params);
         
@@ -67,6 +72,18 @@ public class PythonPlotting {
         System.out.println(process.exitValue());
     }
 
+
+    /**
+     * A version without offline predictions.
+     */
+    public static void plotLRFit(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
+                                 List<Tuple2<Long, Double>> predictionList, int inputIndex, int shiftData, String xlabel,
+                                 String ylabel, String title, PlotType plotType, List<String> inputHeaders,
+                                 List<String> outputHeaders) throws IOException {
+        plotLRFit(inputList, outputList, predictionList, inputIndex, shiftData, xlabel, ylabel, title, plotType, 
+                inputHeaders, outputHeaders, null);
+    }
+
     /**
      * A version without headers for columns in DataSet files.
      */
@@ -74,7 +91,7 @@ public class PythonPlotting {
                                  List<Tuple2<Long, Double>> predictionList, int inputIndex, int shiftData, String xlabel,
                                  String ylabel, String title, PlotType plotType) throws IOException {
         plotLRFit(inputList, outputList, predictionList, inputIndex, shiftData, xlabel, ylabel, title,
-                plotType, null, null);
+                plotType, null, null, null);
     }
 
     public static void plotLRFit(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,

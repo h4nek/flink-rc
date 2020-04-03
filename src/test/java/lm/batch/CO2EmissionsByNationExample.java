@@ -2,6 +2,7 @@ package lm.batch;
 
 import lm.LinearRegression;
 import lm.LinearRegressionPrimitive;
+import lm.streaming.ExampleStreamingUtilities;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -24,6 +25,7 @@ public class CO2EmissionsByNationExample {
     public static final String INPUT_FILE_PATH = "src/test/resources/co2_emissions/fossil-fuel-co2-emissions-by-nation.csv";
     public static final double LEARNING_RATE = 0.85; //0.000001;
     public static final String[] selectNations = {"UNITED KINGDOM", "NORWAY", "CZECH REPUBLIC", "CHINA (MAINLAND)"};
+    private static final double SPLIT_RATIO = 0.8;
 
 
     public static void main(String[] args) throws Exception {
@@ -52,21 +54,30 @@ public class CO2EmissionsByNationExample {
             for (double d : assignNationCode(x.f1.f1)) {
                 y.add(d);
             }
+//            System.out.println(x.f1.f1 + ": " + ExampleStreamingUtilities.listToString(y));//TEST
             return Tuple2.of(x.f0, y);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.f2))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         inputSet.printOnTaskManager("IN");  //TEST
         outputSet.printOnTaskManager("OUT");    //TEST
 
+        /* Split the data for testing and training */
+        int datasetSize = dataSet.collect().size();
+        int trainingSetSize = (int) Math.floor(SPLIT_RATIO*datasetSize);
+        DataSet<Tuple2<Long, List<Double>>> inputSetTrain = inputSet.first(trainingSetSize);
+        DataSet<Tuple2<Long, List<Double>>> inputSetTest = inputSet.filter(x -> x.f0 >= trainingSetSize);
+        DataSet<Tuple2<Long, Double>> outputSetTrain = outputSet.first(trainingSetSize);
+        DataSet<Tuple2<Long, Double>> outputSetTest = outputSet.filter(x -> x.f0 >= trainingSetSize);
+        
         LinearRegression lr = new LinearRegression();
-        DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(inputSet, outputSet, null, LEARNING_RATE, 
-                inputSet.collect().size(), false);
+        DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(inputSetTrain, outputSetTrain, null, LEARNING_RATE,
+                trainingSetSize, false);
         alphas.printOnTaskManager("ALPHA"); //TEST
 
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
-        List<Double> Alpha = alphaList.get(alphaList.size() - 1);
+        List<Double> Alpha = alphaList.get(datasetSize - trainingSetSize - 1);
 
-        DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(inputSet, Alpha);
+        DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(inputSetTest, Alpha);
 
         indexedDataSet.join(results).where(0).equalTo(0)
                 .with((x,y) -> Tuple5.of(x.f0, x.f1.f0, x.f1.f1, x.f1.f2, y.f1))
@@ -75,8 +86,8 @@ public class CO2EmissionsByNationExample {
 
         /*Compute the MSE for last Alpha*/
         System.out.println("last Alpha: " + Alpha);
-        DataSet<Double> mse = ExampleBatchUtilities.computeMSE(results, outputSet);
-        System.out.println(mse.collect().get(alphaList.size() - 1));
+        DataSet<Double> mse = ExampleBatchUtilities.computeMSE(results, outputSetTest);
+        System.out.println(mse.collect().get(datasetSize - trainingSetSize - 1));
         
         /*Check the whole trend of MSE*/
 //        ExampleOfflineUtilities.computeMSETrend(alphaList, inputSet, outputSet);
@@ -104,12 +115,12 @@ public class CO2EmissionsByNationExample {
 //        ExampleBatchUtilities.plotAllAlphas(alphaList);
         
         // transforming the data back to the correct form for plotting
-        PythonPlotting.plotLRFit(inputSet.map(x -> {
+        PythonPlotting.plotLRFit(inputSetTest.map(x -> {
                 double y = x.f1.remove(0);
                 y = y*200 + 1750;
                 x.f1.add(0, y);
                 return x;
-            }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSet.collect(), 
+            }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(), 
                 results.collect(), 0, 0, "Year", "kt of CO\\textsubscript{2}", 
                 "CO2 Emissions By Nation", PythonPlotting.PlotType.POINTS);
     }

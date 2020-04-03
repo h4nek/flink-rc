@@ -26,7 +26,8 @@ import java.util.stream.Collectors;
  */
 public class PM2Point5PollutionInArea {
     public static final String INPUT_FILE_PATH = "src/test/resources/pm2.5_pollution/transformed_input/PM2.5 for Seattle-Tacoma-Bellevue, WA Transformed.csv";
-    public static final double LEARNING_RATE = 0.004;   // 0.001 - without decay (MSE ~ 12.6)
+    public static final double LEARNING_RATE = 0.001;   // 0.001 - without decay (MSE ~ 12.6)
+    private static final double SPLIT_RATIO = 0.8;
 
 
     public static void main(String[] args) throws Exception {
@@ -77,14 +78,25 @@ public class PM2Point5PollutionInArea {
                     avg += val;
             }
             avg /= x.f1.size() - 1;
-            return Tuple2.of(x.f0-1, avg);  // we'll want to predict the next day's mean
+            return Tuple2.of(x.f0 - 1, avg); // we'll want to predict the next day's mean
         }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         outputSet.printOnTaskManager("OUTPUT"); //TEST
+
+        /* Split the data for testing and training */
+        int datasetSize = dataSet.collect().size();
+        int trainingSetSize = (int) Math.floor(SPLIT_RATIO*datasetSize);
+        DataSet<Tuple2<Long, List<Double>>> inputSetTrain = inputSet.first(trainingSetSize);
+        DataSet<Tuple2<Long, List<Double>>> inputSetTest = inputSet.filter(x -> x.f0 >= trainingSetSize);
+        DataSet<Tuple2<Long, Double>> outputSetTrain = outputSet.first(trainingSetSize + 1);
+//                .map(x -> Tuple2.of(x.f0 - 1, x.f1))
+//                .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+        DataSet<Tuple2<Long, Double>> outputSetTest = outputSet.filter(x -> x.f0 >= trainingSetSize);
+                
         
         
         LinearRegression lr = new LinearRegression();
-        DataSet<Tuple2<Long, List<Double>>> alphasAndMSEs = lr.fit(inputSet, outputSet, null, LEARNING_RATE,
-                dataSet.collect().size(), true, true);
+        DataSet<Tuple2<Long, List<Double>>> alphasAndMSEs = lr.fit(inputSetTrain, outputSetTrain, null, 
+                LEARNING_RATE, datasetSize, true, true);
         DataSet<Double> mse = alphasAndMSEs.filter(x -> x.f0 == -1).map(x -> x.f1.get(0));
         DataSet<Tuple2<Long, List<Double>>> alphas = alphasAndMSEs.filter(x -> x.f0 != -1);
         alphas.printOnTaskManager("ALPHA"); //TEST
@@ -95,15 +107,18 @@ public class PM2Point5PollutionInArea {
         /* Plotting Alpha training trend */
         ExampleBatchUtilities.plotAllAlphas(alphaList);
         
-        DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(inputSet, Alpha);
-        outputSet.join(results).where(0).equalTo(0)
-                .with((x, y) -> Tuple3.of(x.f0+1, x.f1, y.f1))
+        DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(inputSetTest, Alpha);
+        outputSetTest.join(results).where(0).equalTo(0)
+                .with((x, y) -> Tuple3.of(y.f0, x.f1, y.f1))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE, Types.DOUBLE))
                 .printOnTaskManager("PREDS");
 
-        DataSet<Double> mse2 = ExampleBatchUtilities.computeMSE(results, outputSet);
-        System.out.println("final MSE: " + mse2.collect().get(alphaList.size() - 1));
-        System.out.println("MSE estimate: " + mse.collect().get(alphaList.size() - 1));
+        DataSet<Double> mse2 = ExampleBatchUtilities.computeMSE(results, outputSetTest);
+        System.out.println("total size: " + datasetSize);
+        System.out.println("training size: " + trainingSetSize);
+        System.out.println("testing size: " + (datasetSize - trainingSetSize));
+        System.out.println("final MSE (testing): " + mse2.collect().get(datasetSize - trainingSetSize - 2)); // one less thanks to the output shift
+        System.out.println("MSE estimate (training): " + mse.collect().get(trainingSetSize - 1));
 
 
 //        /*Graph the original data & results*/
@@ -123,8 +138,17 @@ public class PM2Point5PollutionInArea {
 //                        .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)), 
 //                results, outputSet);
 
-        PythonPlotting.plotLRFit(inputSet.collect(), outputSet.collect(), results.collect(), 0, 0, 
-                "Day", "$\\mu g/m^3$", "PM 2pt5 Pollution in Seattle Area", PythonPlotting.PlotType.POINTS);
+        List<Tuple2<Long, List<Double>>> inputListTest = inputSetTest.collect();
+        inputListTest.remove(0);
+        System.out.println("inputTest size: " + inputListTest.size());
+        System.out.println("outputTest size: " + outputSetTest.collect().size());
+        System.out.println("resluts size: " + results.collect().size());
+        List<Tuple2<Long, Double>> resultsList = results.map(x -> Tuple2.of(x.f0 + 1, x.f1))
+                .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
+        resultsList.remove(resultsList.size() - 1);
+        PythonPlotting.plotLRFit(inputListTest, outputSetTest.map(x -> Tuple2.of(x.f0 + 1, x.f1))
+                        .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect(), resultsList, 0, 0, 
+                "Day", "$\\mu g/m^3$", "PM2.5 Pollution in Seattle Area", PythonPlotting.PlotType.POINTS);
 
 //        System.out.println("MSE estimate: " + lr.getMSE(Alpha));
 //        env.execute();

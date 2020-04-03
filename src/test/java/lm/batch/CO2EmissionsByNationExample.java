@@ -23,7 +23,7 @@ import java.util.List;
  */
 public class CO2EmissionsByNationExample {
     public static final String INPUT_FILE_PATH = "src/test/resources/co2_emissions/fossil-fuel-co2-emissions-by-nation.csv";
-    public static final double LEARNING_RATE = 0.85; //0.000001;
+    public static final double LEARNING_RATE = 0.01; //0.000001;
     public static final String[] selectNations = {"UNITED KINGDOM", "NORWAY", "CZECH REPUBLIC", "CHINA (MAINLAND)"};
     private static final double SPLIT_RATIO = 0.8;
 
@@ -49,7 +49,7 @@ public class CO2EmissionsByNationExample {
         indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
 
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {
-            List<Double> y = new ArrayList<>(); y.add((x.f1.f0.doubleValue() - 1750)/200);
+            List<Double> y = new ArrayList<>(); y.add(x.f1.f0.doubleValue() - 1750);  // shifting the year to start around 0
 //            y.add(Math.exp(x.f0.doubleValue()/500));    // "replace" x0 with e^x0
             for (double d : assignNationCode(x.f1.f1)) {
                 y.add(d);
@@ -104,13 +104,14 @@ public class CO2EmissionsByNationExample {
 //        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
 //        utilities.plotLRFit(inputSet, outputSet, results, 0);
 //
-//        /* Adding offline (pseudoinverse) fitting for comparison */
-//        Alpha = LinearRegressionPrimitive.fit(inputSet, outputSet, LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE,
-//                selectNations.length + 1);
-//        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSet, Alpha);
+        /* Adding offline (pseudoinverse) fitting for comparison */
+        List<Double> AlphaOffline = LinearRegressionPrimitive.fit(inputSetTrain, outputSetTrain, 
+                LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, selectNations.length + 1);
+        DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSetTest, AlphaOffline);
+        
 //        utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
 //        
-//        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, outputSet);
+        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, outputSetTest);
 //        
 //        ExampleBatchUtilities.plotAllAlphas(alphaList);
         

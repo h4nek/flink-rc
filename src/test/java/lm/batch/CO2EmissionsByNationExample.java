@@ -23,9 +23,10 @@ import java.util.List;
  */
 public class CO2EmissionsByNationExample {
     public static final String INPUT_FILE_PATH = "src/test/resources/co2_emissions/fossil-fuel-co2-emissions-by-nation.csv";
-    public static final double LEARNING_RATE = 0.01; //0.000001;
+    public static final double LEARNING_RATE = 100; //0.000001;
     public static final String[] selectNations = {"UNITED KINGDOM", "NORWAY", "CZECH REPUBLIC", "CHINA (MAINLAND)"};
     private static final double SPLIT_RATIO = 0.8;
+    private static final int downScaling = 250; // an amount by which the shifted input years should be divided by
 
 
     public static void main(String[] args) throws Exception {
@@ -49,7 +50,7 @@ public class CO2EmissionsByNationExample {
         indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
 
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {
-            List<Double> y = new ArrayList<>(); y.add(x.f1.f0.doubleValue() - 1750);  // shifting the year to start around 0
+            List<Double> y = new ArrayList<>(); y.add((x.f1.f0.doubleValue() - 1750)/ downScaling);  // shifting the year to start around 0
 //            y.add(Math.exp(x.f0.doubleValue()/500));    // "replace" x0 with e^x0
             for (double d : assignNationCode(x.f1.f1)) {
                 y.add(d);
@@ -58,16 +59,17 @@ public class CO2EmissionsByNationExample {
             return Tuple2.of(x.f0, y);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.f2))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
-        inputSet.printOnTaskManager("IN");  //TEST
-        outputSet.printOnTaskManager("OUT");    //TEST
 
         /* Split the data for testing and training */
         int datasetSize = dataSet.collect().size();
         int trainingSetSize = (int) Math.floor(SPLIT_RATIO*datasetSize);
+        System.out.println("training set size: " + trainingSetSize);
         DataSet<Tuple2<Long, List<Double>>> inputSetTrain = inputSet.first(trainingSetSize);
         DataSet<Tuple2<Long, List<Double>>> inputSetTest = inputSet.filter(x -> x.f0 >= trainingSetSize);
         DataSet<Tuple2<Long, Double>> outputSetTrain = outputSet.first(trainingSetSize);
         DataSet<Tuple2<Long, Double>> outputSetTest = outputSet.filter(x -> x.f0 >= trainingSetSize);
+        inputSetTrain.printOnTaskManager("IN_TRAIN");  //TEST
+        outputSetTrain.printOnTaskManager("OUT_TRAIN");    //TEST
         
         LinearRegression lr = new LinearRegression();
         DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(inputSetTrain, outputSetTrain, null, LEARNING_RATE,
@@ -75,7 +77,8 @@ public class CO2EmissionsByNationExample {
         alphas.printOnTaskManager("ALPHA"); //TEST
 
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
-        List<Double> Alpha = alphaList.get(datasetSize - trainingSetSize - 1);
+        System.out.println("alpha list: " + ExampleStreamingUtilities.listToString(alphaList));
+        List<Double> Alpha = alphaList.get(trainingSetSize - 1);
 
         DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(inputSetTest, Alpha);
 
@@ -106,7 +109,7 @@ public class CO2EmissionsByNationExample {
 //
         /* Adding offline (pseudoinverse) fitting for comparison */
         List<Double> AlphaOffline = LinearRegressionPrimitive.fit(inputSetTrain, outputSetTrain, 
-                LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, selectNations.length + 1);
+                LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, selectNations.length + 1, 0.00000000001);
         DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSetTest, AlphaOffline);
         
 //        utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
@@ -118,12 +121,14 @@ public class CO2EmissionsByNationExample {
         // transforming the data back to the correct form for plotting
         PythonPlotting.plotLRFit(inputSetTest.map(x -> {
                 double y = x.f1.remove(0);
-                y = y*200 + 1750;
+                y *= downScaling;
+                y += 1750;
                 x.f1.add(0, y);
                 return x;
             }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(), 
                 results.collect(), 0, 0, "Year", "kt of CO\\textsubscript{2}", 
-                "CO2 Emissions By Nation", PythonPlotting.PlotType.POINTS);
+                "CO2 Emissions By Nation", PythonPlotting.PlotType.POINTS, null, null, 
+                resultsOffline.collect());
     }
 
     /**

@@ -91,7 +91,7 @@ public class GlacierMeltdownExample {
         /* Training phase - compute the Alpha parameters */
         if (trainingMethod == TrainingMethod.PSEUDOINVERSE) {   // offline LR
             Alpha = LinearRegressionPrimitive.fit(glaciersInTrain, glaciersOutTrain,
-                    TrainingMethod.PSEUDOINVERSE, 1, 0);
+                    TrainingMethod.PSEUDOINVERSE, 0);
         }
         else {  // online LR using GD
             List<Double> alphaInit = new ArrayList<>();
@@ -160,7 +160,7 @@ public class GlacierMeltdownExample {
 //        
         /* Adding offline (pseudoinverse) fitting for comparison */
         List<Double> AlphaOffline = LinearRegressionPrimitive.fit(glaciersInTrain, glaciersOutTrain,
-                TrainingMethod.PSEUDOINVERSE, 1, 0);
+                TrainingMethod.PSEUDOINVERSE, 0);
         DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInTest, AlphaOffline);
 //        utilities.addLRFitToPlot(glaciersInput, predictionsOffline, 0);
 
@@ -208,7 +208,7 @@ public class GlacierMeltdownExample {
         /* 2. Training phase - compute the Alpha parameters */
         if (trainingMethod == TrainingMethod.PSEUDOINVERSE) {   // offline LR
             Alpha = LinearRegressionPrimitive.fit(glaciersFirstHalfInput, glaciersFirstHalfOutput, 
-                    TrainingMethod.PSEUDOINVERSE, 2, LEARNING_RATE);
+                    TrainingMethod.PSEUDOINVERSE, LEARNING_RATE);
         }
         else {  // online LR using SGD -- default
             DataSet<Tuple2<Long, List<Double>>> alphas = mlr.fit(glaciersFirstHalfInput, glaciersFirstHalfOutput, 

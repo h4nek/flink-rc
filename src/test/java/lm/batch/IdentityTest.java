@@ -81,8 +81,7 @@ public class IdentityTest {
 //                "Identity Test", ExampleBatchUtilities.PlotType.POINTS);
 //
         /* Add the offline (pseudoinverse) fitting for comparison */
-        Alpha = LinearRegressionPrimitive.fit(integersTrain, integersOutTrain, TrainingMethod.PSEUDOINVERSE, 1, 
-                0);
+        Alpha = LinearRegressionPrimitive.fit(integersTrain, integersOutTrain, TrainingMethod.PSEUDOINVERSE, 0);
         DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integersTest, Alpha);
 //        utils.addLRFitToPlot(integers, resultsOffline, 0);
         ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, integersOutTest);

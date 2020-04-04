@@ -43,14 +43,13 @@ public class LinearRegressionPrimitive {
      * @param inputSet
      * @param outputSet
      * @param method
-     * @param inputLength
      * @return
      * @throws Exception
      */
     public static List<Double> fit(DataSet<Tuple2<Long, List<Double>>> inputSet, 
-                                   DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method, int inputLength) throws Exception {
+                                   DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method) throws Exception {
         /* Prepare the data for offline training */
-        double[][] inputArr = inputDataSetToArray(inputSet, inputLength);
+        double[][] inputArr = inputDataSetToArray(inputSet);
         double[] outputArr = outputDataSetToArray(outputSet);
 
         double[] alpha = linearModel(inputArr, outputArr, method);
@@ -67,16 +66,15 @@ public class LinearRegressionPrimitive {
      * @param inputSet
      * @param outputSet
      * @param method
-     * @param inputLength
      * @param learningRate learning rate in case of gradient descent; regularization factor in case of pseudoinverse
      * @return
      * @throws Exception
      */
     public static List<Double> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
-                                   DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method, int inputLength,
-                                   double learningRate) throws Exception {
+                                   DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method, double learningRate) 
+            throws Exception {
         /* Prepare the data for offline training */
-        double[][] inputArr = inputDataSetToArray(inputSet, inputLength);
+        double[][] inputArr = inputDataSetToArray(inputSet);
         double[] outputArr = outputDataSetToArray(outputSet);
 
         double[] alpha = linearModel(inputArr, outputArr, method, learningRate);
@@ -182,14 +180,14 @@ public class LinearRegressionPrimitive {
         return result;
     }
     
-    private static double[][] inputDataSetToArray(DataSet<Tuple2<Long, List<Double>>> inputSet, int inputLength) throws Exception {
+    private static double[][] inputDataSetToArray(DataSet<Tuple2<Long, List<Double>>> inputSet) throws Exception {
         List<Tuple2<Long, List<Double>>> inputList = inputSet.collect();
-        double[][] inputArr = new double[inputList.size()][inputLength + 1];
+        double[][] inputArr = new double[inputList.size()][inputList.get(0).f1.size() + 1];
 
         for (int i = 0; i < inputList.size(); i++) {
             List<Double> inputVector = inputList.get(i).f1;
             inputVector.add(0, 1.0);
-            for (int j = 0; j < inputLength + 1; j++) {
+            for (int j = 0; j < inputVector.size(); j++) {
                 inputArr[i][j] = inputVector.get(j);
             }
         }

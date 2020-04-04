@@ -109,7 +109,7 @@ public class CO2EmissionsByNationExample {
 //
         /* Adding offline (pseudoinverse) fitting for comparison */
         List<Double> AlphaOffline = LinearRegressionPrimitive.fit(inputSetTrain, outputSetTrain, 
-                LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, selectNations.length + 1, 0.00000000001);
+                LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, 0.00000000001);
         DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSetTest, AlphaOffline);
         
 //        utilities.addLRFitToPlot(inputSet, resultsOffline, 0);

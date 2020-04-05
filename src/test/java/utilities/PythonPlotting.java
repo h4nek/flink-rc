@@ -43,8 +43,10 @@ public class PythonPlotting {
                 inputList, inputHeaders, true);
         ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + title + "_lrFitOutputData.csv", 
                 outputList, outputHeaders, false);
-        ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + title + "_lrFitPredictionData.csv", 
+        if (predictionList != null) {
+            ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + title + "_lrFitPredictionData.csv", 
                 predictionList, outputHeaders, false);
+        }
         if (offlinePredsList != null) {
             ExampleBatchUtilities.writeDataSetToFile(pathToDataOutputDir + title + "_lrFitOfflinePredictionData.csv", 
                     offlinePredsList, outputHeaders, false);
@@ -54,7 +56,7 @@ public class PythonPlotting {
                 "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotLRFit.py",
                 title + "_lrFitInputData",
                 title + "_lrFitOutputData",
-                title + "_lrFitPredictionData",
+                predictionList != null ? title + "_lrFitPredictionData" : "/",
                 title,
                 "" + (inputIndex + 1),
                 "" + shiftData,

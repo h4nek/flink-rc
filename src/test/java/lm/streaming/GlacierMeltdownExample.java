@@ -28,7 +28,7 @@ import java.util.List;
  */
 public class GlacierMeltdownExample {
     public static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
-    private static final int SPLIT_SIZE = 35;  // is equal to the half of the number of records
+    private static final double SPLIT_RATIO = 0.5;
     public static final double[] ALPHA_INIT = {1, 1, 1};
     public static final double LEARNING_RATE = 0.000004;
     public static final String EXAMPLE_ABSOLUTE_DIR_PATH = System.getProperty("user.dir") + "/src/test/resources/glaciers";
@@ -47,7 +47,7 @@ public class GlacierMeltdownExample {
 //        FileUtils.cleanDirectory(new File(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab"));
 //
         /* Online learning (GD) */
-        for (double learningRate : new double[]{0.0018}) {   // 0.0000004 -- originally ~ best
+        for (double learningRate : new double[]{0.01}) {   // 0.0000004 -- originally ~ best
             fitLRForMatlab(learningRate, TrainingMethod.GRADIENT_DESCENT);
         }
         
@@ -79,19 +79,27 @@ public class GlacierMeltdownExample {
             return Tuple2.of(x.f0-1945, y);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         DataSet<Tuple2<Long, Double>> glaciersOutput = glaciers.map(x -> Tuple2.of(x.f0-1945, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
 
+        /* Split the data for testing and training */
+        int datasetSize = glaciers.collect().size();
+        int trainingSetSize = (int) Math.floor(SPLIT_RATIO*datasetSize);
+        DataSet<Tuple2<Long, List<Double>>> glaciersInTrain = glaciersInput.first(trainingSetSize);
+        DataSet<Tuple2<Long, List<Double>>> glaciersInTest = glaciersInput.filter(x -> x.f0 >= trainingSetSize);
+        DataSet<Tuple2<Long, Double>> glaciersOutTrain = glaciersOutput.first(trainingSetSize);
+        DataSet<Tuple2<Long, Double>> glaciersOutTest = glaciersOutput.filter(x -> x.f0 >= trainingSetSize);
+        
         LinearRegression lr = new LinearRegression();
         /* Training phase - compute the Alpha parameters */
         if (trainingMethod == TrainingMethod.PSEUDOINVERSE) {   // offline LR
-            Alpha = LinearRegressionPrimitive.fit(glaciersInput, glaciersOutput,
-                    TrainingMethod.PSEUDOINVERSE, 1, learningRate);
+            Alpha = LinearRegressionPrimitive.fit(glaciersInTrain, glaciersOutTrain,
+                    TrainingMethod.PSEUDOINVERSE, 0);
         }
         else {  // online LR using GD
             List<Double> alphaInit = new ArrayList<>();
             alphaInit.add(0.0);
             alphaInit.add(0.0);
             
-            DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(glaciersInput, glaciersOutput, alphaInit, learningRate,
-                    glaciers.collect().size(), false);
+            DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(glaciersInTrain, glaciersOutTrain, alphaInit, learningRate,
+                    trainingSetSize, false);
 
             List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
             Alpha = alphaList.get(alphaList.size() - 1);
@@ -115,55 +123,59 @@ public class GlacierMeltdownExample {
         }
 
         /* Testing phase - use the input values and the Alpha vector to compute the predictions */
-        DataSet<Tuple2<Long, Double>> predictions = LinearRegressionPrimitive.predict(glaciersInput, Alpha);
+        DataSet<Tuple2<Long, Double>> predictions = LinearRegressionPrimitive.predict(glaciersInTest, Alpha);
 
         predictions.printOnTaskManager("PREDICTION");
         System.out.println("\n\n\n\n-------------------------------------------------");
 //        outputStream.print("REAL JO");
 
-        DataSet<Double> mse = ExampleBatchUtilities.computeMSE(predictions, glaciersOutput); //ExampleOnlineUtilities.computeMSE(predictions, glaciersOutput);
+        DataSet<Double> mse = ExampleBatchUtilities.computeMSE(predictions, glaciersOutTest); //ExampleOnlineUtilities.computeMSE(predictions, glaciersOutput);
         
         /* Save the inputs, predictions and outputs to a CSV */
-        String learningType = "";
-        if (trainingMethod == LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE) {
-            learningType = "offline";
-        }
-        else if (trainingMethod == TrainingMethod.GRADIENT_DESCENT) {
-            learningType = "online";
-        }
-        
-        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/alpha_parameters_" + 
-                learningType + "_" + learningRate + ".csv", Alpha);
-
-        predictions.writeAsCsv(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/predictions_" +
-                learningType + "_" + learningRate + ".csv", FileSystem.WriteMode.OVERWRITE);
-
-        List<Double> mseList = mse.collect();
-        System.out.println("Alpha: " + Alpha);
-        System.out.println("MSE: " + mseList.get(mseList.size() - 1));
-
-        List<Double> mseLast = new ArrayList<>();
-        mseLast.add(mseList.get(mseList.size() - 1));
-        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + 
-                learningType + "_" + learningRate + ".csv", mseLast);
+//        String learningType = "";
+//        if (trainingMethod == LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE) {
+//            learningType = "offline";
+//        }
+//        else if (trainingMethod == TrainingMethod.GRADIENT_DESCENT) {
+//            learningType = "online";
+//        }
+//        
+//        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/alpha_parameters_" + 
+//                learningType + "_" + learningRate + ".csv", Alpha);
+//
+//        predictions.writeAsCsv(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/predictions_" +
+//                learningType + "_" + learningRate + ".csv", FileSystem.WriteMode.OVERWRITE);
+//
+//        List<Double> mseList = mse.collect();
+//        System.out.println("Alpha: " + Alpha);
+//        System.out.println("MSE: " + mseList.get(mseList.size() - 1));
+//
+//        List<Double> mseLast = new ArrayList<>();
+//        mseLast.add(mseList.get(mseList.size() - 1));
+//        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/matlab/mse_" + 
+//                learningType + "_" + learningRate + ".csv", mseLast);
 
 //        ExampleBatchUtilities utilities = new ExampleBatchUtilities();
 //        utilities.plotLRFit(glaciersInput, glaciersOutput, predictions, 0);
 //        
-//        /* Adding offline (pseudoinverse) fitting for comparison */
-//        Alpha = LinearRegressionPrimitive.fit(glaciersInput, glaciersOutput,
-//                TrainingMethod.PSEUDOINVERSE, 1, learningRate);
-//        DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInput, Alpha);
+        /* Adding offline (pseudoinverse) fitting for comparison */
+        List<Double> AlphaOffline = LinearRegressionPrimitive.fit(glaciersInTrain, glaciersOutTrain,
+                TrainingMethod.PSEUDOINVERSE, 0);
+        DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInTest, AlphaOffline);
 //        utilities.addLRFitToPlot(glaciersInput, predictionsOffline, 0);
-//        
-//        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutput);
 
-        List<Tuple2<Long, List<Double>>> inputTransformed = glaciersInput.map(x -> {x.f1.add(x.f1.get(0) + 1945); 
+        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutTest);
+
+        List<Tuple2<Long, List<Double>>> testInputTransformed = glaciersInTest.map(x -> {x.f1.add(x.f1.get(0) + 1945); 
         x.f1.remove(0); return x;}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect();
-//        System.out.println("new input list: " + ExampleStreamingUtilities.listToString(inputTransformed));
-        PythonPlotting.plotLRFit(inputTransformed, glaciersOutput.collect(), predictions.collect(), 0, 
-                0, "input", "Mean cumulative mass balance", "Glaciers Meltdown", 
-                PythonPlotting.PlotType.LINE);
+//        System.out.println("new input list: " + ExampleStreamingUtilities.listToString(testInputTransformed));
+//        PythonPlotting.plotLRFit(testInputTransformed, glaciersOutput.collect(), predictions.collect(), 0, 
+//                0, "input", "Mean cumulative mass balance (mwe)", "Glaciers Meltdown", 
+//                PythonPlotting.PlotType.LINE);
+        
+        PythonPlotting.plotLRFit(testInputTransformed, glaciersOutTest.collect(), predictions.collect(), 0,
+                0, "input", "Mean cumulative mass balance (mwe)", "Glaciers Meltdown",
+                PythonPlotting.PlotType.LINE, null, null, predictionsOffline.collect());
         
 //        env.execute("Glacier Meltdown Example for Matlab");
     }
@@ -184,6 +196,7 @@ public class GlacierMeltdownExample {
             return Tuple2.of(x.f0, y);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))); // the year (f0) is used here both as an index and as a feature
         DataSet<Tuple2<Long, Double>> glaciersOutput = glaciers.map(x -> Tuple2.of(x.f0, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
 
+        int SPLIT_SIZE = 35;
         /* Split the DataSet for separate training and testing datasets */
         DataSet<Tuple2<Long, List<Double>>> glaciersFirstHalfInput = glaciersInput.first(SPLIT_SIZE);   // x.f0 < SPLIT_SIZE + 1945
         DataSet<Tuple2<Long, List<Double>>> glaciersSecondHalfInput = glaciersInput.filter(x -> x.f0 >= SPLIT_SIZE + 1945);
@@ -195,7 +208,7 @@ public class GlacierMeltdownExample {
         /* 2. Training phase - compute the Alpha parameters */
         if (trainingMethod == TrainingMethod.PSEUDOINVERSE) {   // offline LR
             Alpha = LinearRegressionPrimitive.fit(glaciersFirstHalfInput, glaciersFirstHalfOutput, 
-                    TrainingMethod.PSEUDOINVERSE, 2, LEARNING_RATE);
+                    TrainingMethod.PSEUDOINVERSE, LEARNING_RATE);
         }
         else {  // online LR using SGD -- default
             DataSet<Tuple2<Long, List<Double>>> alphas = mlr.fit(glaciersFirstHalfInput, glaciersFirstHalfOutput, 

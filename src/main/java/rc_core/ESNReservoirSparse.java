@@ -52,7 +52,7 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         if (N_u < 1 || N_x < 1) {
             exceptionString = "The input/internal vector size has to be positive";
         }
-        else if (init_vector.size() != N_x) {
+        else if (init_vector == null || init_vector.size() != N_x) {
             exceptionString = "The length of the initial vector must be N_x.";
         }
         else if (range < 0) {
@@ -64,15 +64,22 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         }
         
         if (alpha < 0 || alpha > 1) {
-            System.err.println("WARNING: The W-scaling hyperparameter (alpha) should be between 0 and 1.");
+            System.err.println("WARNING: The W-scaling hyperparameter (alpha) should be between 0 and 1 (exclusive).");
         }
         if (jumpSize < 2 || jumpSize > N_x/2) {
             System.err.println("WARNING: The jump size should satisfy 1 < jumpSize < N_x/2 (floored)");
         }
     }
-    
-    
-    public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation, double range, 
+
+    public SparseStore<Double> getW_input() {
+        return W_input;
+    }
+
+    public SparseStore<Double> getW_internal() {
+        return W_internal;
+    }
+
+    public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation, double range,
                               double shift, long jumpSize, double alpha, boolean randomized, boolean cycle) {
         this.N_u = N_u;
         this.N_x = N_x;

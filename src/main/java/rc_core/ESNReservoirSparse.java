@@ -37,6 +37,7 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
     private final int N_u;  // input vector (u) size -- an exception is thrown if the input size is different
     private final int N_x;  // (internal) state vector (x) size -- should be higher than N_u
     private final Transformation transformation;    // a function (f) to be applied on a vector (dim N_x*1) element-wise
+    private UnaryFunction<Double> unaryFunction;  // an applicable version of the transformation
     private final List<Double> init_vector; // an initial (internal) state vector (x(0)); has to have size N_x*1
     private final double range; // range in which the values of matrices will be randomly chosen, centered at 0
     private final double shift; // shift of the interval for generating random values
@@ -83,9 +84,9 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
                               double shift, long jumpSize, double alpha, boolean randomized, boolean cycle) {
         this.N_u = N_u;
         this.N_x = N_x;
-        this.transformation = transformation;
         // Matrices not initialized here because of serializability (solved by moving initialization to open() method)
         this.init_vector = init_vector;
+        this.transformation = transformation;
         this.range = range;
         this.shift = shift;
         this.jumpSize = jumpSize;
@@ -170,24 +171,9 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
         /* Scaling W */
         W_internal = (SparseStore<Double>) W_internal.multiply(alpha/spectralRadius);
         System.out.println("scaled W: " + W_internal);
-    }
 
-    private static final Random random = new Random();
-    private double getRandomWeight() {
-        return random.nextDouble()*range - (range/2) + shift;
-    }
-
-    @Override
-    public List<Double> map(List<Double> input) throws Exception {
-        SparseStore<Double> input_vector = SparseStore.PRIMITIVE64.make(N_u, 1);   // convert the vector type from List to SparseStore
-        Access1D<Double> converted_input = Access1D.wrap(input);
-        input_vector.fillColumn(0, converted_input);
-        
-        MatrixStore<Double> output = W_input.multiply(input_vector).add(W_internal.multiply(output_previous));
-//        System.out.println("before tanh: " + output);
-        
-//        UnaryFunction<Double> transformation = PrimitiveFunction.getSet().tanh();
-        UnaryFunction<Double> unaryFunction = new UnaryFunction<Double>() {
+        /* Converting the transformation to an applicable function */
+        unaryFunction = new UnaryFunction<Double>() {
             @Override
             public double invoke(double arg) {
                 return transformation.transform(arg);
@@ -203,8 +189,21 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
                 return transformation.transform(arg);
             }
         };
+    }
+
+    private static final Random random = new Random();
+    private double getRandomWeight() {
+        return random.nextDouble()*range - (range/2) + shift;
+    }
+
+    @Override
+    public List<Double> map(List<Double> input) throws Exception {
+        SparseStore<Double> input_vector = SparseStore.PRIMITIVE64.make(N_u, 1);   // convert the vector type from List to SparseStore
+        Access1D<Double> converted_input = Access1D.wrap(input);
+        input_vector.fillColumn(0, converted_input);
+        
+        MatrixStore<Double> output = W_input.multiply(input_vector).add(W_internal.multiply(output_previous));
         output = output.operateOnAll(unaryFunction);
-//        System.out.println("after tanh: " + output);
         
         return DoubleStream.of(output.toRawCopy1D()).boxed().collect(Collectors.toList());
     }

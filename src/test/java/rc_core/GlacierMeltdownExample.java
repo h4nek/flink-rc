@@ -7,6 +7,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -36,8 +37,11 @@ public class GlacierMeltdownExample {
 
 //        inputStream.print("input");
         
-        inputStream.map(new ESNReservoirSparse(N_u, N_x)); //.print("Reservoir output");
-        
+        DataStream<List<Double>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x)); //.print("Reservoir output");
+//        inputStream.connect(reservoirOutput).map( )
+//        input.addAll(outputList);   // concatenate input and output vector (the result is [u(t) x(t)])
+
+
 //        inputStream.map(new ESNReservoirSparse(N_u, N_x, Collections.nCopies(N_x, 0.0), Math::tanh, 1, 0, 
 //                3, 0.5, true, true)).print("Reservoir output");
 

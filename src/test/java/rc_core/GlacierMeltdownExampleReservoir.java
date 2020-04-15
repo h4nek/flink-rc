@@ -1,18 +1,33 @@
 package rc_core;
 
+import lm.batch.ExampleBatchUtilities;
+import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.io.TextInputFormat;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.metrics.Counter;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
+import org.apache.flink.streaming.api.functions.ProcessFunction;
+import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.util.Collector;
 
+import javax.annotation.Nullable;
 import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class GlacierMeltdownExample {
+/**
+ * An example using only the reservoir part of the library.
+ * The dataset is equivalent to the one used in {@link lm.streaming.GlacierMeltdownExample} - where the LM 
+ * (readout phase) is tested.
+ */
+public class GlacierMeltdownExampleReservoir {
     public static final String INPUT_FILE_PATH = "src/test/resources/glaciers/input_data/glaciers.csv";
     private static final int N_u = 3;
     private static final int N_x = 5;
@@ -37,7 +52,9 @@ public class GlacierMeltdownExample {
 
 //        inputStream.print("input");
         
-        DataStream<List<Double>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x)); //.print("Reservoir output");
+        DataStream<List<Double>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x));
+        reservoirOutput.print("Reservoir output");  //TEST
+        
 //        inputStream.connect(reservoirOutput).map( )
 //        input.addAll(outputList);   // concatenate input and output vector (the result is [u(t) x(t)])
 

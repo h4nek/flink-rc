@@ -11,6 +11,9 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
+import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.util.Collector;
 
 import java.io.Serializable;
@@ -53,7 +56,8 @@ public class LinearRegression implements Serializable {
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
-                                                   double learningRate, int numSamples, boolean includeMSE, boolean stepsDecay) {
+                                                   double learningRate, int numSamples, boolean includeMSE, 
+                                                   boolean stepsDecay) {
         return fit(inputSet, outputSet, alphaInit, learningRate, numSamples, includeMSE,
                 stepsDecay, 32, 1.0/16);
     }
@@ -69,6 +73,32 @@ public class LinearRegression implements Serializable {
         return inputSet.coGroup(outputSet).where(0).equalTo(0).with(new MLRFitCoGroupFunction(
                 alphaInit, learningRate, numSamples, includeMSE, stepsDecay, decayGranularity, decayAmount));
     }
+
+    /**
+     * Create a linear model from training DataStreams using Gradient Descent. A version with default decay values.
+     */
+    public DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
+                                                      DataStream<Tuple2<Long, Double>> outputStream,
+                                                      List<Double> alphaInit,
+                                                      double learningRate, int numSamples, boolean includeMSE, 
+                                                      boolean stepsDecay) {
+        return inputStream.coGroup(outputStream).where(x -> x.f0).equalTo(y -> y.f0).window(TumblingEventTimeWindows
+                .of(Time.seconds(1))).apply(new MLRFitCoGroupFunction(alphaInit, learningRate, numSamples, includeMSE,
+                stepsDecay, 32, 1.0/16));
+    }
+    
+    /**
+     * Create a linear model from training DataStreams using Gradient Descent.
+     */
+    public DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
+                                                      DataStream<Tuple2<Long, Double>> outputStream,
+                                                      List<Double> alphaInit,
+                                                      double learningRate, int numSamples, boolean includeMSE,
+                                                      boolean stepsDecay, double decayGranularity, double decayAmount) {
+        return inputStream.coGroup(outputStream).where(x -> x.f0).equalTo(y -> y.f0).window(TumblingEventTimeWindows
+                .of(Time.seconds(1))).apply(new MLRFitCoGroupFunction(alphaInit, learningRate, numSamples, includeMSE, 
+                stepsDecay, decayGranularity, decayAmount));
+    }
     
 
     /**
@@ -83,18 +113,18 @@ public class LinearRegression implements Serializable {
                                                       List<Double> alpha) {
         return inputStream.process(new MLRPredictProcessFunction(alpha)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
     }
-    
-    private static class MLRPredictProcessFunction 
+
+    private static class MLRPredictProcessFunction
             extends ProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>> {
         private List<Double> alpha;
-        
+
         private MLRPredictProcessFunction(List<Double> alpha) {
             this.alpha = alpha;
         }
-        
+
         @Override
         public void processElement(Tuple2<Long, List<Double>> input, Context ctx,
-                Collector<Tuple2<Long, Double>> out) throws Exception {
+                                   Collector<Tuple2<Long, Double>> out) throws Exception {
             List<Double> inputVector = new ArrayList<>(input.f1);   // copy the list to prevent some problems
             inputVector.add(0, 1.0); // add an extra value for the intercept
 
@@ -103,6 +133,75 @@ public class LinearRegression implements Serializable {
                 y_pred += alpha.get(i) * inputVector.get(i);
             }
             out.collect(Tuple2.of(input.f0, y_pred));
+        }
+    }
+
+    /**
+     * MLR model prediction using DataStreams. Training is separate and considered finished by 
+     * passing the EOTRAINING_TIMESTAMP.
+     */
+    public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
+                                                                    DataStream<Tuple2<Long, List<Double>>> alphaStream,
+                                                                    long EOTRAINING_TIMESTAMP) {
+        return inputStream.connect(alphaStream).process(new MLRPredictCoProcessFunction(EOTRAINING_TIMESTAMP))
+                .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+    }
+    
+    private static class MLRPredictCoProcessFunction extends CoProcessFunction<Tuple2<Long, List<Double>>, 
+            Tuple2<Long, List<Double>>, Tuple2<Long, Double>> {
+        private List<Double> alpha;
+        private long alphaTimestamp = Long.MIN_VALUE;
+        private List<Tuple2<Long, List<Double>>> inputsBacklog = new ArrayList<>();
+        private long EOTRAINING_TIMESTAMP;
+        
+        public MLRPredictCoProcessFunction(long EOTRAINING_TIMESTAMP) {
+            this.EOTRAINING_TIMESTAMP = EOTRAINING_TIMESTAMP;
+        }
+
+        @Override
+        public void processElement1(Tuple2<Long, List<Double>> input, Context ctx, 
+                                    Collector<Tuple2<Long, Double>> out) throws Exception {
+            if (alphaTimestamp < EOTRAINING_TIMESTAMP) {
+//                System.out.println("storing the input");
+                inputsBacklog.add(input);
+            }
+            else if (inputsBacklog.size() > 0) {
+//                System.out.println("releasing the backlog");
+                for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {
+                    predict(oldInput, out);
+                }
+            }
+            else {
+//                System.out.println("outputting the new input");
+                predict(input, out);
+            }
+        }
+        
+        private void predict(Tuple2<Long, List<Double>> input, Collector<Tuple2<Long, Double>> out) {
+            List<Double> inputVector = input.f1;
+            inputVector.add(0, 1.0); // add an extra value for the intercept
+
+            double y_pred = 0;
+            for (int i = 0; i < alpha.size(); i++) {
+                y_pred += alpha.get(i) * inputVector.get(i);
+            }
+            out.collect(Tuple2.of(input.f0, y_pred));
+        }
+
+        @Override
+        public void processElement2(Tuple2<Long, List<Double>> alpha, Context ctx, 
+                                    Collector<Tuple2<Long, Double>> out) throws Exception {
+            if (ctx.timestamp() > alphaTimestamp) { // update the model with newest Alpha
+//                System.out.println("current alpha timestamp: " + ctx.timestamp());
+                this.alpha = alpha.f1;
+                alphaTimestamp = ctx.timestamp();
+            }
+            if (alphaTimestamp >= EOTRAINING_TIMESTAMP) {
+//                System.out.println("Releasing the backlog (from the Alpha process)");
+                for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {
+                    predict(oldInput, out);
+                }
+            }
         }
     }
     

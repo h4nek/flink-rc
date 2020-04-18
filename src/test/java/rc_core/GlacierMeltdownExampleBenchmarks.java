@@ -39,7 +39,7 @@ public class GlacierMeltdownExampleBenchmarks {
                 esnReservoir = new ESNReservoirJama(N_u, N_x);
                 break;
             case "ojAlgoSparse":
-                esnReservoir = new ESNReservoirSparse(N_u, N_x);
+//                esnReservoir = new ESNReservoirSparse(N_u, N_x);  // newly indexed, unlike previous impls.
                 break;
         }
     }

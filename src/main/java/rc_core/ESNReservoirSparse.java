@@ -1,6 +1,7 @@
 package rc_core;
 
 import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.ojalgo.function.*;
 import org.ojalgo.matrix.decomposition.Eigenvalue;
@@ -30,7 +31,7 @@ import java.util.stream.DoubleStream;
  *
  * Utilizing ojAlgo libraries.
  */
-public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Double>> {
+public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>> {
     private SparseStore<Double> W_input;   // represents a matrix of input weights (N_x*N_u)
     private SparseStore<Double> W_internal;    // represents a matrix of internal weights (N_x*N_x)
     private SparseStore<Double> output_previous;   // (internal) state vector (x(t-1)) -- result of the computation in previous time
@@ -197,15 +198,16 @@ public class ESNReservoirSparse extends RichMapFunction<List<Double>, List<Doubl
     }
 
     @Override
-    public List<Double> map(List<Double> input) throws Exception {
+    public Tuple2<Long, List<Double>> map(Tuple2<Long, List<Double>> input) throws Exception {
         SparseStore<Double> input_vector = SparseStore.PRIMITIVE64.make(N_u, 1);   // convert the vector type from List to SparseStore
-        Access1D<Double> converted_input = Access1D.wrap(input);
+        Access1D<Double> converted_input = Access1D.wrap(input.f1);
         input_vector.fillColumn(0, converted_input);
         
         MatrixStore<Double> output = W_input.multiply(input_vector).add(W_internal.multiply(output_previous));
         output = output.operateOnAll(unaryFunction);
         
-        return DoubleStream.of(output.toRawCopy1D()).boxed().collect(Collectors.toList());
+        List<Double> outputList = DoubleStream.of(output.toRawCopy1D()).boxed().collect(Collectors.toList());
+        return Tuple2.of(input.f0, outputList);
     }
 }
 

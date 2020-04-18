@@ -49,10 +49,12 @@ public class GlacierMeltdownExampleReservoir {
                     return inputVector;
                 }).returns(Types.LIST(Types.DOUBLE));
 //        inputStream.print("Read input");
+        DataStream<Tuple2<Long, List<Double>>> indexedInput = inputStream.map(new ExampleBatchUtilities.IndicesMapper<>());
 
 //        inputStream.print("input");
         
-        DataStream<List<Double>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x));
+//        DataStream<List<Double>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x));
+        DataStream<Tuple2<Long, List<Double>>> reservoirOutput = indexedInput.map(new ESNReservoirSparse(N_u, N_x));
         reservoirOutput.print("Reservoir output");  //TEST
         
 //        inputStream.connect(reservoirOutput).map( )

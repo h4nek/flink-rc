@@ -93,7 +93,8 @@ public class HigherLevelExampleTesting {
 
         DataStream<Tuple2<Long, List<Double>>> inputStream = indexedDataStream.map(x -> {x.f1.remove(outputIdx); return x;})
                 .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-        DataStream<Tuple2<Long, Double>> outputStream = indexedDataStream.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)));
+        DataStream<Tuple2<Long, Double>> outputStream = indexedDataStream.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)))
+                .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         if (debugging) inputStream.print("IN");
         if (debugging) outputStream.print("OUT");
 

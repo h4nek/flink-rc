@@ -79,7 +79,8 @@ public class HigherLevelExampleTraining {
         
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {x.f1.remove(outputIdx); return x;})
                 .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-        DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)));
+        DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)))
+                .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         if (debugging) inputSet.printOnTaskManager("IN");
         if (debugging) outputSet.printOnTaskManager("OUT");
 

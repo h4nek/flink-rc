@@ -343,26 +343,4 @@ public class ExampleBatchUtilities {
         }
     }
 
-    /**
-     * Index the elements of the dataset/datastream.
-     * @param <T>
-     */
-    public static class IndicesMapper<T> extends RichMapFunction<T, Tuple2<Long, T>> {
-        private Counter counter;
-
-        @Override
-        public void open(Configuration parameters) throws Exception {
-            super.open(parameters);
-
-            counter = getRuntimeContext().getMetricGroup().counter("index counter");
-        }
-
-        @Override
-        public Tuple2<Long, T> map(T value) throws Exception {
-
-            Tuple2<Long, T> indexedValue = Tuple2.of(counter.getCount(), value);
-            counter.inc();
-            return indexedValue;
-        }
-    }
 }

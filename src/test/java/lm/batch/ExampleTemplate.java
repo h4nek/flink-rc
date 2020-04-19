@@ -8,7 +8,7 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple5;
-import lm.batch.ExampleBatchUtilities.*;
+import utilities.BasicIndexer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +31,7 @@ public class ExampleTemplate {
                 .types(Long.class, String.class, Double.class);
         dataSet.printOnTaskManager("DATA"); //TEST
         
-        DataSet<Tuple2<Long, Tuple3<Long, String, Double>>> indexedDataSet = dataSet.map(new IndicesMapper<>());
+        DataSet<Tuple2<Long, Tuple3<Long, String, Double>>> indexedDataSet = dataSet.map(new BasicIndexer<>());
         
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {
             List<Double> y = new ArrayList<>(); y.add(x.f1.f0.doubleValue()); y.add(1.0); return Tuple2.of(x.f0, y);})

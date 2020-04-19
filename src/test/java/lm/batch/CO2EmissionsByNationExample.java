@@ -9,7 +9,7 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple5;
-import lm.batch.ExampleBatchUtilities.*;
+import utilities.BasicIndexer;
 import utilities.PythonPlotting;
 
 import java.util.ArrayList;
@@ -46,7 +46,7 @@ public class CO2EmissionsByNationExample {
                     return false;});
         dataSet.printOnTaskManager("DATA"); //TEST
         
-        DataSet<Tuple2<Long, Tuple3<Long, String, Double>>> indexedDataSet = dataSet.map(new IndicesMapper<>());
+        DataSet<Tuple2<Long, Tuple3<Long, String, Double>>> indexedDataSet = dataSet.map(new BasicIndexer<>());
         indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
 
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {

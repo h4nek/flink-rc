@@ -1,7 +1,7 @@
 package higher_level_examples;
 
 import lm.LinearRegression;
-import lm.batch.ExampleBatchUtilities;
+import utilities.BasicIndexer;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.io.TextInputFormat;
@@ -101,21 +101,19 @@ public class HigherLevelExampleStreaming {
                 return new Watermark(counter);
             }
         });
+        DataStream<Tuple2<Long, List<Double>>> indexedDataStream = dataStream.map(new BasicIndexer<>());
 
-        DataStream<List<Double>> inputStream = dataStream.map(x -> {x.remove(outputIdx); return x;})
-                .returns(Types.LIST(Types.DOUBLE));
-        DataStream<Double> outputStream = dataStream.map(x -> x.get(outputIdx));//.returns(Types.DOUBLE);
+        DataStream<Tuple2<Long, List<Double>>> inputStream = indexedDataStream.map(x -> {x.f1.remove(outputIdx); return x;})
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        DataStream<Tuple2<Long, Double>> outputStream = indexedDataStream.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)));
         if (debugging) inputStream.print("IN");
         if (debugging) outputStream.print("OUT");
 
         int N_u = StringUtils.countMatches(columnsBitMask, "1") - 1; // subtract 1 for the output
-        DataStream<List<Double>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x));
+        DataStream<Tuple2<Long, List<Double>>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x));
         if (debugging) reservoirOutput.print("Reservoir output");
-        
-        DataStream<Tuple2<Long, List<Double>>> indexedReservoirOutput = reservoirOutput.map(new ExampleBatchUtilities.IndicesMapper<>());
-        DataStream<Tuple2<Long, Double>> indexedOutput = outputStream.map(new ExampleBatchUtilities.IndicesMapper<>());
 
-        DataStream<Tuple2<Long, List<Double>>> trainingInput = indexedReservoirOutput.process(  // filter based on Timestamps
+        DataStream<Tuple2<Long, List<Double>>> trainingInput = reservoirOutput.process(  // filter based on Timestamps
                 new ProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>>() {
             @Override
             public void processElement(Tuple2<Long, List<Double>> value, Context ctx, 
@@ -125,14 +123,14 @@ public class HigherLevelExampleStreaming {
             }
         });
         LinearRegression lr = new LinearRegression();
-        DataStream<Tuple2<Long, List<Double>>> alphas = lr.fit(trainingInput, indexedOutput, lmAlphaInit,
+        DataStream<Tuple2<Long, List<Double>>> alphas = lr.fit(trainingInput, outputStream, lmAlphaInit,
                 learningRate, (int) EOTRAINING_TIMESTAMP/1000, false, stepsDecay);
         if (debugging) alphas.print("ALPHA"); //TEST
 
 //        List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
 //        List<Double> Alpha = alphaList.get(alphaList.size() - 1);
 
-        DataStream<Tuple2<Long, List<Double>>> predictingInput = indexedReservoirOutput.process(  // filter based on Timestamps
+        DataStream<Tuple2<Long, List<Double>>> predictingInput = reservoirOutput.process(  // filter based on Timestamps
                 new ProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>>() {
                     @Override
                     public void processElement(Tuple2<Long, List<Double>> value, Context ctx,
@@ -145,7 +143,7 @@ public class HigherLevelExampleStreaming {
         DataStream<Tuple2<Long, Double>> results = lr.predict(predictingInput, alphas, EOTRAINING_TIMESTAMP);
         if (debugging) results.print("JUST PREDS");
 
-        DataStream<Tuple3<Long, Double, Double>> predsAndReal = indexedOutput.join(results).where(y -> y.f0)
+        DataStream<Tuple3<Long, Double, Double>> predsAndReal = outputStream.join(results).where(y -> y.f0)
                 .equalTo(y -> y.f0).window(TumblingEventTimeWindows.of(Time.minutes(2)))
                 .apply((x, y) -> Tuple3.of(x.f0, x.f1, y.f1), Types.TUPLE(Types.LONG, Types.DOUBLE, Types.DOUBLE));
         if (debugging) predsAndReal.print("RESULTS");

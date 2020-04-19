@@ -8,6 +8,7 @@ import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.*;
 import org.apache.flink.util.Collector;
+import utilities.BasicIndexer;
 import utilities.PythonPlotting;
 
 import java.text.DateFormat;
@@ -49,7 +50,7 @@ public class PM2Point5PollutionInArea {
                     return list;
                 }).returns(Types.LIST(Types.DOUBLE))
                 .filter(Objects::nonNull) // skip the header (and potentially any other invalid line)
-                .map(new ExampleBatchUtilities.IndicesMapper<>());
+                .map(new BasicIndexer<>());
         dataSet.printOnTaskManager("DATA"); //TEST
         
         /*Predicting the average PM2.5*/

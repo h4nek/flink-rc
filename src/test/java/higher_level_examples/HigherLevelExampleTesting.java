@@ -1,7 +1,7 @@
 package higher_level_examples;
 
 import lm.LinearRegression;
-import lm.batch.ExampleBatchUtilities;
+import utilities.BasicIndexer;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.io.TextInputFormat;
@@ -12,11 +12,9 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
-import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.util.Collector;
 import rc_core.ESNReservoirSparse;
 
 import java.util.ArrayList;
@@ -91,21 +89,19 @@ public class HigherLevelExampleTesting {
                 return new Watermark(counter);
             }
         });
+        DataStream<Tuple2<Long, List<Double>>> indexedDataStream = dataStream.map(new BasicIndexer<>());
 
-        DataStream<List<Double>> inputStream = dataStream.map(x -> {x.remove(outputIdx); return x;})
-                .returns(Types.LIST(Types.DOUBLE));
-        DataStream<Double> outputStream = dataStream.map(x -> x.get(outputIdx));
+        DataStream<Tuple2<Long, List<Double>>> inputStream = indexedDataStream.map(x -> {x.f1.remove(outputIdx); return x;})
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        DataStream<Tuple2<Long, Double>> outputStream = indexedDataStream.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)));
         if (debugging) inputStream.print("IN");
         if (debugging) outputStream.print("OUT");
 
         int N_u = StringUtils.countMatches(columnsBitMask, "1") - 1; // subtract 1 for the output
-        DataStream<List<Double>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x));
+        DataStream<Tuple2<Long, List<Double>>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x));
         if (debugging) reservoirOutput.print("Reservoir output");
 
-        DataStream<Tuple2<Long, List<Double>>> indexedReservoirOutput = reservoirOutput.map(new ExampleBatchUtilities.IndicesMapper<>());
-        DataStream<Tuple2<Long, Double>> indexedOutput = outputStream.map(new ExampleBatchUtilities.IndicesMapper<>());
-
-        DataStream<Tuple2<Long, List<Double>>> predictingInput = indexedReservoirOutput.filter(x -> x.f0 >= startingIdx); // filter based on indices
+        DataStream<Tuple2<Long, List<Double>>> predictingInput = reservoirOutput.filter(x -> x.f0 >= startingIdx); // filter based on indices
         // we don't need to do the same for output because unneeded records will be filtered automatically during join
         if (debugging) predictingInput.print("PREDS INPUT");
 
@@ -113,7 +109,7 @@ public class HigherLevelExampleTesting {
         DataStream<Tuple2<Long, Double>> results = lr.predict(predictingInput, Alpha);
         if (debugging) results.print("JUST PREDS");
 
-        DataStream<Tuple3<Long, Double, Double>> predsAndReal = indexedOutput.join(results).where(y -> y.f0)
+        DataStream<Tuple3<Long, Double, Double>> predsAndReal = outputStream.join(results).where(y -> y.f0)
                 .equalTo(y -> y.f0).window(TumblingEventTimeWindows.of(Time.minutes(2)))
                 .apply((x, y) -> Tuple3.of(x.f0, x.f1, y.f1), Types.TUPLE(Types.LONG, Types.DOUBLE, Types.DOUBLE));
         if (debugging) predsAndReal.print("RESULTS");

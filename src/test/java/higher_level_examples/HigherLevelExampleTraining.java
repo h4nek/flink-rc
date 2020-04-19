@@ -1,7 +1,7 @@
 package higher_level_examples;
 
 import lm.LinearRegression;
-import lm.batch.ExampleBatchUtilities;
+import utilities.BasicIndexer;
 import lm.streaming.ExampleStreamingUtilities;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -10,10 +10,6 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.io.TextInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
-import org.apache.flink.streaming.api.functions.ProcessFunction;
-import org.apache.flink.streaming.api.watermark.Watermark;
-import org.apache.flink.util.Collector;
 import rc_core.ESNReservoirSparse;
 
 import java.util.ArrayList;
@@ -79,22 +75,20 @@ public class HigherLevelExampleTraining {
         if (debugging) dataSet.printOnTaskManager("DATA"); //TEST
 
         dataSet = dataSet.first(numSamples);    // reduce the dataset to only training
+        DataSet<Tuple2<Long, List<Double>>> indexedDataSet = dataSet.map(new BasicIndexer<>());
         
-        DataSet<List<Double>> inputSet = dataSet.map(x -> {x.remove(outputIdx); return x;})
-                .returns(Types.LIST(Types.DOUBLE));
-        DataSet<Double> outputSet = dataSet.map(x -> x.get(outputIdx));
+        DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {x.f1.remove(outputIdx); return x;})
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)));
         if (debugging) inputSet.printOnTaskManager("IN");
         if (debugging) outputSet.printOnTaskManager("OUT");
 
         int N_u = StringUtils.countMatches(columnsBitMask, "1") - 1; // subtract 1 for the output
-        DataSet<List<Double>> reservoirOutput = inputSet.map(new ESNReservoirSparse(N_u, N_x));
+        DataSet<Tuple2<Long, List<Double>>> reservoirOutput = inputSet.map(new ESNReservoirSparse(N_u, N_x));
         if (debugging) reservoirOutput.printOnTaskManager("Reservoir output");
-
-        DataSet<Tuple2<Long, List<Double>>> indexedReservoirOutput = reservoirOutput.map(new ExampleBatchUtilities.IndicesMapper<>());
-        DataSet<Tuple2<Long, Double>> indexedOutput = outputSet.map(new ExampleBatchUtilities.IndicesMapper<>());
         
         LinearRegression lr = new LinearRegression();
-        DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(indexedReservoirOutput, indexedOutput, lmAlphaInit,
+        DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(reservoirOutput, outputSet, lmAlphaInit,
                 learningRate, numSamples, false, stepsDecay);
         if (debugging) alphas.printOnTaskManager("ALPHA"); //TEST
 

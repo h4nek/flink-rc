@@ -1,25 +1,15 @@
 package rc_core;
 
-import lm.batch.ExampleBatchUtilities;
-import org.apache.flink.api.common.functions.RichMapFunction;
+import utilities.BasicIndexer;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.io.TextInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.metrics.Counter;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
-import org.apache.flink.streaming.api.functions.ProcessFunction;
-import org.apache.flink.streaming.api.watermark.Watermark;
-import org.apache.flink.util.Collector;
 
-import javax.annotation.Nullable;
-import javax.xml.crypto.Data;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -49,7 +39,7 @@ public class GlacierMeltdownExampleReservoir {
                     return inputVector;
                 }).returns(Types.LIST(Types.DOUBLE));
 //        inputStream.print("Read input");
-        DataStream<Tuple2<Long, List<Double>>> indexedInput = inputStream.map(new ExampleBatchUtilities.IndicesMapper<>());
+        DataStream<Tuple2<Long, List<Double>>> indexedInput = inputStream.map(new BasicIndexer<>());
 
 //        inputStream.print("input");
         

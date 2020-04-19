@@ -12,7 +12,7 @@ import java.util.*;
  * It supports input in form of a CSV file, where each row is a DataSet record and each column corresponds to a feature.
  * There might be more columns than required for the regression. The needed columns can be specified with a bit mask.
  *
- * The class should first be configured with the setup() method and/or individual setters. Then, the main method 
+ * The class should first be configured by setting all the needed fields. Then, the main method 
  * should be called for execution.
  */
 public class HigherLevelExample {
@@ -32,14 +32,48 @@ public class HigherLevelExample {
     private static int trainingSetSize = (int) Math.floor(69*0.8);   // number of records to be in the training dataset (rest of the file is ignored)
 
 
-    /**
-     * Configuring the RC by providing all the needed parameters before running it with main
-     * @param outputCol which column corresponds to the output
-     */
-    public static void setup(String inputFilePath, double learningRate, int outputCol) {
+    public static void setInputFilePath(String inputFilePath) {
         HigherLevelExample.inputFilePath = inputFilePath;
+    }
+
+    public static void setLearningRate(double learningRate) {
         HigherLevelExample.learningRate = learningRate;
-        outputIdx = outputCol - 1;
+    }
+
+    public static void setColumnsBitMask(String columnsBitMask) {
+        HigherLevelExample.columnsBitMask = columnsBitMask;
+    }
+
+    public static void setOutputIdx(int outputIdx) {
+        HigherLevelExample.outputIdx = outputIdx;
+    }
+
+    public static void setDebugging(boolean debugging) {
+        HigherLevelExample.debugging = debugging;
+    }
+
+    public static void setInputFactor(double inputFactor) {
+        HigherLevelExample.inputFactor = inputFactor;
+    }
+
+    public static void setCustomParsers(Map<Integer, InputParsing> customParsers) {
+        HigherLevelExample.customParsers = customParsers;
+    }
+
+    public static void setNx(int nx) {
+        N_x = nx;
+    }
+
+    public static void setLmAlphaInit(List<Double> lmAlphaInit) {
+        HigherLevelExample.lmAlphaInit = lmAlphaInit;
+    }
+
+    public static void setStepsDecay(boolean stepsDecay) {
+        HigherLevelExample.stepsDecay = stepsDecay;
+    }
+
+    public static void setTrainingSetSize(int trainingSetSize) {
+        HigherLevelExample.trainingSetSize = trainingSetSize;
     }
 
 

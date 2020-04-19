@@ -67,7 +67,9 @@ public class HigherLevelExampleTraining {
                             if (customParsers != null && customParsers.containsKey(i)) {
                                 customParsers.get(i).parseAndAddInput(items[i], inputVector);
                             }
-                            inputVector.add(Double.parseDouble(items[i]) / inputFactor);
+                            else {
+                                inputVector.add(Double.parseDouble(items[i]) / inputFactor);
+                            }
                         }
                     }
                     return inputVector;

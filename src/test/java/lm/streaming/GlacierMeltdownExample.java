@@ -174,7 +174,7 @@ public class GlacierMeltdownExample {
 //                PythonPlotting.PlotType.LINE);
         
         PythonPlotting.plotLRFit(testInputTransformed, glaciersOutTest.collect(), predictions.collect(), 0,
-                0, "input", "Mean cumulative mass balance (mwe)", "Glaciers Meltdown",
+                0, "Year", "Mean cumulative mass balance (mwe)", "Glaciers Meltdown",
                 PythonPlotting.PlotType.LINE, null, null, predictionsOffline.collect());
         
 //        env.execute("Glacier Meltdown Example for Matlab");

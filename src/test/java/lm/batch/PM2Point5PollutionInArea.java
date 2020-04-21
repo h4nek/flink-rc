@@ -149,7 +149,7 @@ public class PM2Point5PollutionInArea {
         resultsList.remove(resultsList.size() - 1);
         PythonPlotting.plotLRFit(inputListTest, outputSetTest.map(x -> Tuple2.of(x.f0 + 1, x.f1))
                         .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect(), resultsList, 0, 0, 
-                "Day", "$\\mu g/m^3$", "PM2.5 Pollution in Seattle Area", PythonPlotting.PlotType.POINTS);
+                "Day", "$\\mu g/m^3$", "PM2.5 Pollution in Seattle Area LR", PythonPlotting.PlotType.POINTS);
 
 //        System.out.println("MSE estimate: " + lr.getMSE(Alpha));
 //        env.execute();

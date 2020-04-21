@@ -177,7 +177,3 @@ public class ESNReservoirPrimitive extends RichMapFunction<List<Double>, List<Do
         return listString.toString();
     }
 }
-
-interface Transformation extends Serializable {
-    double transform(double d);
-}

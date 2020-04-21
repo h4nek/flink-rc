@@ -201,6 +201,10 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     public Tuple2<Long, List<Double>> map(Tuple2<Long, List<Double>> input) throws Exception {
         SparseStore<Double> input_vector = SparseStore.PRIMITIVE64.make(N_u, 1);   // convert the vector type from List to SparseStore
         Access1D<Double> converted_input = Access1D.wrap(input.f1);
+        if (N_u != converted_input.size()) {
+            throw new IllegalArgumentException("The current input vector size doesn't match the specified size N_u.\n"
+            + "N_u = " + N_u + ",\t" + input.f0 + ". input size = " + converted_input.size());
+        }
         input_vector.fillColumn(0, converted_input);
         
         MatrixStore<Double> output = W_input.multiply(input_vector).add(W_internal.multiply(output_previous));

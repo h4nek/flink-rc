@@ -121,7 +121,7 @@ public class IdentityTest {
         /* Plotting Online & Offline */
         PythonPlotting.plotLRFit(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 
                 0, "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", 
-                "'Enhanced Identity' (Combined)", null, headers, headersOut, resultsOffline.collect());
+                "'Enhanced Identity' (Combined) LR", null, headers, headersOut, resultsOffline.collect());
         
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
 //                "x", "f(x) = x", "Identity", null);

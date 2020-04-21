@@ -127,7 +127,7 @@ public class CO2EmissionsByNationExample {
                 return x;
             }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(), 
                 results.collect(), 0, 0, "Year", "kt of CO\\textsubscript{2}", 
-                "CO2 Emissions By Nation", PythonPlotting.PlotType.POINTS, null, null, 
+                "CO2 Emissions By Nation LR", PythonPlotting.PlotType.POINTS, null, null, 
                 resultsOffline.collect());
     }
 

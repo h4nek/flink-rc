@@ -107,7 +107,7 @@ public class CO2EmmissionsSingleNationExample {
                     return x;
                 }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(),
                 results.collect(), 0, 0, "Year", "kt of CO\\textsubscript{2}",
-                "CO2 Emissions of " + selectNations[selectedNationIdx], PythonPlotting.PlotType.POINTS, 
+                "CO2 Emissions of " + selectNations[selectedNationIdx] + " LR", PythonPlotting.PlotType.POINTS, 
                 null, null, resultsOffline.collect());
         
         // plot the training data

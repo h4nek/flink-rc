@@ -4,11 +4,18 @@ import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.ojalgo.function.*;
+import org.ojalgo.function.constant.BigMath;
+import org.ojalgo.function.constant.PrimitiveMath;
+import org.ojalgo.matrix.Primitive64Matrix;
 import org.ojalgo.matrix.decomposition.Eigenvalue;
 import org.ojalgo.matrix.store.MatrixStore;
+import org.ojalgo.matrix.store.Primitive64Store;
 import org.ojalgo.matrix.store.SparseStore;
+import org.ojalgo.matrix.store.TransformableRegion;
 import org.ojalgo.random.Uniform;
 import org.ojalgo.structure.Access1D;
+import org.ojalgo.structure.Access2D;
+import org.ojalgo.structure.Structure2D;
 import org.ojalgo.type.CalendarDateUnit;
 import org.ojalgo.type.Stopwatch;
 
@@ -27,14 +34,14 @@ import java.util.stream.DoubleStream;
  * distribution and interval), but sparse.
  *      One option is to just control sparsity (e.g. 20% of non-zero elements), another is to have a deterministic 
  *      structure containing cycles.
- * Both matrices are initialized once at the beginning of computation.
- *
+ * Both matrices are initialized once at the beginning of computation. The reason they are declared static is that we 
+ * keep the same matrices when Flink creates multiple instances of this class...
  * Utilizing ojAlgo libraries.
  */
 public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>> {
-    private SparseStore<Double> W_input;   // represents a matrix of input weights (N_x*N_u)
-    private SparseStore<Double> W_internal;    // represents a matrix of internal weights (N_x*N_x)
-    private SparseStore<Double> output_previous;   // (internal) state vector (x(t-1)) -- result of the computation in previous time
+    private static SparseStore<Double> W_input;   // represents a matrix of input weights (N_x*N_u)
+    private static SparseStore<Double> W_internal;    // represents a matrix of internal weights (N_x*N_x)
+    private MatrixStore<Double> output_previous;   // (internal) state vector (x(t-1)) -- result of the computation in previous time
     private final int N_u;  // input vector (u) size -- an exception is thrown if the input size is different
     private final int N_x;  // (internal) state vector (x) size -- should be higher than N_u
     private final Transformation transformation;    // a function (f) to be applied on a vector (dim N_x*1) element-wise
@@ -119,11 +126,35 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
         
-        SparseStore.Factory<Double> matrixFactory = SparseStore.PRIMITIVE64;
-        output_previous = matrixFactory.make(N_x, 1);   // convert the vector type from List to SparseStore
-        Access1D<Double> converted_init_vector = Access1D.wrap(init_vector);
-        output_previous.fillColumn(0, converted_init_vector);
+//        output_previous = matrixFactory.make(N_x, 1);   // convert the vector type from List to SparseStore
+//        Access1D<Double> converted_init_vector = Access1D.wrap(init_vector);
+        output_previous = MatrixStore.PRIMITIVE64.makeWrapper(Primitive64Store.FACTORY.columns(init_vector)).get();
+
+        /* Converting the transformation to an applicable function */
+        unaryFunction = new UnaryFunction<Double>() {
+            @Override
+            public double invoke(double arg) {
+                return transformation.transform(arg);
+            }
+
+            @Override
+            public float invoke(float arg) {
+                return (float) transformation.transform(arg);
+            }
+
+            @Override
+            public Double invoke(Double arg) {
+                return transformation.transform(arg);
+            }
+        };
+
+        /* W_in and W initialization */
+        if (W_input != null) {
+            //we want to randomly initialize the matrices once and keep them the same for multiple function calls
+            return;
+        }
         
+        SparseStore.Factory<Double> matrixFactory = SparseStore.PRIMITIVE64;
         W_input = matrixFactory.make(N_x, N_u);
         W_input.fillAll(new Uniform(-0.5*range + shift, range));
         System.out.println("random W_in: " + W_input);
@@ -172,24 +203,6 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         /* Scaling W */
         W_internal = (SparseStore<Double>) W_internal.multiply(alpha/spectralRadius);
         System.out.println("scaled W: " + W_internal);
-
-        /* Converting the transformation to an applicable function */
-        unaryFunction = new UnaryFunction<Double>() {
-            @Override
-            public double invoke(double arg) {
-                return transformation.transform(arg);
-            }
-
-            @Override
-            public float invoke(float arg) {
-                return (float) transformation.transform(arg);
-            }
-
-            @Override
-            public Double invoke(Double arg) {
-                return transformation.transform(arg);
-            }
-        };
     }
 
     private static final Random random = new Random();
@@ -206,15 +219,22 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
             + "N_u = " + N_u + ",\t" + input.f0 + ". input size = " + converted_input.size());
         }
         input_vector.fillColumn(0, converted_input);
-        
+        MatrixStore<Double> inputLayer = W_input.multiply(input_vector);
+        MatrixStore<Double> internalLayer = W_internal.multiply(output_previous);
+//        MatrixStore<Double> output = inputLayer.add(internalLayer);
         MatrixStore<Double> output = W_input.multiply(input_vector).add(W_internal.multiply(output_previous));
+//        System.out.println("input: " + Arrays.toString(inputLayer.toRawCopy1D()));
+//        System.out.println("internal: " + Arrays.toString(internalLayer.toRawCopy1D()));
+        System.out.println("u(t): " + RCUtilities.listToString(input.f1));
+//        System.out.println("W_in*u(t): " + Arrays.toString(W_input.multiply(input_vector).toRawCopy1D()));
+        System.out.println("x(t-1):" + Arrays.toString(output_previous.toRawCopy1D()));
+//        System.out.println("W*x(t-1): " + Arrays.toString(W_internal.multiply(output_previous).toRawCopy1D()));
+        System.out.println("W_in*u(t) + W*x(t-1):" + Arrays.toString(output.toRawCopy1D()));
         output = output.operateOnAll(unaryFunction);
+        
+        output_previous = output;   // save output for the next iteration
         
         List<Double> outputList = DoubleStream.of(output.toRawCopy1D()).boxed().collect(Collectors.toList());
         return Tuple2.of(input.f0, outputList);
     }
 }
-
-//interface Transformation extends Serializable {
-//    double transform(double d);
-//}

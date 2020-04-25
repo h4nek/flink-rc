@@ -24,7 +24,7 @@ import utilities.PythonPlotting;
  */
 public class IdentityTest {
     private static final int NUM_SAMPLES = 500;
-    private static final double LEARNING_RATE = 8.5;    // 0.02 for identity
+    private static final double LEARNING_RATE = 0.02;    // 0.02 for identity
     private static final double SPLIT_RATIO = 0.8; // how much of the data should be used for training (0-1)
     
     public static void main(String[] args) throws Exception {
@@ -35,18 +35,18 @@ public class IdentityTest {
         
         DataSet<Tuple2<Long, List<Double>>> integers = env.fromCollection(integerList).map(x -> {
             List<Double> y = new ArrayList<>();
-            y.add(x.doubleValue()/500); // "normalize" the inputs
+            y.add(x.doubleValue()); // "normalize" the inputs
             return Tuple2.of(x.longValue(), y);
         }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         
         Random random = new Random();   // adding a random epsilon to each data point
         DataSet<Tuple2<Long, Double>> integersOut = env.fromCollection(integerList)
-//                .map(x -> Tuple2.of(x.longValue(), x.doubleValue())) // identity function
+                .map(x -> Tuple2.of(x.longValue(), x.doubleValue())) // identity function
 //                .map(x -> Tuple2.of(x.longValue(), x.doubleValue() + random.nextDouble() - 0.5)) // added a random epsilon
 //                .map(x -> Tuple2.of(x.longValue(), random.nextDouble() - 0.5 - x.doubleValue())) // descending version of the previous
 //                .map(x -> Tuple2.of(x.longValue(), Math.pow(random.nextDouble() - 0.5 - x.doubleValue(), 3) - 
 //                        Math.pow(x.doubleValue(), 2) + Math.pow(x.doubleValue(), 1))) // ~ x^3
-                .map(x -> Tuple2.of(x.longValue(), 5 + x.doubleValue()*Math.sin(x)/500 + (Math.pow(x.doubleValue()/500, 2)))) // x*sin(x) ...
+//                .map(x -> Tuple2.of(x.longValue(), 5 + x.doubleValue()*Math.sin(x)/500 + (Math.pow(x.doubleValue()/500, 2)))) // x*sin(x) ...
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
 
         /* Split the data for testing and training */
@@ -119,12 +119,12 @@ public class IdentityTest {
 //                headers, headersOut);
         
         /* Plotting Online & Offline */
-        PythonPlotting.plotLRFit(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 
-                0, "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", 
-                "'Enhanced Identity' (Combined) LR", null, headers, headersOut, resultsOffline.collect());
+//        PythonPlotting.plotLRFit(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 
+//                0, "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", 
+//                "'Enhanced Identity' (Combined) LR", null, headers, headersOut, resultsOffline.collect());
         
-//        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), 0, 0, 
-//                "x", "f(x) = x", "Identity", null);
+        PythonPlotting.plotLRFit(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 0, 
+                "x", "f(x) = x", "Identity LR", null, headers, headersOut, resultsOffline.collect());
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), "Identity");
     }
 }

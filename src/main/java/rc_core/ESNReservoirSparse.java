@@ -1,25 +1,22 @@
 package rc_core;
 
 import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.state.FunctionInitializationContext;
+import org.apache.flink.runtime.state.FunctionSnapshotContext;
+import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.ojalgo.function.*;
-import org.ojalgo.function.constant.BigMath;
-import org.ojalgo.function.constant.PrimitiveMath;
-import org.ojalgo.matrix.Primitive64Matrix;
-import org.ojalgo.matrix.decomposition.Eigenvalue;
 import org.ojalgo.matrix.store.MatrixStore;
 import org.ojalgo.matrix.store.Primitive64Store;
 import org.ojalgo.matrix.store.SparseStore;
-import org.ojalgo.matrix.store.TransformableRegion;
 import org.ojalgo.random.Uniform;
 import org.ojalgo.structure.Access1D;
-import org.ojalgo.structure.Access2D;
-import org.ojalgo.structure.Structure2D;
-import org.ojalgo.type.CalendarDateUnit;
-import org.ojalgo.type.Stopwatch;
 
-import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
@@ -55,6 +52,9 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
                                        // (or one random "constant" for jumps, one for the cycle)
     private final boolean cycle;   // signifies if we want to include a unidirectional cycle (1->2->...->N_x->1)
                                    // otherwise, the jumps will "supplement" this by leading from/to every node
+    private final boolean includeInput; // include the input vector as part of the reservoir output ([u(t) x(t)])
+    private final boolean includeBias;  // include the bias constant as part of the output ([1 x(t)] or [1 u(t) x(t)])
+    
     
     private void argumentsCheck() {
         String exceptionString = null;
@@ -89,7 +89,8 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     }
 
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation, double range,
-                              double shift, long jumpSize, double alpha, boolean randomized, boolean cycle) {
+                              double shift, long jumpSize, double alpha, boolean randomized, boolean cycle, 
+                              boolean includeInput, boolean includeBias) {
         this.N_u = N_u;
         this.N_x = N_x;
         // Matrices not initialized here because of serializability (solved by moving initialization to open() method)
@@ -101,12 +102,15 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         this.alpha = alpha;
         this.randomized = randomized;
         this.cycle = cycle;
+        this.includeInput = includeInput;
+        this.includeBias = includeBias;
 
         argumentsCheck();   // check the validity of all arguments after instantiating them, so no need to pass them
     }
     
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation) {
-        this(N_u, N_x, init_vector, transformation, 1, 0, 2, 0.5, false, true);
+        this(N_u, N_x, init_vector, transformation, 1, 0, 2, 0.5, false, true, 
+                true, true);
     }
 
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector) {
@@ -154,6 +158,14 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
             return;
         }
         
+        if (W_internal != null) {
+            System.out.println("W_in is null! but W is: " + W_internal);
+        }
+
+        System.out.println("CREATING MATRICES FOR 1st TIME");   // TEST -- runs twice for some reason (multiple serializations?)
+        System.out.println("W_in: " + W_input);
+        System.out.println("W: " + W_internal);
+        
         SparseStore.Factory<Double> matrixFactory = SparseStore.PRIMITIVE64;
         W_input = matrixFactory.make(N_x, N_u);
         W_input.fillAll(new Uniform(-0.5*range + shift, range));
@@ -165,6 +177,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
 
         /* SparseStore Quicker */   // fastest
         W_internal = SparseStore.makePrimitive(N_x, N_x);
+        System.out.println("W_internal before init: " + W_internal);
         // simple cycle reservoir
 //        for (int i = 1; i < N_x; ++i) {
 //            W_internal.add(i, i-1, valueW);
@@ -180,9 +193,11 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
                         W_internal.add(i, prevPos, randomized ? getRandomWeight() : jumpWeight);
                 }
                 if (i == 0) {   // unidirectional cycle
+                    System.out.println("i = " + i);
                     W_internal.add(i, N_x - 1, randomized ? getRandomWeight() : cycleWeight);
                 }
                 else {
+                    System.out.println("i = " + i);
                     W_internal.add(i, i-1, randomized ? getRandomWeight() : cycleWeight);   // unidirectional cycle
                 }
             }
@@ -235,6 +250,15 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         output_previous = output;   // save output for the next iteration
         
         List<Double> outputList = DoubleStream.of(output.toRawCopy1D()).boxed().collect(Collectors.toList());
+        
+        if (includeInput) {
+            outputList.addAll(0, input.f1);
+        }
+
+        if (includeBias) {
+            outputList.add(0, 1.0);
+        }
+        
         return Tuple2.of(input.f0, outputList);
     }
 }

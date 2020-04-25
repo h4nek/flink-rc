@@ -4,7 +4,6 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.ojalgo.matrix.store.SparseStore;
 import utilities.PythonPlotting;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
@@ -33,7 +32,7 @@ public class ReservoirHeatmapPlot {
     public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
         ESNReservoirSparse esnReservoir = new ESNReservoirSparse(1, N_x, Collections.nCopies(N_x, 0.0), 
-                null, range, 0, jumpSize, alpha, randomized, cycle);
+                null, range, 0, jumpSize, alpha, randomized, cycle, true, true);
         esnReservoir.open(null);    // setup the scaled W
 
         W_internal = esnReservoir.getW_internal();

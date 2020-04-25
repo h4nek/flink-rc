@@ -35,9 +35,11 @@ import java.util.stream.DoubleStream;
  * keep the same matrices when Flink creates multiple instances of this class...
  * Utilizing ojAlgo libraries.
  */
-public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>> {
+public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>> 
+        implements CheckpointedFunction {
     private static SparseStore<Double> W_input;   // represents a matrix of input weights (N_x*N_u)
     private static SparseStore<Double> W_internal;    // represents a matrix of internal weights (N_x*N_x)
+    private static ListState<SparseStore<Double>> weightMatricesState;
     private MatrixStore<Double> output_previous;   // (internal) state vector (x(t-1)) -- result of the computation in previous time
     private final int N_u;  // input vector (u) size -- an exception is thrown if the input size is different
     private final int N_x;  // (internal) state vector (x) size -- should be higher than N_u
@@ -55,6 +57,29 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     private final boolean includeInput; // include the input vector as part of the reservoir output ([u(t) x(t)])
     private final boolean includeBias;  // include the bias constant as part of the output ([1 x(t)] or [1 u(t) x(t)])
     
+
+    @Override
+    public void snapshotState(FunctionSnapshotContext context) throws Exception {
+        weightMatricesState.clear();
+        weightMatricesState.add(W_input);
+        weightMatricesState.add(W_internal);
+    }
+
+    @Override
+    public void initializeState(FunctionInitializationContext context) throws Exception {
+        ListStateDescriptor<SparseStore<Double>> descriptor = new ListStateDescriptor<SparseStore<Double>>(
+                "weight matrices", TypeInformation.of(new TypeHint<SparseStore<Double>>() {}));
+        weightMatricesState = context.getOperatorStateStore().getListState(descriptor);
+        
+        if (context.isRestored()) {
+            restoreState((List<SparseStore<Double>>) weightMatricesState.get());
+        }
+    }
+
+    public void restoreState(List<SparseStore<Double>> state) throws Exception {
+        W_input = state.get(0);
+        W_internal = state.get(1);
+    }
     
     private void argumentsCheck() {
         String exceptionString = null;
@@ -162,9 +187,14 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
             System.out.println("W_in is null! but W is: " + W_internal);
         }
 
+        if (weightMatricesState != null) {
+            restoreState((List<SparseStore<Double>>) weightMatricesState.get());
+        }
+
         System.out.println("CREATING MATRICES FOR 1st TIME");   // TEST -- runs twice for some reason (multiple serializations?)
         System.out.println("W_in: " + W_input);
         System.out.println("W: " + W_internal);
+        System.out.println("state: " + weightMatricesState);
         
         SparseStore.Factory<Double> matrixFactory = SparseStore.PRIMITIVE64;
         W_input = matrixFactory.make(N_x, N_u);

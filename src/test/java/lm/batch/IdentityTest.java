@@ -2,7 +2,6 @@ package lm.batch;
 
 import lm.LinearRegression;
 import lm.LinearRegressionPrimitive;
-import lm.streaming.ExampleStreamingUtilities;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -14,7 +13,6 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lm.LinearRegressionPrimitive.TrainingMethod;
-import org.apache.flink.streaming.api.datastream.DataStream;
 import utilities.PythonPlotting;
 
 /**
@@ -123,7 +121,7 @@ public class IdentityTest {
 //                0, "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", 
 //                "'Enhanced Identity' (Combined) LR", null, headers, headersOut, resultsOffline.collect());
         
-        PythonPlotting.plotLRFit(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 0, 
+        PythonPlotting.plotRCPredictions(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 0, 
                 "x", "f(x) = x", "Identity LR", null, headers, headersOut, resultsOffline.collect());
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), "Identity");
     }

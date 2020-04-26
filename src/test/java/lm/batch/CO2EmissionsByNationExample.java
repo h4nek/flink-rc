@@ -119,7 +119,7 @@ public class CO2EmissionsByNationExample {
 //        ExampleBatchUtilities.plotAllAlphas(alphaList);
         
         // transforming the data back to the correct form for plotting
-        PythonPlotting.plotLRFit(inputSetTest.map(x -> {
+        PythonPlotting.plotRCPredictions(inputSetTest.map(x -> {
                 double y = x.f1.remove(0);
                 y *= downScaling;
                 y += 1750;

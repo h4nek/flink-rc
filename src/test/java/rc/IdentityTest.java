@@ -163,12 +163,12 @@ public class IdentityTest {
 //            resultsOffline.printOnTaskManager("PLOTTING-OFFLINE RESULTS");
 //            System.out.println("ONLINE RESULTS AS A LIST: " + RCUtilities.listToString(results.collect()));
 //            System.out.println("OFFLINE RESULTS AS A LIST: " + RCUtilities.listToString(resultsOffline.collect()));
-            PythonPlotting.plotLRFit(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 
+            PythonPlotting.plotRCPredictions(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 
                     0, "$x$", "$f(x) = x$", "Identity", null, headers, 
                     headersOut, resultsOffline.collect());
         }
         else {
-            PythonPlotting.plotLRFit(integersTest.collect(), integersOutTest.collect(), results.collect(), 0,
+            PythonPlotting.plotRCPredictions(integersTest.collect(), integersOutTest.collect(), results.collect(), 0,
                     0, "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$",
                     "'Enhanced Identity' (Combined)", null, headers, headersOut, resultsOffline.collect());
         }

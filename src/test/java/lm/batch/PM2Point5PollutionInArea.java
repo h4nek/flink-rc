@@ -147,7 +147,7 @@ public class PM2Point5PollutionInArea {
         List<Tuple2<Long, Double>> resultsList = results.map(x -> Tuple2.of(x.f0 + 1, x.f1))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
         resultsList.remove(resultsList.size() - 1);
-        PythonPlotting.plotLRFit(inputListTest, outputSetTest.map(x -> Tuple2.of(x.f0 + 1, x.f1))
+        PythonPlotting.plotRCPredictions(inputListTest, outputSetTest.map(x -> Tuple2.of(x.f0 + 1, x.f1))
                         .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect(), resultsList, 0, 0, 
                 "Day", "$\\mu g/m^3$", "PM2.5 Pollution in Seattle Area LR", PythonPlotting.PlotType.POINTS);
 

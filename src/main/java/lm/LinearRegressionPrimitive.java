@@ -7,6 +7,7 @@ import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -25,11 +26,12 @@ public class LinearRegressionPrimitive {
         return inputSet.map(new MapFunction<Tuple2<Long, List<Double>>, Tuple2<Long, Double>>() {
             @Override
             public Tuple2<Long, Double> map(Tuple2<Long, List<Double>> input) throws Exception {
-                List<Double> inputVector = new ArrayList<>(input.f1);   // copy the list to prevent some problems
-                inputVector.add(0, 1.0); // add an extra value for the intercept
+//                List<Double> inputVector = new ArrayList<>(input.f1);   // copy the list to prevent some problems
+                List<Double> inputVector = input.f1;
+//                inputVector.add(0, 1.0); // add an extra value for the intercept
 
                 double y_pred = 0;
-                for (int i = 0; i < alpha.size(); i++) {
+                for (int i = 0; i < inputVector.size(); i++) {
                     y_pred += alpha.get(i) * inputVector.get(i);
                 }
                 
@@ -128,7 +130,7 @@ public class LinearRegressionPrimitive {
             case PSEUDOINVERSE:
                 return trainUsingPseudoinverse(inputData, outputData, learningRate);
             case GRADIENT_DESCENT:
-                return trainUsingGradientDescent(inputData, outputData, new double[inputData.length], learningRate);
+                return trainUsingGradientDescent(inputData, outputData, new double[inputData[0].length], learningRate);
             default:    // a null value was passed as a training method - use PSEUDOINVERSE as a default
                 return trainUsingPseudoinverse(inputData, outputData, learningRate);
         }
@@ -152,17 +154,34 @@ public class LinearRegressionPrimitive {
         return alpha;
     }
 
+    /**
+     * Trained using stochastic gradient descent (SGD) that goes once through the whole dataset (1 epoch).
+     * TODO Use it only for testing of {@link MLRFitCoGroupFunction#trainUsingGradientDescent}? (outputs the same values w/o decay)
+     */
     protected static double[] trainUsingGradientDescent(double[][] input, double[] output, double[] alphaInit, 
                                                         double learningRate) throws InvalidArgumentException {
         double[] alpha = alphaInit;
-        Matrix X = new Matrix(input);
-        Matrix y = new Matrix(output, 1).transpose();
-        
-        for (int i = 0; i < input.length; i++) {
+
+        System.out.println("learning rate: " + learningRate);
+        System.out.println("alpha init: " + Arrays.toString(alpha));
+
+        int numSamples = input.length;
+        for (int i = 0; i < numSamples; i++) {
             Matrix x_i = new Matrix(input[i], 1).transpose();
+            // we have to convert the Alpha each time as we use array representation for dot product and Jama 
+            // representation for the matrix op.
             Matrix alphaJama = new Matrix(alpha, 1).transpose();
-            alpha = alphaJama.minus(x_i.times(2*learningRate*dotProduct(alpha, input[i]) - output[i])).getColumnPackedCopy();
+            System.out.println("Alpha * x  - y = " + (dotProduct(alpha, input[i]) - output[i]));
+            System.out.println("2*lambda * alpha * x = " + 2*learningRate*dotProduct(alpha, input[i]));
+            System.out.println("x * (alpha * x - y) = " + Arrays.toString(x_i.times((dotProduct(alpha, input[i]) - output[i])).getColumnPackedCopy()));
+            System.out.println("y = " + output[i]);
+            System.out.println("alpha delta = " + Arrays.toString(x_i.times((dotProduct(alpha, input[i]) - output[i])).times((learningRate/numSamples)).getColumnPackedCopy()));
+            alpha = alphaJama.minus(x_i.times((learningRate/numSamples)*(dotProduct(alpha, input[i]) - output[i]))).getColumnPackedCopy();
+            System.out.println("alpha new: " + Arrays.toString(alphaJama.getColumnPackedCopy()));
         }
+        
+//        alpha = alphaJama.getColumnPackedCopy();
+        System.out.println("alpha out: " + Arrays.toString(alpha));
 
         return alpha;
     }
@@ -171,7 +190,8 @@ public class LinearRegressionPrimitive {
         double result = 0;
 
         if (x.length != y.length) {
-            throw new InvalidArgumentException(new String[] {"Lengths must agree!"});
+            throw new InvalidArgumentException(new String[] {"Lengths must agree! (x = " + x.length + "\ty = " + 
+                    y.length + ")"});
         }
 
         for (int i = 0; i < x.length; i++) {
@@ -182,11 +202,10 @@ public class LinearRegressionPrimitive {
     
     private static double[][] inputDataSetToArray(DataSet<Tuple2<Long, List<Double>>> inputSet) throws Exception {
         List<Tuple2<Long, List<Double>>> inputList = inputSet.collect();
-        double[][] inputArr = new double[inputList.size()][inputList.get(0).f1.size() + 1];
+        double[][] inputArr = new double[inputList.size()][inputList.get(0).f1.size()];
 
         for (int i = 0; i < inputList.size(); i++) {
             List<Double> inputVector = inputList.get(i).f1;
-            inputVector.add(0, 1.0);
             for (int j = 0; j < inputVector.size(); j++) {
                 inputArr[i][j] = inputVector.get(j);
             }

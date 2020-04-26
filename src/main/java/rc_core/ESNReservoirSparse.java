@@ -56,6 +56,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
                                    // otherwise, the jumps will "supplement" this by leading from/to every node
     private final boolean includeInput; // include the input vector as part of the reservoir output ([u(t) x(t)])
     private final boolean includeBias;  // include the bias constant as part of the output ([1 x(t)] or [1 u(t) x(t)])
+                                        // (corresponds to the y-intercept in LR)
     
 
     @Override

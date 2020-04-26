@@ -96,15 +96,13 @@ class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double
         for (Tuple2<Long, List<Double>> input : inputGroup) {
             for (Tuple2<Long, Double> output : outputGroup) {
                 if (alpha == null) {    // set the initial alpha to a zero vector of an appropriate length (input length + 1)
-                    int alphaSize = input.f1.size() + 1;
+                    int alphaSize = input.f1.size();
                     alpha = new ArrayList<>(alphaSize);
                     for (int i = 0; i < alphaSize; i++) {
                         alpha.add(0.0);
                     }
                 }
-                List<Double> inputVector = new ArrayList<>(input.f1);   // copy the original list to avoid problems
-                inputVector.add(0, 1.0);    // add a value for the intercept
-                List<Double> newAlpha = trainUsingGradientDescent(alpha, inputVector, output.f1, learningRate, numSamples, out);
+                List<Double> newAlpha = trainUsingGradientDescent(alpha, input.f1, output.f1, learningRate, numSamples, out);
 
                 alpha = newAlpha;
                 out.collect(Tuple2.of(input.f0, newAlpha));
@@ -140,11 +138,14 @@ class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double
             System.out.println("current MSE: " + MSE);
             out.collect(Tuple2.of(-1L, Collections.singletonList(MSE)));    // -1 index will signify the MSE values
         }
+        System.out.println("y: " + output);
         System.out.println("y_hat - y: " + yDiff);
         List<Double> gradient = scalarMultiplication(yDiff, input);
         System.out.println("gradient: " + gradient);
+//        System.out.println("alpha delta: " + scalarMultiplication(learningRate/numSamples, gradient));
 
         alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate/numSamples, gradient));
+//        System.out.println("new alpha: " + alpha);
 //        alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate*(dotProduct(alpha, input) - output)/
 //                numSamples, input));  // one-liner
         return alpha;

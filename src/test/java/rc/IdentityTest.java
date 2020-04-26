@@ -26,7 +26,7 @@ import java.util.stream.IntStream;
  */
 public class IdentityTest {
     private static final int NUM_SAMPLES = 500;
-    private static double learningRate = 0.01;    // 0.002 for identity; 8.5 for the last fction
+    private static double learningRate = 0.002;    // 0.002 for identity; 8.5 for the last fction; 0.0002 Id w/o decay
     private static final double SPLIT_RATIO = 0.8; // how much of the data should be used for training (0-1)
     private static final int N_u = 1;
     private static final int N_x = 6;
@@ -85,7 +85,7 @@ public class IdentityTest {
 
         /* ESN Reservoir */
         ESNReservoirSparse reservoir = new ESNReservoirSparse(N_u, N_x, Collections.nCopies(N_x, 0.0), Math::tanh, 
-                1, 0, 2, 0.5, false, true, true, false);
+                1, 0, 2, 0.5, false, true, true, true);
         DataSet<Tuple2<Long, List<Double>>> integersTrainRes = integersTrain.map(reservoir);
         DataSet<Tuple2<Long, List<Double>>> integersTestRes = integersTest.map(reservoir);
         // w/ these prints ojAlgo sometimes throws ArrayIndexOutOfBoundsException...
@@ -106,7 +106,8 @@ public class IdentityTest {
 
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
         Alpha = alphaList.get(alphaList.size() - 1);
-        
+        System.out.println("Online Alpha: " + Alpha);
+
         DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(integersTestRes, Alpha);
         results.printOnTaskManager("Preds online");
 
@@ -118,7 +119,8 @@ public class IdentityTest {
 //                "Identity Test", ExampleBatchUtilities.PlotType.POINTS);
 //
         /* Add the offline (pseudoinverse) fitting for comparison */
-        Alpha = LinearRegressionPrimitive.fit(integersTrain, integersOutTrain, TrainingMethod.PSEUDOINVERSE, 0);
+        Alpha = LinearRegressionPrimitive.fit(integersTrainRes, integersOutTrain, TrainingMethod.PSEUDOINVERSE, 0);
+        System.out.println("Offline Alpha: " + Alpha);
         DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integersTestRes, Alpha);
         resultsOffline.printOnTaskManager("Preds offline");
 //        utils.addLRFitToPlot(integers, resultsOffline, 0);

@@ -22,7 +22,7 @@ public class HigherLevelExample {
     private static int outputIdx = 1;  // index of the output column (0-based)
     private static boolean debugging = true;    // print various data in the process
     private static double inputFactor = 2000;  // a factor to divide the data by to normalize them
-    private static Map<Integer, InputParsing> customParsers = new HashMap<>();
+    private static Map<Integer, DataParsing> customParsers = new HashMap<>();
 
     private static int N_x = 5;    // dimension of the reservoir (N_x*N_x matrix)
 
@@ -56,7 +56,7 @@ public class HigherLevelExample {
         HigherLevelExample.inputFactor = inputFactor;
     }
 
-    public static void setCustomParsers(Map<Integer, InputParsing> customParsers) {
+    public static void setCustomParsers(Map<Integer, DataParsing> customParsers) {
         HigherLevelExample.customParsers = customParsers;
     }
 
@@ -65,7 +65,7 @@ public class HigherLevelExample {
      * @param index index of the input column (0-based) this parser will be applied to
      * @param parser custom parsing implementation
      */
-    public static void addCustomParser(int index, InputParsing parser) {
+    public static void addCustomParser(int index, DataParsing parser) {
         customParsers.put(index, parser);
     }
 

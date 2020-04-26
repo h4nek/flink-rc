@@ -28,7 +28,7 @@ public class HigherLevelExampleTesting {
     private static int outputIdx;
     private static boolean debugging;
     private static double inputFactor;
-    private static Map<Integer, InputParsing> customParsers;
+    private static Map<Integer, DataParsing> customParsers;
 
     private static int N_x;
     private static int startingIdx;   // the index of the first record in the testing dataset (beginning of the file is ignored)
@@ -36,7 +36,7 @@ public class HigherLevelExampleTesting {
     private static List<Double> Alpha;
     
 
-    static void setup(String inputFilePath, String columnsBitMask, Map<Integer, InputParsing> customParsers,
+    static void setup(String inputFilePath, String columnsBitMask, Map<Integer, DataParsing> customParsers,
                       double inputFactor, int outputIdx, int N_x, boolean debugging, int startingIdx, 
                       double learningRate, List<Double> Alpha) {
         HigherLevelExampleTesting.inputFilePath = inputFilePath;

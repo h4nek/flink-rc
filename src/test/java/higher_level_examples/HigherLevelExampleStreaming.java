@@ -38,7 +38,7 @@ public class HigherLevelExampleStreaming {
     private static int outputIdx = 1;  // index of the output column (0-based)
     private static boolean debugging = true;    // print various data in the process
     private static double inputFactor = 2000;  // a factor to divide the data by to normalize them
-    private static Map<Integer, InputParsing> customParsers;
+    private static Map<Integer, DataParsing> customParsers;
     
     private static int N_x = 5;    // dimension of the reservoir (N_x*N_x matrix)
     private static long EOTRAINING_TIMESTAMP = 33000;   // finish training at 33 seconds (33 records)

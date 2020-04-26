@@ -19,7 +19,7 @@ import java.util.Map;
 public class HigherLevelExampleTraining {
     private static String inputFilePath;
     private static String columnsBitMask;
-    private static Map<Integer, InputParsing> customParsers;
+    private static Map<Integer, DataParsing> customParsers;
     private static double inputFactor;
     private static int outputIdx;
     private static int numSamples;   // number of records to be in the training dataset (rest of the file is ignored)
@@ -35,7 +35,7 @@ public class HigherLevelExampleTraining {
     private static List<Double> finalAlpha;
     
 
-    static void setup(String inputFilePath, String columnsBitMask, Map<Integer, InputParsing> customParsers, 
+    static void setup(String inputFilePath, String columnsBitMask, Map<Integer, DataParsing> customParsers, 
                       double inputFactor, int outputIdx, int N_x, boolean debugging, List<Double> lmAlphaInit, 
                       boolean stepsDecay, int numSamples, double learningRate) {
         HigherLevelExampleTraining.inputFilePath = inputFilePath;

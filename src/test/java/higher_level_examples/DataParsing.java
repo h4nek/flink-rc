@@ -10,5 +10,5 @@ public interface DataParsing {
      * @param inputVector a reference to the joint input/output vector where all values (features) are expected to be 
      *                    added
      */
-    void parseAndAddInput(String inputString, List<Double> inputVector);
+    void parseAndAddData(String inputString, List<Double> inputVector);
 }

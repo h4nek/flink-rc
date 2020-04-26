@@ -95,7 +95,7 @@ public class HigherLevelExampleBatch {
                         // "normalize" the data to be in some reasonable range for the transformation
                         if (columnsBitMask.charAt(i) != '0') {
                             if (customParsers != null && customParsers.containsKey(i)) {
-                                customParsers.get(i).parseAndAddInput(items[i], inputVector);
+                                customParsers.get(i).parseAndAddData(items[i], inputVector);
                             }
                             else {
                                 inputVector.add(Double.parseDouble(items[i]));

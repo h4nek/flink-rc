@@ -96,7 +96,6 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                 .printOnTaskManager("RESULTS");
 
 
-//        DataSet<Tuple2<Long, List<Double>>> plottingDataSet = dataForPlotting(env);
         DataSet<Tuple2<Long, List<Double>>> plottingInputSet = inputSet.filter(x -> x.f0 >= trainingSetSize)
                 .map(x -> { 
                     for (int i = 0; i < x.f1.size(); ++i) {

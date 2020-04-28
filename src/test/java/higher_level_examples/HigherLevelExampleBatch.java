@@ -12,98 +12,41 @@ import org.apache.flink.api.java.io.TextInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.Path;
 import rc_core.ESNReservoirSparse;
+import rc_core.RCUtilities;
 import utilities.BasicIndexer;
 import utilities.PythonPlotting;
 
 import java.util.*;
 
-public class HigherLevelExampleBatch {
-    private static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
-    private static double learningRate = 0.01;
-    private static String columnsBitMask = "111";
-    private static int outputIdx = 1;  // index of the output column (0-based)
-    private static boolean debugging = true;    // print various data in the process
-//    private static double inputFactor = 2000;  // a factor to divide the data by to normalize them
-    private static Map<Integer, DataParsing> customParsers = new HashMap<>();
-
-    private static int N_x = 6;    // dimension of the reservoir (N_x*N_x matrix)
-
-    private static List<Double> lmAlphaInit; // initial value of the LM Alpha vector; has to be of length N_x (or null)
-    private static boolean stepsDecay = true;
-
-    private static int trainingSetSize = (int) Math.floor(69*0.8);   // number of records to be in the training dataset (rest of the file is ignored)
-
-
-    public static void setup(String inputFilePath, String columnsBitMask, double inputFactor, int outputIdx, int N_x, 
-                             boolean debugging, List<Double> lmAlphaInit, boolean stepsDecay, int numSamples, 
-                             double learningRate) {
-        HigherLevelExampleBatch.inputFilePath = inputFilePath;
-        HigherLevelExampleBatch.columnsBitMask = columnsBitMask;
-//        HigherLevelExampleBatch.inputFactor = inputFactor;
-        HigherLevelExampleBatch.outputIdx = outputIdx;
-        HigherLevelExampleBatch.N_x = N_x;
-        HigherLevelExampleBatch.debugging = debugging;
-        HigherLevelExampleBatch.learningRate = learningRate;
-        HigherLevelExampleBatch.lmAlphaInit = lmAlphaInit;
-        HigherLevelExampleBatch.stepsDecay = stepsDecay;
-
-        HigherLevelExampleBatch.trainingSetSize = numSamples;
-    }
-
-    /**
-     * Add one custom parser for the specified column (representing an input feature).
-     * @param index index of the input column (0-based) this parser will be applied to
-     * @param parser custom parsing implementation
-     */
-    public static void addCustomParser(int index, DataParsing parser) {
-        customParsers.put(index, parser);
-    }
-    
-    private static int inputIndex = 0;
-    private static int shiftData = 0;
-    private static String xlabel = "Year";
-    private static String ylabel = "Mean cumulative mass balance (mwe)";
-    private static String title = "Glaciers Meltdown";
-    private static PythonPlotting.PlotType plotType = PythonPlotting.PlotType.LINE;
-    private static List<String> inputHeaders;
-    private static List<String> outputHeaders;
-    
-    public static void setupPlotting(int inputIndex, int shiftData, String xlabel, String ylabel, String title, 
-                                     PythonPlotting.PlotType plotType, List<String> inputHeaders, 
-                                     List<String> outputHeaders) {
-        HigherLevelExampleBatch.inputIndex = inputIndex;
-        HigherLevelExampleBatch.shiftData = shiftData;
-        HigherLevelExampleBatch.xlabel = xlabel;
-        HigherLevelExampleBatch.ylabel = ylabel;
-        HigherLevelExampleBatch.title = title;
-        HigherLevelExampleBatch.plotType = plotType;
-        HigherLevelExampleBatch.inputHeaders = inputHeaders;
-        HigherLevelExampleBatch.outputHeaders = outputHeaders;
-    }
-    
-    
+public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
     public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
 
         DataSet<List<Double>> dataSet = env.readFile(new TextInputFormat(new Path(inputFilePath)), inputFilePath)
-                .filter(line -> line.matches("[^a-zA-Z]+")) // match only "non-word" lines
                 .map(line -> {
                     String[] items = line.split(",");
                     List<Double> inputVector = new ArrayList<>();
                     for (int i = 0; i < items.length; ++i) {
                         // "normalize" the data to be in some reasonable range for the transformation
                         if (columnsBitMask.charAt(i) != '0') {
-                            if (customParsers != null && customParsers.containsKey(i)) {
-                                customParsers.get(i).parseAndAddData(items[i], inputVector);
+                            try {
+                                if (customParsers != null && customParsers.containsKey(i)) {
+                                    customParsers.get(i).parseAndAddData(items[i], inputVector);
+                                } else {
+                                    inputVector.add(Double.parseDouble(items[i]));
+                                }
                             }
-                            else {
-                                inputVector.add(Double.parseDouble(items[i]));
+                            catch (Exception e) {   // dealing with invalid lines - exclude them
+                                System.err.println("invalid cell: " + items[i]);
+                                System.err.println("line: " + line);
+                                inputVector = null;
+                                break;  // we don't want to process other cells
                             }
                         }
                     }
                     return inputVector;
-                }).returns(Types.LIST(Types.DOUBLE));
+                }).returns(Types.LIST(Types.DOUBLE)).filter(Objects::nonNull);
         if (debugging) dataSet.printOnTaskManager("DATA"); //TEST
 
         DataSet<Tuple2<Long, List<Double>>> indexedDataSet = dataSet.map(new BasicIndexer<>());
@@ -114,8 +57,7 @@ public class HigherLevelExampleBatch {
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         if (debugging) inputSet.printOnTaskManager("IN");
         if (debugging) outputSet.printOnTaskManager("OUT");
-
-        int N_u = StringUtils.countMatches(columnsBitMask, "1") - 1; // subtract 1 for the output
+        
         DataSet<Tuple2<Long, List<Double>>> reservoirOutput = inputSet.map(new ESNReservoirSparse(N_u, N_x, 
                 Collections.nCopies(N_x, 0.0), Math::tanh, 1, 0, 2, 0.5, false, 
                 true, true, true));
@@ -132,6 +74,7 @@ public class HigherLevelExampleBatch {
         if (debugging) alphas.printOnTaskManager("ALPHA"); //TEST
 
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
+        System.out.println("Alpha list: " + RCUtilities.listToString(alphaList));
         List<Double> finalAlpha = alphaList.get(alphaList.size() - 1);
         if (debugging) System.out.println("Final Alpha: " + ExampleStreamingUtilities.listToString(finalAlpha));
         
@@ -153,13 +96,26 @@ public class HigherLevelExampleBatch {
                 .printOnTaskManager("RESULTS");
 
 
-        DataSet<Tuple2<Long, List<Double>>> plottingDataSet = dataForPlotting(env);
-        DataSet<Tuple2<Long, List<Double>>> plottingInputSet = plottingDataSet.map(x -> {x.f1.remove(outputIdx); return x;})
-                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-        DataSet<Tuple2<Long, Double>> plottingOutputSet = plottingDataSet.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)))
-                .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
-        PythonPlotting.plotRCPredictions(plottingInputSet.filter(x -> x.f0 >= trainingSetSize).collect(),
-                plottingOutputSet.filter(x -> x.f0 >= trainingSetSize).collect(), predictions.collect(), inputIndex, 
+//        DataSet<Tuple2<Long, List<Double>>> plottingDataSet = dataForPlotting(env);
+        DataSet<Tuple2<Long, List<Double>>> plottingInputSet = inputSet.filter(x -> x.f0 >= trainingSetSize)
+                .map(x -> { 
+                    for (int i = 0; i < x.f1.size(); ++i) {
+                        if (plottingTransformers.containsKey(i)) {
+                            Double transformed = plottingTransformers.get(i).transform(x.f1.remove(i));
+                            x.f1.add(i, transformed); 
+                        } 
+                    }
+                    return x; 
+                }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        DataSet<Tuple2<Long, Double>> plottingOutputSet = outputSet.filter(x -> x.f0 >= trainingSetSize)
+                .map(y -> {
+                    if (plottingTransformers.containsKey(N_u)) {
+                        y.f1 = plottingTransformers.get(N_u).transform(y.f1);
+                    }
+                    return y;
+                }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+        PythonPlotting.plotRCPredictions(plottingInputSet.collect(),
+                plottingOutputSet.collect(), predictions.collect(), inputIndex, 
                 shiftData, xlabel, ylabel, title, plotType, inputHeaders, outputHeaders, predictionsOffline.collect());
     }
 
@@ -169,21 +125,4 @@ public class HigherLevelExampleBatch {
     public static void run() throws Exception {
         main(null);
     }
-    
-    private static DataSet<Tuple2<Long, List<Double>>> dataForPlotting(ExecutionEnvironment env) {
-        DataSet<List<Double>> dataSet = env.readFile(new TextInputFormat(new Path(inputFilePath)), inputFilePath)
-                .filter(line -> line.matches("[^a-zA-Z]+")) // match only "non-word" lines
-                .map(line -> {
-                    String[] items = line.split(",");
-                    List<Double> inputVector = new ArrayList<>();
-                    for (int i = 0; i < items.length; ++i) {
-                        if (columnsBitMask.charAt(i) != '0') {
-                            inputVector.add(Double.parseDouble(items[i]));
-                        }
-                    }
-                    return inputVector;
-                }).returns(Types.LIST(Types.DOUBLE));
-        return dataSet.map(new BasicIndexer<>());
-    }
-    
 }

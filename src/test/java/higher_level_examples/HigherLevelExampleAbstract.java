@@ -12,26 +12,25 @@ public abstract class HigherLevelExampleAbstract {
     protected static String columnsBitMask = "111";
     protected static int outputIdx = 1;  // index of the output column (0-based)
     protected static boolean debugging = true;    // print various data in the process
-    //    protected static double inputFactor = 2000;  // a factor to divide the data by to normalize them
-    protected static Map<Integer, DataParsing> customParsers = new HashMap<>();
+    // potential custom parsing functions for individual input columns (enables e.g. scaling - normalization of inputs)
+    protected static Map<Integer, DataParsing> customParsers = new HashMap<>(); 
 
-    protected static int N_u = 2;     // dimension of the input (vectors u(t))
-    protected static int N_x = 6;    // dimension of the reservoir (N_x*N_x matrix; vectors x(t))
+    protected static int N_u = 2;   // dimension of the input (vectors u(t))
+    protected static int N_x = 6;   // dimension of the reservoir (N_x*N_x matrix; vectors x(t))
 
     protected static List<Double> lmAlphaInit; // initial value of the LM Alpha vector; has to be of length N_x (or null)
     protected static boolean stepsDecay = true;
 
     protected static int trainingSetSize = (int) Math.floor(69*0.5);   // number of records to be in the training dataset
-                                                                     // (rest of the file is ignored)
+                                                                       // (rest of the file is ignored)
 
     protected static Map<Integer, DataTransformation> plottingTransformers = new HashMap<>();
 
-    public static void setup(String inputFilePath, String columnsBitMask, double inputFactor, int outputIdx, int N_u, 
-                             int N_x, boolean debugging, List<Double> lmAlphaInit, boolean stepsDecay, int trainingSetSize,
+    public static void setup(String inputFilePath, String columnsBitMask, int outputIdx, int N_u, int N_x,
+                             boolean debugging, List<Double> lmAlphaInit, boolean stepsDecay, int trainingSetSize,
                              double learningRate) {
         HigherLevelExampleAbstract.inputFilePath = inputFilePath;
         HigherLevelExampleAbstract.columnsBitMask = columnsBitMask;
-//        HigherLevelExampleAbstract.inputFactor = inputFactor;
         HigherLevelExampleAbstract.outputIdx = outputIdx;
         HigherLevelExampleAbstract.N_u = N_u;
         HigherLevelExampleAbstract.N_x = N_x;
@@ -93,10 +92,6 @@ public abstract class HigherLevelExampleAbstract {
         customParsers.put(index, parser);
     }
     
-    public static void addPlottingTransformer(int index, DataTransformation transformer) {
-        plottingTransformers.put(index, transformer);
-    }
-
     protected static int inputIndex = 0;
     protected static int shiftData = 0;
     protected static String xlabel = "Year";
@@ -119,4 +114,46 @@ public abstract class HigherLevelExampleAbstract {
         HigherLevelExampleAbstract.outputHeaders = outputHeaders;
     }
 
+    /* Individual plotting field setters */
+    public static void setInputIndex(int inputIndex) {
+        HigherLevelExampleAbstract.inputIndex = inputIndex;
+    }
+
+    public static void setShiftData(int shiftData) {
+        HigherLevelExampleAbstract.shiftData = shiftData;
+    }
+
+    public static void setXlabel(String xlabel) {
+        HigherLevelExampleAbstract.xlabel = xlabel;
+    }
+
+    public static void setYlabel(String ylabel) {
+        HigherLevelExampleAbstract.ylabel = ylabel;
+    }
+
+    public static void setTitle(String title) {
+        HigherLevelExampleAbstract.title = title;
+    }
+
+    public static void setPlotType(PythonPlotting.PlotType plotType) {
+        HigherLevelExampleAbstract.plotType = plotType;
+    }
+
+    public static void setInputHeaders(List<String> inputHeaders) {
+        HigherLevelExampleAbstract.inputHeaders = inputHeaders;
+    }
+
+    public static void setOutputHeaders(List<String> outputHeaders) {
+        HigherLevelExampleAbstract.outputHeaders = outputHeaders;
+    }
+
+    /**
+     * Add a transformation of an individual (input or output) field for the purpose of Python plotting.
+     * @param index 0-based index of the vectors' field that the transformation will be applied upon. 
+     *              <i>N_u</i> is considered to be the output index
+     * @param transformer the transformation function
+     */
+    public static void addPlottingTransformer(int index, DataTransformation transformer) {
+        plottingTransformers.put(index, transformer);
+    }
 }

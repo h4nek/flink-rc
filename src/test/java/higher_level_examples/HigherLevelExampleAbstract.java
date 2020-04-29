@@ -1,7 +1,9 @@
 package higher_level_examples;
 
+import rc_core.Transformation;
 import utilities.PythonPlotting;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,9 +25,7 @@ public abstract class HigherLevelExampleAbstract {
 
     protected static int trainingSetSize = (int) Math.floor(69*0.5);   // number of records to be in the training dataset
                                                                        // (rest of the file is ignored)
-
-    protected static Map<Integer, DataTransformation> plottingTransformers = new HashMap<>();
-
+    
     public static void setup(String inputFilePath, String columnsBitMask, int outputIdx, int N_u, int N_x,
                              boolean debugging, List<Double> lmAlphaInit, boolean stepsDecay, int trainingSetSize,
                              double learningRate) {
@@ -91,7 +91,77 @@ public abstract class HigherLevelExampleAbstract {
     public static void addCustomParser(int index, DataParsing parser) {
         customParsers.put(index, parser);
     }
+
+
+    /* Reservoir configuration */
+    protected static List<Double> init_vector = Collections.nCopies(N_x, 0.0);
+    protected static Transformation transformation = Math::tanh;
+    protected static double range = 1;
+    protected static double shift = 0;
+    protected static long jumpSize = 2;
+    protected static double scalingAlpha = 0.5;
+    protected static boolean randomized = false;
+    protected static boolean cycle = true;
+    protected static boolean includeInput = true;
+    protected static boolean includeBias = true;
+
+    public static void setupReservoir(List<Double> init_vector, Transformation transformation, double range, 
+                                      double shift, long jumpSize, double scalingAlpha, boolean randomized, 
+                                      boolean cycle, boolean includeInput, boolean includeBias) {
+        HigherLevelExampleAbstract.init_vector = init_vector;
+        HigherLevelExampleAbstract.transformation = transformation;
+        HigherLevelExampleAbstract.range = range;
+        HigherLevelExampleAbstract.shift = shift;
+        HigherLevelExampleAbstract.jumpSize = jumpSize;
+        HigherLevelExampleAbstract.scalingAlpha = scalingAlpha;
+        HigherLevelExampleAbstract.randomized = randomized;
+        HigherLevelExampleAbstract.cycle = cycle;
+        HigherLevelExampleAbstract.includeInput = includeInput;
+        HigherLevelExampleAbstract.includeBias = includeBias;
+    }
+
+    public static void setInit_vector(List<Double> init_vector) {
+        HigherLevelExampleAbstract.init_vector = init_vector;
+    }
+
+    public static void setTransformation(Transformation transformation) {
+        HigherLevelExampleAbstract.transformation = transformation;
+    }
+
+    public static void setRange(double range) {
+        HigherLevelExampleAbstract.range = range;
+    }
+
+    public static void setShift(double shift) {
+        HigherLevelExampleAbstract.shift = shift;
+    }
+
+    public static void setJumpSize(long jumpSize) {
+        HigherLevelExampleAbstract.jumpSize = jumpSize;
+    }
+
+    public static void setScalingAlpha(double scalingAlpha) {
+        HigherLevelExampleAbstract.scalingAlpha = scalingAlpha;
+    }
+
+    public static void setRandomized(boolean randomized) {
+        HigherLevelExampleAbstract.randomized = randomized;
+    }
+
+    public static void setCycle(boolean cycle) {
+        HigherLevelExampleAbstract.cycle = cycle;
+    }
+
+    public static void setIncludeInput(boolean includeInput) {
+        HigherLevelExampleAbstract.includeInput = includeInput;
+    }
+
+    public static void setIncludeBias(boolean includeBias) {
+        HigherLevelExampleAbstract.includeBias = includeBias;
+    }
     
+    
+    /* Plotting configuration */
     protected static int inputIndex = 0;
     protected static int shiftData = 0;
     protected static String xlabel = "Year";
@@ -100,6 +170,7 @@ public abstract class HigherLevelExampleAbstract {
     protected static PythonPlotting.PlotType plotType = PythonPlotting.PlotType.LINE;
     protected static List<String> inputHeaders;
     protected static List<String> outputHeaders;
+    protected static Map<Integer, DataTransformation> plottingTransformers = new HashMap<>();
 
     public static void setupPlotting(int inputIndex, int shiftData, String xlabel, String ylabel, String title,
                                      PythonPlotting.PlotType plotType, List<String> inputHeaders,
@@ -114,7 +185,6 @@ public abstract class HigherLevelExampleAbstract {
         HigherLevelExampleAbstract.outputHeaders = outputHeaders;
     }
 
-    /* Individual plotting field setters */
     public static void setInputIndex(int inputIndex) {
         HigherLevelExampleAbstract.inputIndex = inputIndex;
     }

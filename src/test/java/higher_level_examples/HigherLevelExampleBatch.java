@@ -4,7 +4,6 @@ import lm.LinearRegression;
 import lm.LinearRegressionPrimitive;
 import lm.batch.ExampleBatchUtilities;
 import lm.streaming.ExampleStreamingUtilities;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -59,8 +58,8 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (debugging) outputSet.printOnTaskManager("OUT");
         
         DataSet<Tuple2<Long, List<Double>>> reservoirOutput = inputSet.map(new ESNReservoirSparse(N_u, N_x, 
-                Collections.nCopies(N_x, 0.0), Math::tanh, 1, 0, 2, 0.5, false, 
-                true, true, true));
+                init_vector, transformation, range, shift, jumpSize, scalingAlpha, randomized, cycle, 
+                includeInput, includeBias));
         if (debugging) reservoirOutput.printOnTaskManager("Reservoir output");
 
         DataSet<Tuple2<Long, List<Double>>> trainingInput = reservoirOutput.first(trainingSetSize);

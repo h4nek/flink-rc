@@ -29,40 +29,41 @@ public class PythonPlotting {
      * @throws IOException
      */
     public static void plotRCPredictions(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
-                                         List<Tuple2<Long, Double>> predictionList, int inputIndex, int shiftData, String xlabel,
-                                         String ylabel, String title, PlotType plotType, List<String> inputHeaders,
-                                         List<String> outputHeaders, List<Tuple2<Long, Double>> offlinePredsList) throws IOException {
+                                         List<Tuple2<Long, Double>> predictionList, String plotFileName, String xlabel, 
+                                         String ylabel, String title, int inputIndex, int shiftData, PlotType plotType, 
+                                         List<String> inputHeaders, List<String> outputHeaders, 
+                                         List<Tuple2<Long, Double>> offlinePredsList) throws IOException {
         String plotTypeString = "-";
         if (plotType == PlotType.POINTS) {
             plotTypeString = ".";
         }
 
-        ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + title + "_InputData.csv",
+        ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + plotFileName + "_InputData.csv",
                 inputList, inputHeaders, true);
-        ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + title + "_OutputData.csv",
+        ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + plotFileName + "_OutputData.csv",
                 outputList, outputHeaders, false);
         if (predictionList != null) {
-            ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + title + "_PredictionData.csv",
+            ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + plotFileName + "_PredictionData.csv",
                     predictionList, outputHeaders, false);
         }
         if (offlinePredsList != null) {
-            ExampleBatchUtilities.writeDataSetToFile(pathToDataOutputDir + title + "_OfflinePredictionData.csv",
+            ExampleBatchUtilities.writeDataSetToFile(pathToDataOutputDir + plotFileName + "_OfflinePredictionData.csv",
                     offlinePredsList, outputHeaders, false);
         }
         String[] params = {
                 "python",
                 "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotRCPredictions.py",
-                title + "_InputData",
-                title + "_OutputData",
-                predictionList != null ? title + "_PredictionData" : "/",
-                title,
+                plotFileName + "_InputData",
+                plotFileName + "_OutputData",
+                predictionList != null ? plotFileName + "_PredictionData" : "/",
+                plotFileName,
                 "" + (inputIndex + 1),
                 "" + shiftData,
                 xlabel,
                 ylabel,
                 title,
                 plotTypeString,
-                offlinePredsList == null ? "" : title + "_OfflinePredictionData",
+                offlinePredsList == null ? "/" : plotFileName + "_OfflinePredictionData",
         };
         Process process = Runtime.getRuntime().exec(params);
 
@@ -77,21 +78,21 @@ public class PythonPlotting {
      * A version without offline predictions.
      */
     public static void plotRCPredictions(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
-                                         List<Tuple2<Long, Double>> predictionList, int inputIndex, int shiftData, String xlabel,
-                                         String ylabel, String title, PlotType plotType, List<String> inputHeaders,
-                                         List<String> outputHeaders) throws IOException {
-        plotRCPredictions(inputList, outputList, predictionList, inputIndex, shiftData, xlabel, ylabel, title, plotType, 
-                inputHeaders, outputHeaders, null);
+                                         List<Tuple2<Long, Double>> predictionList, String plotFileName, String xlabel, 
+                                         String ylabel, String title, int inputIndex, int shiftData, PlotType plotType,
+                                         List<String> inputHeaders, List<String> outputHeaders) throws IOException {
+        plotRCPredictions(inputList, outputList, predictionList, plotFileName, xlabel, ylabel, title, inputIndex, 
+                shiftData, plotType, inputHeaders, outputHeaders, null);
     }
 
     /**
      * A version without headers for columns in DataSet files.
      */
     public static void plotRCPredictions(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
-                                         List<Tuple2<Long, Double>> predictionList, int inputIndex, int shiftData, String xlabel,
-                                         String ylabel, String title, PlotType plotType) throws IOException {
-        plotRCPredictions(inputList, outputList, predictionList, inputIndex, shiftData, xlabel, ylabel, title,
-                plotType, null, null, null);
+                                         List<Tuple2<Long, Double>> predictionList, String plotFileName, String xlabel, 
+                                         String ylabel, String title, int inputIndex, int shiftData, PlotType plotType) throws IOException {
+        plotRCPredictions(inputList, outputList, predictionList, plotFileName, xlabel, ylabel, title, inputIndex, 
+                shiftData, plotType, null, null, null);
     }
 
     /**
@@ -100,8 +101,8 @@ public class PythonPlotting {
     public static void plotRCPredictions(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
                                          List<Tuple2<Long, Double>> predictionList,
                                          List<Tuple2<Long, Double>> predictionsOfflineList, String title) throws IOException {
-        plotRCPredictions(inputList, outputList, predictionList, 0, 0, "input", "output", title,
-                null, null, null, predictionsOfflineList);
+        plotRCPredictions(inputList, outputList, predictionList, title, "input", "output", title, 0, 
+                0, null, null, null, predictionsOfflineList);
     }
 
     /**
@@ -109,8 +110,8 @@ public class PythonPlotting {
      */
     public static void plotRCPredictions(List<Tuple2<Long, List<Double>>> inputList, List<Tuple2<Long, Double>> outputList,
                                          List<Tuple2<Long, Double>> predictionList, String title) throws IOException {
-        plotRCPredictions(inputList, outputList, predictionList, 0, 0, "input", "output", title, 
-                null);
+        plotRCPredictions(inputList, outputList, predictionList, title, "input", "output", title, 0, 
+                0, null);
     }
     
     public static void  plotMatrixHeatmap(double[][] matrix, String title) throws IOException {

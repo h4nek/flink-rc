@@ -11,7 +11,6 @@ import org.apache.flink.api.java.io.TextInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.Path;
 import rc_core.ESNReservoirSparse;
-import rc_core.RCUtilities;
 import utilities.BasicIndexer;
 import utilities.PythonPlotting;
 
@@ -113,8 +112,8 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         List<Tuple2<Long, Double>> plottingOutputSet = modifyForPlotting(outputSet);
         List<Tuple2<Long, Double>> plottingPredictions = modifyForPlotting(predictions);
         List<Tuple2<Long, Double>> plottingPredictionsOffline = modifyForPlotting(predictionsOffline);
-        PythonPlotting.plotRCPredictions(plottingInputSet.collect(), plottingOutputSet, plottingPredictions, 
-                inputIndex, shiftData, xlabel, ylabel, title, plotType, inputHeaders, outputHeaders,
+        PythonPlotting.plotRCPredictions(plottingInputSet.collect(), plottingOutputSet, plottingPredictions,
+                plotFileName, xlabel, ylabel, title, inputIndex, shiftData, plotType, inputHeaders, outputHeaders, 
                 plottingPredictionsOffline);
     }
     

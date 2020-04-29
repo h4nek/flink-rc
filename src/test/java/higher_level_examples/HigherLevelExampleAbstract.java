@@ -182,11 +182,12 @@ public abstract class HigherLevelExampleAbstract {
     protected static PythonPlotting.PlotType plotType = PythonPlotting.PlotType.LINE;
     protected static List<String> inputHeaders;
     protected static List<String> outputHeaders;
+    protected static String plotFileName = title;
     protected static Map<Integer, DataTransformation> plottingTransformers = new HashMap<>();
 
     public static void setupPlotting(int inputIndex, int shiftData, String xlabel, String ylabel, String title,
                                      PythonPlotting.PlotType plotType, List<String> inputHeaders,
-                                     List<String> outputHeaders) {
+                                     List<String> outputHeaders, String plotFileName) {
         HigherLevelExampleAbstract.inputIndex = inputIndex;
         HigherLevelExampleAbstract.shiftData = shiftData;
         HigherLevelExampleAbstract.xlabel = xlabel;
@@ -195,6 +196,7 @@ public abstract class HigherLevelExampleAbstract {
         HigherLevelExampleAbstract.plotType = plotType;
         HigherLevelExampleAbstract.inputHeaders = inputHeaders;
         HigherLevelExampleAbstract.outputHeaders = outputHeaders;
+        HigherLevelExampleAbstract.plotFileName = plotFileName;
     }
 
     public static void setInputIndex(int inputIndex) {
@@ -227,6 +229,10 @@ public abstract class HigherLevelExampleAbstract {
 
     public static void setOutputHeaders(List<String> outputHeaders) {
         HigherLevelExampleAbstract.outputHeaders = outputHeaders;
+    }
+
+    public static void setPlotFileName(String plotFileName) {
+        HigherLevelExampleAbstract.plotFileName = plotFileName;
     }
 
     /**

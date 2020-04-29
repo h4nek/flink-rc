@@ -121,8 +121,9 @@ public class IdentityTest {
 //                0, "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", 
 //                "'Enhanced Identity' (Combined) LR", null, headers, headersOut, resultsOffline.collect());
         
-        PythonPlotting.plotRCPredictions(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 0, 
-                "x", "f(x) = x", "Identity LR", null, headers, headersOut, resultsOffline.collect());
+        PythonPlotting.plotRCPredictions(integersTest.collect(), integersOutTest.collect(), results.collect(),
+                "Identity LR", "x", "f(x) = x", "Identity LR", 0, 0, null, headers, headersOut, resultsOffline.collect()
+        );
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), "Identity");
     }
 }

@@ -90,7 +90,7 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (debugging) System.out.println("Offline Alpha: " + AlphaOffline);
         DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(testingInput, AlphaOffline);
         
-        
+        /* Print the "performance" of the model and create a plot of the results */
         ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, testingOutput);
         
         if (debugging)
@@ -117,9 +117,9 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                     }
                     return y;
                 }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
-        PythonPlotting.plotRCPredictions(plottingInputSet.collect(),
-                plottingOutputSet.collect(), predictions.collect(), inputIndex, 
-                shiftData, xlabel, ylabel, title, plotType, inputHeaders, outputHeaders, predictionsOffline.collect());
+        PythonPlotting.plotRCPredictions(plottingInputSet.collect(), plottingOutputSet.collect(), predictions.collect(), 
+                inputIndex, shiftData, xlabel, ylabel, title, plotType, inputHeaders, outputHeaders, 
+                predictionsOffline.collect());
     }
 
     /**

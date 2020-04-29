@@ -22,6 +22,8 @@ public abstract class HigherLevelExampleAbstract {
 
     protected static List<Double> lmAlphaInit; // initial value of the LM Alpha vector; has to be of length N_x (or null)
     protected static boolean stepsDecay = true;
+    // regularization factor for LM using pseudoinverse; initialized with the closest to 0 value - avoids a singular matrix
+    protected static double regularizationFactor = Double.MIN_VALUE;
 
     protected static int trainingSetSize = (int) Math.floor(69*0.5);   // number of records to be in the training dataset
                                                                        // (rest of the file is ignored)
@@ -29,7 +31,7 @@ public abstract class HigherLevelExampleAbstract {
     
     public static void setup(String inputFilePath, String columnsBitMask, int outputIdx, int N_u, int N_x,
                              boolean debugging, List<Double> lmAlphaInit, boolean stepsDecay, int trainingSetSize,
-                             double learningRate, boolean includeMSE) {
+                             double learningRate, boolean includeMSE, double regularizationFactor) {
         HigherLevelExampleAbstract.inputFilePath = inputFilePath;
         HigherLevelExampleAbstract.columnsBitMask = columnsBitMask;
         HigherLevelExampleAbstract.outputIdx = outputIdx;
@@ -39,7 +41,7 @@ public abstract class HigherLevelExampleAbstract {
         HigherLevelExampleAbstract.learningRate = learningRate;
         HigherLevelExampleAbstract.lmAlphaInit = lmAlphaInit;
         HigherLevelExampleAbstract.stepsDecay = stepsDecay;
-
+        HigherLevelExampleAbstract.regularizationFactor = regularizationFactor;
         HigherLevelExampleAbstract.trainingSetSize = trainingSetSize;
         HigherLevelExampleAbstract.includeMSE = includeMSE;
     }
@@ -83,6 +85,14 @@ public abstract class HigherLevelExampleAbstract {
 
     public static void setTrainingSetSize(int trainingSetSize) {
         HigherLevelExampleAbstract.trainingSetSize = trainingSetSize;
+    }
+
+    public static void setRegularizationFactor(double regularizationFactor) {
+        HigherLevelExampleAbstract.regularizationFactor = regularizationFactor;
+    }
+
+    public static void setIncludeMSE(boolean includeMSE) {
+        HigherLevelExampleAbstract.includeMSE = includeMSE;
     }
 
     /**

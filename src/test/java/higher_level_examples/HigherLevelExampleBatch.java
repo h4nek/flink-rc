@@ -74,12 +74,11 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (includeMSE) {
             DataSet<Tuple2<Long, List<Double>>> MSEs = alphas.filter(x -> x.f0 == -1);
             alphas = alphas.filter(x -> x.f0 != -1);
-            MSEs.printOnTaskManager("MSE");
+            if (debugging) MSEs.printOnTaskManager("MSE");
         }
-        if (debugging) alphas.printOnTaskManager("ALPHA"); //TEST
+        if (debugging) alphas.printOnTaskManager("ALPHA");
 
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
-        System.out.println("Alpha list: " + RCUtilities.listToString(alphaList));
         List<Double> finalAlpha = alphaList.get(alphaList.size() - 1);
         if (debugging) System.out.println("Final Alpha: " + ExampleStreamingUtilities.listToString(finalAlpha));
         
@@ -87,7 +86,7 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
 
         /* Do the offline (pseudoinverse) fitting for comparison */
         List<Double> AlphaOffline = LinearRegressionPrimitive.fit(trainingInput, trainingOutput, 
-                LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, 0);
+                LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, regularizationFactor);
         if (debugging) System.out.println("Offline Alpha: " + AlphaOffline);
         DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(testingInput, AlphaOffline);
         

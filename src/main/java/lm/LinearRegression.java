@@ -125,14 +125,7 @@ public class LinearRegression implements Serializable {
         @Override
         public void processElement(Tuple2<Long, List<Double>> input, Context ctx,
                                    Collector<Tuple2<Long, Double>> out) throws Exception {
-            List<Double> inputVector = new ArrayList<>(input.f1);   // copy the list to prevent some problems
-            inputVector.add(0, 1.0); // add an extra value for the intercept
-
-            double y_pred = 0;
-            for (int i = 0; i < alpha.size(); i++) {
-                y_pred += alpha.get(i) * inputVector.get(i);
-            }
-            out.collect(Tuple2.of(input.f0, y_pred));
+            MLRPredictCoProcessFunction.predict(input, out, alpha);
         }
     }
 
@@ -168,19 +161,18 @@ public class LinearRegression implements Serializable {
             else if (inputsBacklog.size() > 0) {
 //                System.out.println("releasing the backlog");
                 for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {
-                    predict(oldInput, out);
+                    predict(oldInput, out, alpha);
                 }
             }
             else {
 //                System.out.println("outputting the new input");
-                predict(input, out);
+                predict(input, out, alpha);
             }
         }
-        
-        private void predict(Tuple2<Long, List<Double>> input, Collector<Tuple2<Long, Double>> out) {
-            List<Double> inputVector = input.f1;
-            inputVector.add(0, 1.0); // add an extra value for the intercept
 
+        private static void predict(Tuple2<Long, List<Double>> input, Collector<Tuple2<Long, Double>> out, 
+                                    List<Double> alpha) {
+            List<Double> inputVector = input.f1;
             double y_pred = 0;
             for (int i = 0; i < alpha.size(); i++) {
                 y_pred += alpha.get(i) * inputVector.get(i);
@@ -199,7 +191,7 @@ public class LinearRegression implements Serializable {
             if (alphaTimestamp >= EOTRAINING_TIMESTAMP) {
 //                System.out.println("Releasing the backlog (from the Alpha process)");
                 for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {
-                    predict(oldInput, out);
+                    predict(oldInput, out, this.alpha);
                 }
             }
         }

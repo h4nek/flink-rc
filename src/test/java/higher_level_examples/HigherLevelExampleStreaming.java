@@ -69,13 +69,13 @@ public class HigherLevelExampleStreaming extends HigherLevelExampleAbstract {
 
         // filter based on Timestamps; we don't have to filter the output as it will get naturally joined
         DataStream<Tuple2<Long, List<Double>>> trainingInput = reservoirOutput.process(
-                new ProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>>() {
-            @Override
-            public void processElement(Tuple2<Long, List<Double>> value, Context ctx, 
-                                       Collector<Tuple2<Long, List<Double>>> out) throws Exception {
-                if (ctx.timestamp() <= EOTRAINING_TIMESTAMP)
-                    out.collect(value);
-            }
+            new ProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>>() {
+                @Override
+                public void processElement(Tuple2<Long, List<Double>> value, Context ctx, 
+                                           Collector<Tuple2<Long, List<Double>>> out) throws Exception {
+                    if (ctx.timestamp() <= EOTRAINING_TIMESTAMP)
+                        out.collect(value);
+                }
         });
         LinearRegression lr = new LinearRegression();
         DataStream<Tuple2<Long, List<Double>>> alphas = lr.fit(trainingInput, outputStream, lmAlphaInit,
@@ -88,14 +88,14 @@ public class HigherLevelExampleStreaming extends HigherLevelExampleAbstract {
         if (debugging) alphas.print("ALPHA"); //TEST
 
         DataStream<Tuple2<Long, List<Double>>> predictingInput = reservoirOutput.process(  // filter based on Timestamps
-                new ProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>>() {
-                    @Override
-                    public void processElement(Tuple2<Long, List<Double>> value, Context ctx,
-                                               Collector<Tuple2<Long, List<Double>>> out) throws Exception {
-                        if (ctx.timestamp() > EOTRAINING_TIMESTAMP)
-                            out.collect(value);
-                    }
-                });
+            new ProcessFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>>() {
+                @Override
+                public void processElement(Tuple2<Long, List<Double>> value, Context ctx,
+                                           Collector<Tuple2<Long, List<Double>>> out) throws Exception {
+                    if (ctx.timestamp() > EOTRAINING_TIMESTAMP)
+                        out.collect(value);
+                }
+            });
         if (debugging) predictingInput.print("PREDS INPUT");
         DataStream<Tuple2<Long, Double>> predictions = lr.predict(predictingInput, alphas, EOTRAINING_TIMESTAMP);
         if (debugging) predictions.print("JUST PREDS");

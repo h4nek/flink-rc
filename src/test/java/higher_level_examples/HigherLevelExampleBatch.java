@@ -22,29 +22,7 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         env.setParallelism(1);
 
         DataSet<List<Double>> dataSet = env.readFile(new TextInputFormat(new Path(inputFilePath)), inputFilePath)
-                .map(line -> {
-                    String[] items = line.split(",");
-                    List<Double> inputVector = new ArrayList<>();
-                    for (int i = 0; i < items.length; ++i) {
-                        // "normalize" the data to be in some reasonable range for the transformation
-                        if (columnsBitMask.charAt(i) != '0') {
-                            try {
-                                if (customParsers != null && customParsers.containsKey(i)) {
-                                    customParsers.get(i).parseAndAddData(items[i], inputVector);
-                                } else {
-                                    inputVector.add(Double.parseDouble(items[i]));
-                                }
-                            }
-                            catch (Exception e) {   // dealing with invalid lines - exclude them
-                                System.err.println("invalid cell: " + items[i]);
-                                System.err.println("line: " + line);
-                                inputVector = null;
-                                break;  // we don't want to process other cells
-                            }
-                        }
-                    }
-                    return inputVector;
-                }).returns(Types.LIST(Types.DOUBLE)).filter(Objects::nonNull);
+                .flatMap(new ProcessInput()).returns(Types.LIST(Types.DOUBLE));
         if (debugging) dataSet.printOnTaskManager("DATA"); //TEST
 
         DataSet<Tuple2<Long, List<Double>>> indexedDataSet = dataSet.map(new BasicIndexer<>());
@@ -69,7 +47,6 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         LinearRegression lr = new LinearRegression();
         DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(trainingInput, trainingOutput, lmAlphaInit,
                 learningRate, trainingSetSize, includeMSE, stepsDecay);
-        
         if (includeMSE) {
             DataSet<Tuple2<Long, List<Double>>> MSEs = alphas.filter(x -> x.f0 == -1);
             alphas = alphas.filter(x -> x.f0 != -1);
@@ -116,20 +93,20 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                 plotFileName, xlabel, ylabel, title, inputIndex, shiftData, plotType, inputHeaders, outputHeaders, 
                 plottingPredictionsOffline);
     }
-    
-    private static List<Tuple2<Long, Double>> modifyForPlotting(DataSet<Tuple2<Long, Double>> dataSet) throws Exception {
-        return dataSet.filter(x -> x.f0 >= trainingSetSize).map(y -> { 
-            if (plottingTransformers.containsKey(N_u)) { 
-                y.f1 = plottingTransformers.get(N_u).transform(y.f1); 
-            }
-            return y; 
-        }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
-    }
 
     /**
      * Used for invoking the example through another method.
      */
     public static void run() throws Exception {
         main(null);
+    }
+
+    private static List<Tuple2<Long, Double>> modifyForPlotting(DataSet<Tuple2<Long, Double>> dataSet) throws Exception {
+        return dataSet.filter(x -> x.f0 >= trainingSetSize).map(y -> {
+            if (plottingTransformers.containsKey(N_u)) {
+                y.f1 = plottingTransformers.get(N_u).transform(y.f1);
+            }
+            return y;
+        }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
     }
 }

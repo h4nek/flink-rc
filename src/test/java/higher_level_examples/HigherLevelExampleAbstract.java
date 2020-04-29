@@ -1,16 +1,16 @@
 package higher_level_examples;
 
+import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.util.Collector;
 import rc_core.Transformation;
 import utilities.PythonPlotting;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public abstract class HigherLevelExampleAbstract {
     protected static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
-    protected static double learningRate = 0.0000001;
+    protected static double learningRate = 0.01;
     protected static String columnsBitMask = "111";
     protected static int outputIdx = 1;  // index of the output column (0-based)
     protected static boolean debugging = true;    // print various data in the process
@@ -28,7 +28,11 @@ public abstract class HigherLevelExampleAbstract {
     protected static int trainingSetSize = (int) Math.floor(69*0.5);   // number of records to be in the training dataset
                                                                        // (rest of the file is ignored)
     protected static boolean includeMSE = false;
-    
+
+    /**
+     * Configuring the RC by providing all the general parameters before running it with <i>main</i>. Setups for 
+     * reservoir and plotting are also available.
+     */
     public static void setup(String inputFilePath, String columnsBitMask, int outputIdx, int N_u, int N_x,
                              boolean debugging, List<Double> lmAlphaInit, boolean stepsDecay, int trainingSetSize,
                              double learningRate, boolean includeMSE, double regularizationFactor) {
@@ -243,5 +247,38 @@ public abstract class HigherLevelExampleAbstract {
      */
     public static void addPlottingTransformer(int index, DataTransformation transformer) {
         plottingTransformers.put(index, transformer);
+    }
+
+    /**
+     * An input processing function, common for all HLEs.
+     * Accepts lines of CSV file as {@code String} values. Converts each into a vector ({@code List<Double>}), 
+     * possibly using custom parsers.
+     */
+    public static class ProcessInput implements FlatMapFunction<String, List<Double>> {
+        @Override
+        public void flatMap(String line, Collector<List<Double>> out) throws Exception {
+            String[] items = line.split(",");
+            List<Double> inputVector = new ArrayList<>();
+            for (int i = 0; i < items.length; ++i) {
+                // "normalize" the data to be in some reasonable range for the transformation
+                if (columnsBitMask.charAt(i) != '0') {
+                    try {
+                        if (customParsers != null && customParsers.containsKey(i)) {
+                            customParsers.get(i).parseAndAddData(items[i], inputVector);
+                        } else {
+                            inputVector.add(Double.parseDouble(items[i]));
+                        }
+                    }
+                    catch (Exception e) {   // dealing with invalid lines - exclude them
+                        if (debugging) {
+                            System.err.println("invalid cell: " + items[i]);
+                            System.err.println("line: " + line);
+                        }
+                        return;  // we don't want to process other cells
+                    }
+                }
+            }
+            out.collect(inputVector); // the line is valid
+        }
     }
 }

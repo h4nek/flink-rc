@@ -188,9 +188,9 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
             System.out.println("W_in is null! but W is: " + W_internal);
         }
 
-        if (weightMatricesState != null) {
-            restoreState((List<SparseStore<Double>>) weightMatricesState.get());
-        }
+//        if (weightMatricesState != null) {
+//            restoreState((List<SparseStore<Double>>) weightMatricesState.get());
+//        }
 
         System.out.println("CREATING MATRICES FOR 1st TIME");   // TEST -- runs twice for some reason (multiple serializations?)
         System.out.println("W_in: " + W_input);

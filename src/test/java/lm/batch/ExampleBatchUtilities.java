@@ -100,17 +100,17 @@ public class ExampleBatchUtilities {
         System.out.println("MSE offline: " + mseOfflineList.get(mseOfflineList.size() - 1));
     }
 
-    public static DataSet<Double> computeMSE(DataSet<Tuple2<Long, Double>> predictions, DataSet<Tuple2<Long, Double>> outputSet) {
+    public static DataSet<Double> computeMSE(DataSet<Tuple2<Long, Double>> predictions, 
+                                             DataSet<Tuple2<Long, Double>> outputSet) {
 
         /* Join the stream of predictions with the stream of real outputs */
         DataSet<Tuple3<Long, Double, Double>> predsAndReal = predictions.join(outputSet).where(x -> x.f0).equalTo(y -> y.f0)
-                .with(
-                        new JoinFunction<Tuple2<Long, Double>, Tuple2<Long, Double>, Tuple3<Long, Double, Double>>() {
-                            @Override
-                            public Tuple3<Long, Double, Double> join(Tuple2<Long, Double> y_pred, Tuple2<Long, Double> y) throws Exception {
-                                return Tuple3.of(y_pred.f0, y_pred.f1, y.f1);
-                            }
-                        });
+                .with(new JoinFunction<Tuple2<Long, Double>, Tuple2<Long, Double>, Tuple3<Long, Double, Double>>() {
+                    @Override 
+                    public Tuple3<Long, Double, Double> join(Tuple2<Long, Double> y_pred, Tuple2<Long, Double> y) throws Exception {
+                        return Tuple3.of(y_pred.f0, y_pred.f1, y.f1);
+                    }
+                });
 
 //        predsAndReal.printOnTaskManager("PREDS AND REAL");
 

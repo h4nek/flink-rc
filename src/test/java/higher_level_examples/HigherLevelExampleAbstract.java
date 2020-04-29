@@ -25,10 +25,11 @@ public abstract class HigherLevelExampleAbstract {
 
     protected static int trainingSetSize = (int) Math.floor(69*0.5);   // number of records to be in the training dataset
                                                                        // (rest of the file is ignored)
+    protected static boolean includeMSE = false;
     
     public static void setup(String inputFilePath, String columnsBitMask, int outputIdx, int N_u, int N_x,
                              boolean debugging, List<Double> lmAlphaInit, boolean stepsDecay, int trainingSetSize,
-                             double learningRate) {
+                             double learningRate, boolean includeMSE) {
         HigherLevelExampleAbstract.inputFilePath = inputFilePath;
         HigherLevelExampleAbstract.columnsBitMask = columnsBitMask;
         HigherLevelExampleAbstract.outputIdx = outputIdx;
@@ -40,6 +41,7 @@ public abstract class HigherLevelExampleAbstract {
         HigherLevelExampleAbstract.stepsDecay = stepsDecay;
 
         HigherLevelExampleAbstract.trainingSetSize = trainingSetSize;
+        HigherLevelExampleAbstract.includeMSE = includeMSE;
     }
 
     /* Individual setters */

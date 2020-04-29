@@ -69,7 +69,13 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         
         LinearRegression lr = new LinearRegression();
         DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(trainingInput, trainingOutput, lmAlphaInit,
-                learningRate, trainingSetSize, false, stepsDecay);
+                learningRate, trainingSetSize, includeMSE, stepsDecay);
+        
+        if (includeMSE) {
+            DataSet<Tuple2<Long, List<Double>>> MSEs = alphas.filter(x -> x.f0 == -1);
+            alphas = alphas.filter(x -> x.f0 != -1);
+            MSEs.printOnTaskManager("MSE");
+        }
         if (debugging) alphas.printOnTaskManager("ALPHA"); //TEST
 
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();

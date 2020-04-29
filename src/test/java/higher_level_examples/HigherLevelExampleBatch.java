@@ -110,16 +110,21 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                     }
                     return x; 
                 }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-        DataSet<Tuple2<Long, Double>> plottingOutputSet = outputSet.filter(x -> x.f0 >= trainingSetSize)
-                .map(y -> {
-                    if (plottingTransformers.containsKey(N_u)) {
-                        y.f1 = plottingTransformers.get(N_u).transform(y.f1);
-                    }
-                    return y;
-                }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
-        PythonPlotting.plotRCPredictions(plottingInputSet.collect(), plottingOutputSet.collect(), predictions.collect(), 
-                inputIndex, shiftData, xlabel, ylabel, title, plotType, inputHeaders, outputHeaders, 
-                predictionsOffline.collect());
+        List<Tuple2<Long, Double>> plottingOutputSet = modifyForPlotting(outputSet);
+        List<Tuple2<Long, Double>> plottingPredictions = modifyForPlotting(predictions);
+        List<Tuple2<Long, Double>> plottingPredictionsOffline = modifyForPlotting(predictionsOffline);
+        PythonPlotting.plotRCPredictions(plottingInputSet.collect(), plottingOutputSet, plottingPredictions, 
+                inputIndex, shiftData, xlabel, ylabel, title, plotType, inputHeaders, outputHeaders,
+                plottingPredictionsOffline);
+    }
+    
+    private static List<Tuple2<Long, Double>> modifyForPlotting(DataSet<Tuple2<Long, Double>> dataSet) throws Exception {
+        return dataSet.filter(x -> x.f0 >= trainingSetSize).map(y -> { 
+            if (plottingTransformers.containsKey(N_u)) { 
+                y.f1 = plottingTransformers.get(N_u).transform(y.f1); 
+            }
+            return y; 
+        }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
     }
 
     /**

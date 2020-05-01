@@ -15,6 +15,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import utilities.PythonPlotting;
+import utilities.Utilities;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -221,7 +222,7 @@ public class GlacierMeltdownExample {
             Alpha = alphaList.get(alphaList.size() - 1);
         }
 
-        System.out.println(ExampleStreamingUtilities.listToString(Alpha)); // Check the optimal Alpha value
+        System.out.println(Utilities.listToString(Alpha)); // Check the optimal Alpha value
 
         /* 3. Periodically output the 2nd part of the input DataSet and the output DataSet into another file */
         List<Tuple2<Long, List<Double>>> inputsList = glaciersSecondHalfInput.collect();
@@ -264,7 +265,7 @@ public class GlacierMeltdownExample {
 //        predictions.writeAsCsv(System.getProperty("user.dir") + "/src/test/resources/glaciers/output/predictions_online",
 //                FileSystem.WriteMode.OVERWRITE);  // doesn't work for some reason
         
-        ExampleStreamingUtilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/alpha_parameters.csv", Alpha);
+        Utilities.writeListToFile(EXAMPLE_ABSOLUTE_DIR_PATH + "/output/alpha_parameters.csv", Alpha);
         
         ExampleStreamingUtilities.writeStreamToBucketedFileSink(EXAMPLE_ABSOLUTE_DIR_PATH +
                 "/output/predictions_online", predictions);

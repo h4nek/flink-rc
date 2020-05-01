@@ -4,7 +4,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.io.TupleCsvInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -23,6 +22,7 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTime
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
+import utilities.Utilities;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -55,6 +55,9 @@ public class ExampleStreamingUtilities {
         }).start();
     }
 
+    /**
+     * Used to simulate data incoming every 100 milliseconds.
+     */
     public static <T> void writeDataPeriodically(List<Tuple2<Long, T>> data, String absoluteDirPath,
                                                  String prefix) throws IOException, InterruptedException {
 //        new PrintWriter(PREDICTIONS_ABSOLUTE_PATH).close(); // effectively clears the file's (previous) contents
@@ -71,7 +74,7 @@ public class ExampleStreamingUtilities {
 
             String secondValue = "";
             if (element.f1 instanceof List) {
-                secondValue = listToString((List) element.f1);
+                secondValue = Utilities.listToString((List) element.f1);
             }
             else {
                 secondValue = element.f1.toString();
@@ -83,30 +86,6 @@ public class ExampleStreamingUtilities {
         }
     }
 
-    /**
-     * A utility function that converts a generic List of values into a String of comma-separated values.
-     * Public for testing purposes (printing a list in code).
-     * @param list
-     * @param <T>
-     * @return
-     */
-    public static <T> String listToString(List<T> list) {
-        if (list == null)
-            return "";
-
-        StringBuilder listString = new StringBuilder();
-        for (int i = 0; i < list.size(); ++i) {
-            if (i == list.size() - 1) {
-                listString.append(list.get(i));
-            }
-            else {
-                listString.append(list.get(i)).append(",");
-            }
-        }
-
-        return listString.toString();
-    }
-    
     public static DataStream<Tuple2<Long, List<Double>>> readCsvInput(StreamExecutionEnvironment see, String absoluteDirPath, int numInputs) {
         switch (numInputs) {
             case 2:
@@ -227,19 +206,4 @@ public class ExampleStreamingUtilities {
         dataStream.addSink(sink);
     }
 
-    /**
-     * Creates a specified file and writes the contents of the specified list to it using common Java methods.
-     * @param pathToFile
-     * @param list
-     * @param <T>
-     * @throws IOException
-     */
-    public static <T> void writeListToFile(String pathToFile, List<T> list) throws IOException {
-        File file = new File(pathToFile);
-        file.getParentFile().mkdirs();
-        file.createNewFile();
-        FileWriter writer = new FileWriter(file);
-        writer.write(ExampleStreamingUtilities.listToString(list) + '\n');
-        writer.close();
-    }
 }

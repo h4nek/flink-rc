@@ -36,27 +36,6 @@ public class Utilities {
         return inputList;
     }
 
-    /**
-     * A convenience method that creates a comma-separated string of list contents.
-     * @param list
-     * @param <T>
-     * @return
-     */
-    private static <T> String listToString(List<T> list) {
-        StringBuilder listString = new StringBuilder("{");
-        for (int i = 0; i < list.size(); ++i) {
-            if (i == list.size() - 1) {
-                listString.append(list.get(i));
-            }
-            else {
-                listString.append(list.get(i)).append(", ");
-            }
-        }
-        listString.append('}');
-
-        return listString.toString();
-    }
-
     public static <T> void write2DArrayToCSV(String pathToFile, double[][] data) throws IOException {
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < data.length; ++i) {
@@ -73,6 +52,46 @@ public class Utilities {
         file.createNewFile();
         FileWriter writer = new FileWriter(file);
         writer.write(stringBuilder.toString());
+        writer.close();
+    }
+
+    /**
+     * A utility function that converts a generic List of values into a String of comma-separated values.
+     * Public for testing purposes (printing a list in code).
+     * @param list
+     * @param <T>
+     * @return
+     */
+    public static <T> String listToString(List<T> list) {
+        if (list == null)
+            return "";
+
+        StringBuilder listString = new StringBuilder();
+        for (int i = 0; i < list.size(); ++i) {
+            if (i == list.size() - 1) {
+                listString.append(list.get(i));
+            }
+            else {
+                listString.append(list.get(i)).append(",");
+            }
+        }
+
+        return listString.toString();
+    }
+
+    /**
+     * Creates a specified file and writes the contents of the specified list to it using common Java methods.
+     * @param pathToFile
+     * @param list
+     * @param <T>
+     * @throws IOException
+     */
+    public static <T> void writeListToFile(String pathToFile, List<T> list) throws IOException {
+        File file = new File(pathToFile);
+        file.getParentFile().mkdirs();
+        file.createNewFile();
+        FileWriter writer = new FileWriter(file);
+        writer.write(Utilities.listToString(list) + '\n');
         writer.close();
     }
 }

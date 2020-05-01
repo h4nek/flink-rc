@@ -2,7 +2,6 @@ package higher_level_examples;
 
 import lm.LinearRegression;
 import utilities.BasicIndexer;
-import lm.streaming.ExampleStreamingUtilities;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
@@ -11,6 +10,7 @@ import org.apache.flink.api.java.io.TextInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.Path;
 import rc_core.ESNReservoirSparse;
+import utilities.Utilities;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -97,7 +97,7 @@ public class HigherLevelExampleTraining {
 
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
         finalAlpha = alphaList.get(alphaList.size() - 1);
-        System.out.println("Final Alpha: " + ExampleStreamingUtilities.listToString(finalAlpha));
+        System.out.println("Final Alpha: " + Utilities.listToString(finalAlpha));
     }
     
     public static List<Double> trainAndGetFinalAlpha() throws Exception {

@@ -1,17 +1,14 @@
 package lm.batch;
 
 import lm.LinearRegressionPrimitive;
-import lm.streaming.ExampleStreamingUtilities;
 import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.metrics.Counter;
 import org.math.plot.Plot2DPanel;
 import org.math.plot.PlotPanel;
+import utilities.Utilities;
 
 import javax.swing.*;
 import java.awt.*;
@@ -39,10 +36,10 @@ public class ExampleBatchUtilities {
         file.createNewFile();
         FileWriter writer = new FileWriter(file);
         if (headers != null)
-            writer.write(ExampleStreamingUtilities.listToString(headers) + '\n');
+            writer.write(Utilities.listToString(headers) + '\n');
         for (int i = 0; i < list.size(); ++i) {
             Tuple2<Long, T> elem = list.get(i);
-            writer.write(elem.f0 + "," + (input ? ExampleStreamingUtilities.listToString((List<?>) 
+            writer.write(elem.f0 + "," + (input ? Utilities.listToString((List<?>) 
                     elem.f1) : elem.f1) + '\n');
         }
         writer.close();
@@ -54,10 +51,10 @@ public class ExampleBatchUtilities {
         file.getParentFile().mkdirs();
         file.createNewFile();
         FileWriter writer = new FileWriter(file);
-        writer.write(ExampleStreamingUtilities.listToString(headers) + '\n');
+        writer.write(Utilities.listToString(headers) + '\n');
         for (int i = 0; i < list.size(); ++i) {
             List<T> elem = list.get(i);
-            writer.write(i + "," + ExampleStreamingUtilities.listToString(elem) + '\n');
+            writer.write(i + "," + Utilities.listToString(elem) + '\n');
         }
         writer.close();
     }

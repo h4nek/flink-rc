@@ -2,7 +2,6 @@ package lm.batch;
 
 import lm.LinearRegression;
 import lm.LinearRegressionPrimitive;
-import lm.streaming.ExampleStreamingUtilities;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -11,6 +10,7 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple5;
 import utilities.BasicIndexer;
 import utilities.PythonPlotting;
+import utilities.Utilities;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,7 +77,7 @@ public class CO2EmissionsByNationExample {
         alphas.printOnTaskManager("ALPHA"); //TEST
 
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
-        System.out.println("alpha list: " + ExampleStreamingUtilities.listToString(alphaList));
+        System.out.println("alpha list: " + Utilities.listToString(alphaList));
         List<Double> Alpha = alphaList.get(trainingSetSize - 1);
 
         DataSet<Tuple2<Long, Double>> results = LinearRegressionPrimitive.predict(inputSetTest, Alpha);

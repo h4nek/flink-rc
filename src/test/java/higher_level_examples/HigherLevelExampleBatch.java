@@ -3,7 +3,6 @@ package higher_level_examples;
 import lm.LinearRegression;
 import lm.LinearRegressionPrimitive;
 import lm.batch.ExampleBatchUtilities;
-import lm.streaming.ExampleStreamingUtilities;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -13,6 +12,7 @@ import org.apache.flink.core.fs.Path;
 import rc_core.ESNReservoirSparse;
 import utilities.BasicIndexer;
 import utilities.PythonPlotting;
+import utilities.Utilities;
 
 import java.util.*;
 
@@ -56,7 +56,7 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
 
         List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
         List<Double> finalAlpha = alphaList.get(alphaList.size() - 1);
-        if (debugging) System.out.println("Final Alpha: " + ExampleStreamingUtilities.listToString(finalAlpha));
+        if (debugging) System.out.println("Final Alpha: " + Utilities.listToString(finalAlpha));
         
         DataSet<Tuple2<Long, Double>> predictions = LinearRegressionPrimitive.predict(testingInput, finalAlpha);
 

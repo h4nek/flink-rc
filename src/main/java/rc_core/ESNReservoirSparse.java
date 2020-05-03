@@ -83,19 +83,14 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     }
     
     private void argumentsCheck() {
-        String exceptionString = null;
         if (N_u < 1 || N_x < 1) {
-            exceptionString = "The input/internal vector size has to be positive";
+            throw new IllegalArgumentException("The input/internal vector size has to be positive");
         }
         else if (init_vector == null || init_vector.size() != N_x) {
-            exceptionString = "The length of the initial vector must be N_x.";
+            throw new IllegalArgumentException("The length of the initial vector must be N_x.");
         }
         else if (range < 0) {
-            exceptionString = "The range of weights has to be positive";
-        }
-        
-        if (exceptionString != null) {
-            throw new IllegalArgumentException(exceptionString);
+            throw new IllegalArgumentException("The range of weights has to be positive");
         }
         
         if (alpha < 0 || alpha > 1) {

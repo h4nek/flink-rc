@@ -26,6 +26,7 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (debugging) dataSet.printOnTaskManager("DATA"); //TEST
 
         DataSet<Tuple2<Long, List<Double>>> indexedDataSet = dataSet.map(new BasicIndexer<>());
+        if (debugging) indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
         
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {x.f1.remove(outputIdx); return x;})
                 .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));

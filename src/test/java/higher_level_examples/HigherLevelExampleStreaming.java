@@ -1,11 +1,8 @@
 package higher_level_examples;
 
 import lm.LinearRegression;
-import lm.batch.ExampleBatchUtilities;
 import lm.streaming.ExampleStreamingUtilities;
-import org.apache.flink.api.java.DataSet;
 import utilities.BasicIndexer;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.io.TextInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -63,8 +60,8 @@ public class HigherLevelExampleStreaming extends HigherLevelExampleAbstract {
         if (debugging) outputStream.print("OUT");
         
         DataStream<Tuple2<Long, List<Double>>> reservoirOutput = inputStream.map(new ESNReservoirSparse(N_u, N_x,
-                init_vector, transformation, range, shift, jumpSize, scalingAlpha, randomized, cycle,
-                includeInput, includeBias));
+                init_vector, transformation, range, shift, jumpSize, sparsity, scalingAlpha,
+                reservoirTopology, includeInput, includeBias));
         if (debugging) reservoirOutput.print("Reservoir output");
 
         // filter based on Timestamps; we don't have to filter the output as it will get naturally joined

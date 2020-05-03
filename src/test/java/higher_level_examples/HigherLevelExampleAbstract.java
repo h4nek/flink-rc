@@ -3,6 +3,7 @@ package higher_level_examples;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.util.Collector;
+import rc_core.ESNReservoirSparse.Topology;
 import rc_core.Transformation;
 import utilities.PythonPlotting;
 
@@ -117,23 +118,23 @@ public abstract class HigherLevelExampleAbstract {
     protected static double range = 1;
     protected static double shift = 0;
     protected static long jumpSize = 2;
+    protected static double sparsity = 80;
     protected static double scalingAlpha = 0.5;
-    protected static boolean randomized = false;
-    protected static boolean cycle = true;
+    protected static Topology reservoirTopology = Topology.CYCLIC_WITH_JUMPS;
     protected static boolean includeInput = true;
     protected static boolean includeBias = true;
 
-    public static void setupReservoir(List<Double> init_vector, Transformation transformation, double range, 
-                                      double shift, long jumpSize, double scalingAlpha, boolean randomized, 
-                                      boolean cycle, boolean includeInput, boolean includeBias) {
+    public static void setupReservoir(List<Double> init_vector, Transformation transformation, double range,
+                                      double shift, long jumpSize, double sparsity, double scalingAlpha, 
+                                      Topology reservoirTopology, boolean includeInput, boolean includeBias) {
         HigherLevelExampleAbstract.init_vector = init_vector;
         HigherLevelExampleAbstract.transformation = transformation;
         HigherLevelExampleAbstract.range = range;
         HigherLevelExampleAbstract.shift = shift;
         HigherLevelExampleAbstract.jumpSize = jumpSize;
+        HigherLevelExampleAbstract.sparsity = sparsity;
         HigherLevelExampleAbstract.scalingAlpha = scalingAlpha;
-        HigherLevelExampleAbstract.randomized = randomized;
-        HigherLevelExampleAbstract.cycle = cycle;
+        HigherLevelExampleAbstract.reservoirTopology = reservoirTopology;
         HigherLevelExampleAbstract.includeInput = includeInput;
         HigherLevelExampleAbstract.includeBias = includeBias;
     }
@@ -158,16 +159,16 @@ public abstract class HigherLevelExampleAbstract {
         HigherLevelExampleAbstract.jumpSize = jumpSize;
     }
 
+    public static void setSparsity(double sparsity) {
+        HigherLevelExampleAbstract.sparsity = sparsity;
+    }
+    
     public static void setScalingAlpha(double scalingAlpha) {
         HigherLevelExampleAbstract.scalingAlpha = scalingAlpha;
     }
-
-    public static void setRandomized(boolean randomized) {
-        HigherLevelExampleAbstract.randomized = randomized;
-    }
-
-    public static void setCycle(boolean cycle) {
-        HigherLevelExampleAbstract.cycle = cycle;
+    
+    public static void setReservoirTopology(Topology reservoirTopology) {
+        HigherLevelExampleAbstract.reservoirTopology = reservoirTopology;
     }
 
     public static void setIncludeInput(boolean includeInput) {

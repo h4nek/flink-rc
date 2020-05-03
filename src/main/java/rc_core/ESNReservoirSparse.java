@@ -50,13 +50,26 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     private final double shift; // shift of the interval for generating random values
     private final long jumpSize; // the size of bidirectional jumps when W is initialized using a deterministic pattern
     private final double alpha;   // scaling hyperparameter
-    private final boolean randomized;  // signifies if W should consist of individually randomized weights 
+//    private final boolean randomized;  // signifies if W should consist of individually randomized weights 
                                        // (or one random "constant" for jumps, one for the cycle)
-    private final boolean cycle;   // signifies if we want to include a unidirectional cycle (1->2->...->N_x->1)
+//    private final boolean cycle;   // signifies if we want to include a unidirectional cycle (1->2->...->N_x->1)
                                    // otherwise, the jumps will "supplement" this by leading from/to every node
     private final boolean includeInput; // include the input vector as part of the reservoir output ([u(t) x(t)])
     private final boolean includeBias;  // include the bias constant as part of the output ([1 x(t)] or [1 u(t) x(t)])
                                         // (corresponds to the y-intercept in LR)
+    private final Topology reservoirTopology;
+    private final double sparsity;  // a number between 0-100 (%), valid if SPARSE Topology is chosen.
+                                    // 0 means fully dense reservoir, 100 means a zero matrix
+    
+    public enum Topology{
+        JUMPS_ONLY, // matrix with only the bidirectional jumps (connections between nodes jumpSize apart; symmetric
+                    // the jumps wil be leading from/to every node as a supplement for the missing cycle
+        JUMPS_ONLY_RANDOMIZED,  // -||- weights are individually randomized (otherwise one random constant is used)
+        CYCLIC_WITH_JUMPS,  // reservoir with a unidirectional cycle (1->2->...->N_x->1) in addition to jumps; default topology
+                            // (the jumps will create at most one big cycle, starting from node 0)
+        CYCLIC_WITH_JUMPS_RANDOMIZED, // -||- weights are individually randomized (otherwise two random constants are used)
+        SPARSE  // reservoir with random (typically) sparse topology, influenced by sparsity
+    }
     
 
     @Override
@@ -110,8 +123,11 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     }
 
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation, double range,
-                              double shift, long jumpSize, double alpha, boolean randomized, boolean cycle, 
-                              boolean includeInput, boolean includeBias) {
+                              double shift, long jumpSize, double sparsity, double alpha,
+                              Topology reservoirTopology, boolean includeInput, boolean includeBias) {
+        if (reservoirTopology == null) {
+            reservoirTopology = Topology.CYCLIC_WITH_JUMPS;
+        }
         this.N_u = N_u;
         this.N_x = N_x;
         // Matrices not initialized here because of serializability (solved by moving initialization to open() method)
@@ -121,8 +137,8 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         this.shift = shift;
         this.jumpSize = jumpSize;
         this.alpha = alpha;
-        this.randomized = randomized;
-        this.cycle = cycle;
+        this.reservoirTopology = reservoirTopology;
+        this.sparsity = sparsity;
         this.includeInput = includeInput;
         this.includeBias = includeBias;
 
@@ -130,8 +146,8 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     }
     
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation) {
-        this(N_u, N_x, init_vector, transformation, 1, 0, 2, 0.5, false, true, 
-                true, true);
+        this(N_u, N_x, init_vector, transformation, 1, 0, 2, 80, 0.5, 
+                Topology.CYCLIC_WITH_JUMPS, true, true);
     }
 
     public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector) {
@@ -151,8 +167,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
         
-//        output_previous = matrixFactory.make(N_x, 1);   // convert the vector type from List to SparseStore
-//        Access1D<Double> converted_init_vector = Access1D.wrap(init_vector);
+        // convert the vector type from List to MatrixStore
         output_previous = MatrixStore.PRIMITIVE64.makeWrapper(Primitive64Store.FACTORY.columns(init_vector)).get();
 
         /* Converting the transformation to an applicable function */
@@ -208,8 +223,21 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
 //        for (int i = 1; i < N_x; ++i) {
 //            W_internal.add(i, i-1, valueW);
 //        }
+        boolean randomized = false;
+        boolean jumpsOnly = false;
+        boolean cycle = false;
+        if (reservoirTopology == Topology.CYCLIC_WITH_JUMPS_RANDOMIZED || 
+                reservoirTopology == Topology.JUMPS_ONLY_RANDOMIZED) {
+            randomized = true;
+        }
+        if (reservoirTopology == Topology.JUMPS_ONLY || reservoirTopology == Topology.JUMPS_ONLY_RANDOMIZED) {
+            jumpsOnly = true;
+        }
+        if (reservoirTopology == Topology.CYCLIC_WITH_JUMPS || reservoirTopology == Topology.CYCLIC_WITH_JUMPS_RANDOMIZED) {
+            cycle = true;
+        }
         for (int i = 0; i < N_x; i++) {
-            if (cycle) {    // cycle reservoir with jumps
+            if (cycle) {
                 if (i % jumpSize == 0) {    // jumps will start at "node 0" and end there or before
                     long nextPos = (i + jumpSize) % N_x;
                     long prevPos = (i - jumpSize + N_x) % N_x;
@@ -227,12 +255,15 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
                     W_internal.add(i, i-1, randomized ? getRandomWeight() : cycleWeight);   // unidirectional cycle
                 }
             }
-            else {  // jumps saturated matrix -- symmetric with exactly two values in each row/col
+            else if (jumpsOnly) {  // jumps saturated matrix -- symmetric with exactly two values in each row/col
                 W_internal.add(i, (i + jumpSize) % N_x, randomized ? getRandomWeight() : jumpWeight);
                 W_internal.add(i, (i - jumpSize + N_x) % N_x, randomized ? getRandomWeight() : jumpWeight);
             }
+            else if (reservoirTopology == Topology.SPARSE) {
+                //TODO
+            }
         }
-        System.out.println("sparse store w/ jumps: " + W_internal);
+        System.out.println("reservoir W: " + W_internal);
 
         /* Custom MatrixStore */    // alternative
 //        JumpsSaturatedMatrix W_input_jumps = new JumpsSaturatedMatrix(N_x, range, jumpSize);

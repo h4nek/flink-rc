@@ -97,10 +97,7 @@ class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double
             for (Tuple2<Long, Double> output : outputGroup) {
                 if (alpha == null) {    // set the initial alpha to a zero vector of an appropriate length (input length + 1)
                     int alphaSize = input.f1.size();
-                    alpha = new ArrayList<>(alphaSize);
-                    for (int i = 0; i < alphaSize; i++) {
-                        alpha.add(0.0);
-                    }
+                    alpha = Collections.nCopies(alphaSize, 0.0);
                 }
                 List<Double> newAlpha = trainUsingGradientDescent(alpha, input.f1, output.f1, learningRate, numSamples, out);
 

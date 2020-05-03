@@ -20,7 +20,7 @@ public abstract class HigherLevelExampleAbstract {
     protected static int N_u = 2;   // dimension of the input (vectors u(t))
     protected static int N_x = 6;   // dimension of the reservoir (N_x*N_x matrix; vectors x(t))
 
-    protected static List<Double> lmAlphaInit; // initial value of the LM Alpha vector; has to be of length N_x (or null)
+    protected static List<Double> lmAlphaInit = null; // initial value of the LM Alpha vector; has to be of length N_x (or null)
     protected static boolean stepsDecay = true;
     // regularization factor for LM using pseudoinverse; initialized with the closest to 0 value - avoids a singular matrix
     protected static double regularizationFactor = Double.MIN_VALUE;

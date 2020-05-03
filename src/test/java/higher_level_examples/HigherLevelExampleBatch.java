@@ -67,12 +67,14 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (debugging) System.out.println("Offline Alpha: " + AlphaOffline);
         DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(testingInput, AlphaOffline);
         
-        /* Print the "performance" of the model and create a plot of the results */
         ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, testingOutput);
         
-        if (debugging)
+        if (debugging)  // format: (index, [input, output, prediction, offline prediction])
             indexedDataSet.join(predictions).where(0).equalTo(0)
                 .with((x,y) -> {List<Double> inputOutput = x.f1; inputOutput.add(y.f1); return Tuple2.of(x.f0, inputOutput);})
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)))
+                .join(predictionsOffline).where(0).equalTo(0)
+                .with((x,y) -> {List<Double> results = x.f1; results.add(y.f1); return Tuple2.of(x.f0, results);})
                 .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)))
                 .printOnTaskManager("RESULTS");
 

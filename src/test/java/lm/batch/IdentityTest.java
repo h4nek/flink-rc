@@ -47,6 +47,9 @@ public class IdentityTest {
 //                .map(x -> Tuple2.of(x.longValue(), 5 + x.doubleValue()*Math.sin(x)/500 + (Math.pow(x.doubleValue()/500, 2)))) // x*sin(x) ...
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
 
+        
+        integers = integers.map(x -> {x.f1.add(0, 1.0); return Tuple2.of(x.f0, x.f1);})
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));    // add the intercept
         /* Split the data for testing and training */
         int trainingSetSize = (int) Math.floor(SPLIT_RATIO*NUM_SAMPLES);
         DataSet<Tuple2<Long, List<Double>>> integersTrain = integers.first(trainingSetSize);
@@ -57,8 +60,8 @@ public class IdentityTest {
         List<Double> Alpha;
         LinearRegression lr = new LinearRegression();
 
-        DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integersTrain, integersOutTrain, null, LEARNING_RATE,
-                trainingSetSize, true, true);
+        DataSet<Tuple2<Long, List<Double>>> alphasWithMSE = lr.fit(integersTrain, integersOutTrain, null, 
+                LEARNING_RATE, trainingSetSize, true, true);
 
         DataSet<Double> mse = alphasWithMSE.filter(x -> x.f0 == -1).map(x -> x.f1.get(0));
         mse.printOnTaskManager("MSE Estimate: ");
@@ -120,9 +123,11 @@ public class IdentityTest {
 //        PythonPlotting.plotLRFit(integersTest.collect(), integersOutTest.collect(), results.collect(), 0, 
 //                0, "$x$", "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", 
 //                "'Enhanced Identity' (Combined) LR", null, headers, headersOut, resultsOffline.collect());
-        
+        integersTest = integersTest.map(x -> {x.f1.remove(0); return Tuple2.of(x.f0, x.f1);})
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         PythonPlotting.plotRCPredictions(integersTest.collect(), integersOutTest.collect(), results.collect(),
-                "Identity LR", "x", "f(x) = x", "Identity LR", 0, 0, null, headers, headersOut, resultsOffline.collect()
+                "Identity LR", "x", "f(x) = x", "Identity LR", 0, 0, 
+                null, headers, headersOut, resultsOffline.collect()
         );
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), "Identity");
     }

@@ -56,6 +56,7 @@ public class PM2Point5PollutionInArea {
         /*Predicting the average PM2.5*/
         DataSet<Tuple2<Long, List<Double>>> inputSet = dataSet.map(x -> {
             List<Double> list = new ArrayList<>();
+            list.add(1.0);  // intercept
             list.add(x.f1.get(0));
             list.add(100*Math.sin(x.f1.get(0)));    // introduce periodicity
             list.add(100*Math.exp(Math.sin(x.f1.get(0))));  // non-linear tendency
@@ -143,14 +144,14 @@ public class PM2Point5PollutionInArea {
         inputListTest.remove(0);
         System.out.println("inputTest size: " + inputListTest.size());
         System.out.println("outputTest size: " + outputSetTest.collect().size());
-        System.out.println("resluts size: " + results.collect().size());
+        System.out.println("results size: " + results.collect().size());
         List<Tuple2<Long, Double>> resultsList = results.map(x -> Tuple2.of(x.f0 + 1, x.f1))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
         resultsList.remove(resultsList.size() - 1);
         PythonPlotting.plotRCPredictions(inputListTest, outputSetTest.map(x -> Tuple2.of(x.f0 + 1, x.f1))
                         .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect(), resultsList, 
                 "PM2pt5 Pollution in Seattle Area LR", "Day", "$\\mu g/m^3$", 
-                "PM$_{2.5}$ Pollution in Seattle Area LR", 0, 0, PythonPlotting.PlotType.POINTS);
+                "PM$_{2.5}$ Pollution in Seattle Area LR", 1, 0, PythonPlotting.PlotType.POINTS);
 
 //        System.out.println("MSE estimate: " + lr.getMSE(Alpha));
 //        env.execute();

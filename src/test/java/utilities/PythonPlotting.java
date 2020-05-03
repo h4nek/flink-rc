@@ -33,6 +33,12 @@ public class PythonPlotting {
                                          String ylabel, String title, int inputIndex, int shiftData, PlotType plotType, 
                                          List<String> inputHeaders, List<String> outputHeaders, 
                                          List<Tuple2<Long, Double>> offlinePredsList) throws IOException {
+        if (inputHeaders != null && outputHeaders != null && (inputHeaders.size() != inputList.get(0).f1.size() + 1 || 
+                outputHeaders.size() != 2)) {
+            System.err.println("input headers size: " + inputHeaders.size());
+            System.err.println("output headers size: " + outputHeaders.size());
+            throw new IllegalArgumentException("At least one of the lists of headers has wrong number of elements.");
+        }
         String plotTypeString = "-";
         if (plotType == PlotType.POINTS) {
             plotTypeString = ".";

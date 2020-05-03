@@ -50,7 +50,8 @@ public class CO2EmissionsByNationExample {
         indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
 
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {
-            List<Double> y = new ArrayList<>(); y.add((x.f1.f0.doubleValue() - 1750)/ downScaling);  // shifting the year to start around 0
+            List<Double> y = new ArrayList<>(); y.add(1.0); // intercept
+            y.add((x.f1.f0.doubleValue() - 1750)/ downScaling);  // shifting the year to start around 0
 //            y.add(Math.exp(x.f0.doubleValue()/500));    // "replace" x0 with e^x0
             for (double d : assignNationCode(x.f1.f1)) {
                 y.add(d);
@@ -127,7 +128,7 @@ public class CO2EmissionsByNationExample {
                 return x;
             }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(), 
                 results.collect(), "CO2 Emissions By Nation LR", "Year", "kt of CO\\textsubscript{2}", 
-                "CO$_2$ Emissions By Nation LR", 0, 0, PythonPlotting.PlotType.POINTS, null,
+                "CO$_2$ Emissions By Nation LR", 1, 0, PythonPlotting.PlotType.POINTS, null,
                 null, resultsOffline.collect()
         );
     }

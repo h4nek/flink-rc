@@ -42,7 +42,8 @@ public class CO2EmmissionsSingleNationExample {
         indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
 
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {
-            List<Double> y = new ArrayList<>(); y.add((x.f1.f0.doubleValue() - 1750)/ downScaling);  // shifting the year to start around 0
+            List<Double> y = new ArrayList<>(); y.add(1.0);
+            y.add((x.f1.f0.doubleValue() - 1750)/ downScaling);  // shifting the year to start around 0
 //            y.add(Math.exp(x.f0.doubleValue()/500));    // "replace" x0 with e^x0
             return Tuple2.of(x.f0, y);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.f2))
@@ -100,14 +101,17 @@ public class CO2EmmissionsSingleNationExample {
 
         // transforming the data back to the correct form for plotting
         PythonPlotting.plotRCPredictions(inputSetTest.map(x -> {
-                    double y = x.f1.remove(0);
-                    y *= downScaling;
-                    y += 1750;
-                    x.f1.add(0, y);
-                    return x;
-                }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(),
-                results.collect(), "CO2 Emissions of " + selectNations[selectedNationIdx] + " LR", "Year", "kt of CO\\textsubscript{2}", "CO$_2$ Emissions of " + selectNations[selectedNationIdx] + " LR", 0, 0, PythonPlotting.PlotType.POINTS, null,
-                null, resultsOffline.collect()
+            x.f1.remove(0); // removing the intercept
+            double y = x.f1.remove(0);
+            y *= downScaling;
+            y += 1750;
+            x.f1.add(0, y);
+            return x; 
+        }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(),
+        results.collect(), "CO2 Emissions of " + selectNations[selectedNationIdx] + " LR", "Year", 
+                "kt of CO\\textsubscript{2}", "CO$_2$ Emissions of " + selectNations[selectedNationIdx] + " LR", 
+                0, 0, PythonPlotting.PlotType.POINTS, null, null, 
+                resultsOffline.collect()
         );
         
         // plot the training data

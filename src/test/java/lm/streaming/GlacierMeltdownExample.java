@@ -76,7 +76,7 @@ public class GlacierMeltdownExample {
 
         /* Transform the data */
         DataSet<Tuple2<Long, List<Double>>> glaciersInput = glaciers.map(x -> {
-            List<Double> y = new ArrayList<Double>(); y.add(x.f0.doubleValue()-1945); //y.add(x.f2);
+            List<Double> y = new ArrayList<Double>(); y.add(1.0); y.add(x.f0.doubleValue()-1945); //y.add(x.f2);
             return Tuple2.of(x.f0-1945, y);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         DataSet<Tuple2<Long, Double>> glaciersOutput = glaciers.map(x -> Tuple2.of(x.f0-1945, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
 
@@ -167,8 +167,9 @@ public class GlacierMeltdownExample {
 
         ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutTest);
 
-        List<Tuple2<Long, List<Double>>> testInputTransformed = glaciersInTest.map(x -> {x.f1.add(x.f1.get(0) + 1945); 
-        x.f1.remove(0); return x;}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect();
+        List<Tuple2<Long, List<Double>>> testInputTransformed = glaciersInTest.map(x -> {x.f1.remove(0); 
+        x.f1.add(x.f1.get(0) + 1945); x.f1.remove(0); return x;})
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect();
 //        System.out.println("new input list: " + ExampleStreamingUtilities.listToString(testInputTransformed));
 //        PythonPlotting.plotLRFit(testInputTransformed, glaciersOutput.collect(), predictions.collect(), 0, 
 //                0, "input", "Mean cumulative mass balance (mwe)", "Glaciers Meltdown", 

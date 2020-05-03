@@ -260,17 +260,12 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
             + "N_u = " + N_u + ",\t" + input.f0 + ". input size = " + converted_input.size());
         }
         input_vector.fillColumn(0, converted_input);
-        MatrixStore<Double> inputLayer = W_input.multiply(input_vector);
-        MatrixStore<Double> internalLayer = W_internal.multiply(output_previous);
-//        MatrixStore<Double> output = inputLayer.add(internalLayer);
         MatrixStore<Double> output = W_input.multiply(input_vector).add(W_internal.multiply(output_previous));
-//        System.out.println("input: " + Arrays.toString(inputLayer.toRawCopy1D()));
-//        System.out.println("internal: " + Arrays.toString(internalLayer.toRawCopy1D()));
-        System.out.println("u(t): " + RCUtilities.listToString(input.f1));
+//        System.out.println("u(t): " + RCUtilities.listToString(input.f1));
 //        System.out.println("W_in*u(t): " + Arrays.toString(W_input.multiply(input_vector).toRawCopy1D()));
-        System.out.println("x(t-1):" + Arrays.toString(output_previous.toRawCopy1D()));
+//        System.out.println("x(t-1):" + Arrays.toString(output_previous.toRawCopy1D()));
 //        System.out.println("W*x(t-1): " + Arrays.toString(W_internal.multiply(output_previous).toRawCopy1D()));
-        System.out.println("W_in*u(t) + W*x(t-1):" + Arrays.toString(output.toRawCopy1D()));
+//        System.out.println("W_in*u(t) + W*x(t-1):" + Arrays.toString(output.toRawCopy1D()));
         output = output.operateOnAll(unaryFunction);
         
         output_previous = output;   // save output for the next iteration

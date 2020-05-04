@@ -45,7 +45,8 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     private final int N_x;  // (internal) state vector (x) size -- should be higher than N_u
     private final Transformation transformation;    // a function (f) to be applied on a vector (dim N_x*1) element-wise
     private UnaryFunction<Double> unaryFunction;  // an applicable version of the transformation
-    private final List<Double> init_vector; // an initial (internal) state vector (x(0)); has to have size N_x*1
+    private final List<Double> initVector; // an initial (internal) state vector (x(0)); has to have size N_x*1 or be null
+                                            // (0 vector is created in that case)
     private final double range; // range in which the values of matrices will be randomly chosen, centered at 0
     private final double shift; // shift of the interval for generating random values
     private final long jumpSize; // the size of bidirectional jumps when W is initialized using a deterministic pattern
@@ -99,7 +100,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         if (N_u < 1 || N_x < 1) {
             throw new IllegalArgumentException("The input/internal vector size has to be positive");
         }
-        else if (init_vector == null || init_vector.size() != N_x) {
+        else if (initVector.size() != N_x) {
             throw new IllegalArgumentException("The length of the initial vector must be N_x.");
         }
         else if (range < 0) {
@@ -122,16 +123,19 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         return W_internal;
     }
 
-    public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation, double range,
+    public ESNReservoirSparse(int N_u, int N_x, List<Double> initVector, Transformation transformation, double range,
                               double shift, long jumpSize, double sparsity, double alpha,
                               Topology reservoirTopology, boolean includeInput, boolean includeBias) {
         if (reservoirTopology == null) {
             reservoirTopology = Topology.CYCLIC_WITH_JUMPS;
         }
+        if (initVector == null) {
+            initVector = Collections.nCopies(N_x, 0.0);
+        }
         this.N_u = N_u;
         this.N_x = N_x;
         // Matrices not initialized here because of serializability (solved by moving initialization to open() method)
-        this.init_vector = init_vector;
+        this.initVector = initVector;
         this.transformation = transformation;
         this.range = range;
         this.shift = shift;
@@ -145,21 +149,21 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         argumentsCheck();   // check the validity of all arguments after instantiating them, so no need to pass them
     }
     
-    public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector, Transformation transformation) {
-        this(N_u, N_x, init_vector, transformation, 1, 0, 2, 80, 0.5, 
+    public ESNReservoirSparse(int N_u, int N_x, List<Double> initVector, Transformation transformation) {
+        this(N_u, N_x, initVector, transformation, 1, 0, 2, 80, 0.5, 
                 Topology.CYCLIC_WITH_JUMPS, true, true);
     }
 
-    public ESNReservoirSparse(int N_u, int N_x, List<Double> init_vector) {
-        this(N_u, N_x, init_vector, Math::tanh);
+    public ESNReservoirSparse(int N_u, int N_x, List<Double> initVector) {
+        this(N_u, N_x, initVector, Math::tanh);
     }
 
     public ESNReservoirSparse(int N_u, int N_x) {
-        this(N_u, N_x, Collections.nCopies(N_x, 0.0));
+        this(N_u, N_x, (List<Double>) null);
     }
 
     public ESNReservoirSparse(int N_u, int N_x, Transformation transformation) {
-        this(N_u, N_x, Collections.nCopies(N_x, 0.0), transformation);
+        this(N_u, N_x, null, transformation);
     }
 
 
@@ -168,7 +172,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         super.open(parameters);
         
         // convert the vector type from List to MatrixStore
-        output_previous = MatrixStore.PRIMITIVE64.makeWrapper(Primitive64Store.FACTORY.columns(init_vector)).get();
+        output_previous = MatrixStore.PRIMITIVE64.makeWrapper(Primitive64Store.FACTORY.columns(initVector)).get();
 
         /* Converting the transformation to an applicable function */
         unaryFunction = new UnaryFunction<Double>() {

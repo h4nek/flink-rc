@@ -84,7 +84,7 @@ public class IdentityTest {
         DataSet<Tuple2<Long, Double>> integersOutTest = integersOut.filter(x -> x.f0 >= trainingSetSize);
 
         /* ESN Reservoir */
-        ESNReservoirSparse reservoir = new ESNReservoirSparse(N_u, N_x, Collections.nCopies(N_x, 0.0), Math::tanh, 
+        ESNReservoirSparse reservoir = new ESNReservoirSparse(N_u, N_x, null, Math::tanh, 
                 1, 0, 2, 80, 0.5, null, true, true);
         DataSet<Tuple2<Long, List<Double>>> integersTrainRes = integersTrain.map(reservoir);
         DataSet<Tuple2<Long, List<Double>>> integersTestRes = integersTest.map(reservoir);

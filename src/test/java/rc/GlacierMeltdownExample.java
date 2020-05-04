@@ -3,6 +3,7 @@ package rc;
 import higher_level_examples.HigherLevelExampleAbstract;
 import higher_level_examples.HigherLevelExampleBatch;
 import higher_level_examples.DataParsing;
+import rc_core.ESNReservoirSparse.Topology;
 
 import java.util.List;
 
@@ -22,6 +23,8 @@ public class GlacierMeltdownExample {
         });
 //        HigherLevelExampleAbstract.addCustomParser(1, (x, y) -> {double mwe = Double.parseDouble(x); y.add((mwe -14)/14);});
         HigherLevelExampleAbstract.addCustomParser(2, (x, y) -> {double observations = Double.parseDouble(x); y.add((observations - 18)/18);});
+        HigherLevelExampleAbstract.setupReservoir(null, Math::tanh, 1, 0, 2, 80, 
+                .5, Topology.CYCLIC_WITH_JUMPS, true, true);
 //        HigherLevelExampleAbstract.setupPlotting();
         HigherLevelExampleAbstract.addPlottingTransformer(0, x -> x*34 + 1945 + 34);
 //        HigherLevelExampleAbstract.addPlottingTransformer(1, x -> x*18 + 18);

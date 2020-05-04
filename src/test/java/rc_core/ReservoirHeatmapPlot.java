@@ -31,9 +31,8 @@ public class ReservoirHeatmapPlot {
      */
     public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        ESNReservoirSparse esnReservoir = new ESNReservoirSparse(1, N_x, Collections.nCopies(N_x, 0.0), 
-                null, range, 0, jumpSize, 80, alpha, null, true, 
-                true);
+        ESNReservoirSparse esnReservoir = new ESNReservoirSparse(1, N_x, null, null, range, 
+                0, jumpSize, 80, alpha, null, true, true);
         esnReservoir.open(null);    // setup the scaled W
 
         W_internal = esnReservoir.getW_internal();

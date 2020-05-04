@@ -49,8 +49,6 @@ public abstract class HigherLevelExampleAbstract {
         HigherLevelExampleAbstract.regularizationFactor = regularizationFactor;
         HigherLevelExampleAbstract.trainingSetSize = trainingSetSize;
         HigherLevelExampleAbstract.includeMSE = includeMSE;
-        
-        HigherLevelExampleAbstract.init_vector = Collections.nCopies(N_x, 0.0); // dependent on N_x
     }
 
     /* Individual setters */
@@ -113,7 +111,7 @@ public abstract class HigherLevelExampleAbstract {
 
 
     /* Reservoir configuration */
-    protected static List<Double> init_vector = Collections.nCopies(N_x, 0.0);  // default init also in setup
+    protected static List<Double> init_vector = null;  // creates a 0 vector of N_x length
     protected static Transformation transformation = Math::tanh;
     protected static double range = 1;
     protected static double shift = 0;

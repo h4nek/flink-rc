@@ -121,10 +121,10 @@ public class CO2EmissionsByNationExample {
         
         // transforming the data back to the correct form for plotting
         PythonPlotting.plotRCPredictions(inputSetTest.map(x -> {
-                double y = x.f1.remove(0);
+                double y = x.f1.remove(1);
                 y *= downScaling;
                 y += 1750;
-                x.f1.add(0, y);
+                x.f1.add(1, y);
                 return x;
             }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(), 
                 results.collect(), "CO2 Emissions By Nation LR", "Year", "kt of CO\\textsubscript{2}", 

@@ -17,6 +17,22 @@ import utilities.Utilities;
 import java.util.*;
 
 public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
+    private static boolean plottingMode = true;
+    private static double onlineMSE;
+    private static double offlineMSE;
+
+    public static double getOnlineMSE() {
+        return onlineMSE;
+    }
+
+    public static double getOfflineMSE() {
+        return offlineMSE;
+    }
+
+    public static void setPlottingMode(boolean plottingMode) {
+        HigherLevelExampleBatch.plottingMode = plottingMode;
+    }
+
     public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
@@ -67,7 +83,9 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (debugging) System.out.println("Offline Alpha: " + AlphaOffline);
         DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(testingInput, AlphaOffline);
         
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, testingOutput);
+        Tuple2<Double, Double> mses = ExampleBatchUtilities.getOnlineOfflineMSE(predictions, predictionsOffline, testingOutput);
+        onlineMSE = mses.f0;
+        offlineMSE = mses.f1;
         
         if (debugging)  // format: (index, [input, output, prediction, offline prediction])
             indexedDataSet.join(predictions).where(0).equalTo(0)
@@ -79,22 +97,24 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                 .printOnTaskManager("RESULTS");
 
 
-        DataSet<Tuple2<Long, List<Double>>> plottingInputSet = inputSet.filter(x -> x.f0 >= trainingSetSize)
-                .map(x -> { 
-                    for (int i = 0; i < x.f1.size(); ++i) {
-                        if (plottingTransformers.containsKey(i)) {
-                            Double transformed = plottingTransformers.get(i).transform(x.f1.remove(i));
-                            x.f1.add(i, transformed); 
-                        } 
-                    }
-                    return x; 
-                }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-        List<Tuple2<Long, Double>> plottingOutputSet = modifyForPlotting(outputSet);
-        List<Tuple2<Long, Double>> plottingPredictions = modifyForPlotting(predictions);
-        List<Tuple2<Long, Double>> plottingPredictionsOffline = modifyForPlotting(predictionsOffline);
-        PythonPlotting.plotRCPredictions(plottingInputSet.collect(), plottingOutputSet, plottingPredictions,
-                plotFileName, xlabel, ylabel, title, inputIndex, shiftData, plotType, inputHeaders, outputHeaders, 
-                plottingPredictionsOffline);
+        if (plottingMode) {
+            DataSet<Tuple2<Long, List<Double>>> plottingInputSet = inputSet.filter(x -> x.f0 >= trainingSetSize)
+                    .map(x -> {
+                        for (int i = 0; i < x.f1.size(); ++i) {
+                            if (plottingTransformers.containsKey(i)) {
+                                Double transformed = plottingTransformers.get(i).transform(x.f1.remove(i));
+                                x.f1.add(i, transformed);
+                            }
+                        }
+                        return x;
+                    }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+            List<Tuple2<Long, Double>> plottingOutputSet = modifyForPlotting(outputSet);
+            List<Tuple2<Long, Double>> plottingPredictions = modifyForPlotting(predictions);
+            List<Tuple2<Long, Double>> plottingPredictionsOffline = modifyForPlotting(predictionsOffline);
+            PythonPlotting.plotRCPredictions(plottingInputSet.collect(), plottingOutputSet, plottingPredictions,
+                    plotFileName, xlabel, ylabel, title, inputIndex, shiftData, plotType, inputHeaders, outputHeaders,
+                    plottingPredictionsOffline);
+        }
     }
 
     /**

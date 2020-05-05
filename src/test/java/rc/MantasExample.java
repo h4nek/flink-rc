@@ -1,12 +1,9 @@
 package rc;
 
-import higher_level_examples.DataParsing;
-import higher_level_examples.DataTransformation;
-import higher_level_examples.HigherLevelExampleAbstract;
-import higher_level_examples.HigherLevelExampleBatch;
+import higher_level_examples.*;
+import org.apache.flink.api.java.tuple.Tuple2;
+import utilities.PythonPlotting;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -16,14 +13,18 @@ import java.util.List;
  * 
  * We can use it to cross-check that our implementation is (probably) correct by ensuring it emmits similar results.
  */
-public class MantasExample {
-    public static final String INPUT_FILE_PATH = "src/test/resources/mantas/MackeyGlass_t17.txt";
-    private static final int N_u = 1;
-    private static final int N_x = 100;
-    private static final double learningRate = 0.01;
+public class MantasExample extends HigherLevelExampleFactory {
+    static {
+        INPUT_FILE_PATH = "src/test/resources/mantas/MackeyGlass_t17.txt";
+        N_u = 1;
+        N_x = 100;
+        learningRate = 0.01;
+        scalingAlpha = 0.5;
+    }
     
     public static void main(String[] args) throws Exception {
-        HigherLevelExampleAbstract.setup(INPUT_FILE_PATH, "1", 1, N_u, N_x, true, 
+        System.out.println("Inside example... Computing average MSE for N_x = " + N_x +", spectral radius = " + scalingAlpha + ".");
+        HigherLevelExampleAbstract.setup(INPUT_FILE_PATH, "1", 1, N_u, N_x, false, 
                 null, true, 2000, learningRate, true, 1e-8);
         HigherLevelExampleAbstract.addCustomParser(0, new DataParsing() {
             Double prevVal = null;
@@ -39,6 +40,9 @@ public class MantasExample {
                 prevVal = val;
             }
         });
+        
+        HigherLevelExampleAbstract.setScalingAlpha(scalingAlpha);
+        
         HigherLevelExampleAbstract.addPlottingTransformer(0, new DataTransformation() {
             int idx = 0;
             @Override
@@ -48,7 +52,15 @@ public class MantasExample {
         });
         String title = "Mackey-Glass Time Series";
         HigherLevelExampleAbstract.setupPlotting(0, 0, "index", "$y(index + 2000)$", title, 
-                null, null, null, title);
+                PythonPlotting.PlotType.LINE, null, null, title);
         HigherLevelExampleBatch.run();
+
+        onlineMSE = HigherLevelExampleBatch.getOnlineMSE();
+        offlineMSE = HigherLevelExampleBatch.getOfflineMSE();
+    }
+
+    public Tuple2<Double, Double> runAndGetMSEs() throws Exception {
+        main(null);
+        return Tuple2.of(onlineMSE, offlineMSE);
     }
 }

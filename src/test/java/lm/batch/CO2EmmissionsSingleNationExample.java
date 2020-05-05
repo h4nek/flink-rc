@@ -97,7 +97,7 @@ public class CO2EmmissionsSingleNationExample {
                 LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, 0.00000000001);
         DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(inputSetTest, AlphaOffline);
 
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, outputSetTest);
+        ExampleBatchUtilities.computeAndPrintOnlineOfflineMSE(results, resultsOffline, outputSetTest);
 
         // transforming the data back to the correct form for plotting
         PythonPlotting.plotRCPredictions(inputSetTest.map(x -> {

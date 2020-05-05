@@ -135,10 +135,10 @@ class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double
             System.out.println("current MSE: " + MSE);
             out.collect(Tuple2.of(-1L, Collections.singletonList(MSE)));    // -1 index will signify the MSE values
         }
-        System.out.println("y: " + output);
-        System.out.println("y_hat - y: " + yDiff);
+//        System.out.println("y: " + output);
+//        System.out.println("y_hat - y: " + yDiff);
         List<Double> gradient = scalarMultiplication(yDiff, input);
-        System.out.println("gradient: " + gradient);
+//        System.out.println("gradient: " + gradient);
 //        System.out.println("alpha delta: " + scalarMultiplication(learningRate/numSamples, gradient));
 
         alpha = vectorSubtraction(alpha, scalarMultiplication(learningRate/numSamples, gradient));

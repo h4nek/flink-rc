@@ -87,14 +87,25 @@ public class ExampleBatchUtilities {
 //        writer.close();
 //    }
     
-    public static void computeAndPrintOfflineOnlineMSE(DataSet<Tuple2<Long, Double>> predictionsOffline, 
-                                                       DataSet<Tuple2<Long, Double>> predictionsOnline,
+    public static void computeAndPrintOnlineOfflineMSE(DataSet<Tuple2<Long, Double>> predictionsOnline,
+                                                       DataSet<Tuple2<Long, Double>> predictionsOffline,
                                                        DataSet<Tuple2<Long, Double>> outputSet) throws Exception {
-        List<Double> mseOfflineList = computeMSE(predictionsOffline, outputSet).collect();
         List<Double> mseOnlineList = computeMSE(predictionsOnline, outputSet).collect();
+        List<Double> mseOfflineList = computeMSE(predictionsOffline, outputSet).collect();
 
         System.out.println("MSE online:  " + mseOnlineList.get(mseOnlineList.size() - 1));
         System.out.println("MSE offline: " + mseOfflineList.get(mseOfflineList.size() - 1));
+    }
+
+    public static Tuple2<Double, Double> getOnlineOfflineMSE(DataSet<Tuple2<Long, Double>> predictionsOnline,
+                                                             DataSet<Tuple2<Long, Double>> predictionsOffline,
+                                                             DataSet<Tuple2<Long, Double>> outputSet) throws Exception {
+        List<Double> mseOnlineList = computeMSE(predictionsOnline, outputSet).collect();
+        List<Double> mseOfflineList = computeMSE(predictionsOffline, outputSet).collect();
+
+        System.out.println("MSE online:  " + mseOnlineList.get(mseOnlineList.size() - 1));
+        System.out.println("MSE offline: " + mseOfflineList.get(mseOfflineList.size() - 1));
+        return Tuple2.of(mseOnlineList.get(mseOnlineList.size() - 1), mseOfflineList.get(mseOfflineList.size() - 1));
     }
 
     public static DataSet<Double> computeMSE(DataSet<Tuple2<Long, Double>> predictions, 

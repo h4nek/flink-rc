@@ -13,7 +13,6 @@ import rc_core.ESNReservoirSparse;
 import utilities.PythonPlotting;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -124,7 +123,7 @@ public class IdentityTest {
         DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integersTestRes, Alpha);
         resultsOffline.printOnTaskManager("Preds offline");
 //        utils.addLRFitToPlot(integers, resultsOffline, 0);
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, integersOutTest);
+        ExampleBatchUtilities.computeAndPrintOnlineOfflineMSE(results, resultsOffline, integersOutTest);
 //        ExampleBatchUtilities.plotAllAlphas(alphaList); // Plotting Alpha Training
         
 //        Double mseOffline = ExampleOfflineUtilities.computeMSE(results, integersOut).collect().get(NUM_SAMPLES - 1);

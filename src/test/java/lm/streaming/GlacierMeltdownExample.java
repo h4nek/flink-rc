@@ -165,7 +165,7 @@ public class GlacierMeltdownExample {
         DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(glaciersInTest, AlphaOffline);
 //        utilities.addLRFitToPlot(glaciersInput, predictionsOffline, 0);
 
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(predictionsOffline, predictions, glaciersOutTest);
+        ExampleBatchUtilities.computeAndPrintOnlineOfflineMSE(predictions, predictionsOffline, glaciersOutTest);
 
         List<Tuple2<Long, List<Double>>> testInputTransformed = glaciersInTest.map(x -> {x.f1.remove(0); 
         x.f1.add(x.f1.get(0) + 1945); x.f1.remove(0); return x;})

@@ -85,7 +85,7 @@ public class IdentityTest {
         Alpha = LinearRegressionPrimitive.fit(integersTrain, integersOutTrain, TrainingMethod.PSEUDOINVERSE, 0);
         DataSet<Tuple2<Long, Double>> resultsOffline = LinearRegressionPrimitive.predict(integersTest, Alpha);
 //        utils.addLRFitToPlot(integers, resultsOffline, 0);
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, integersOutTest);
+        ExampleBatchUtilities.computeAndPrintOnlineOfflineMSE(results, resultsOffline, integersOutTest);
 //        ExampleBatchUtilities.plotAllAlphas(alphaList); // Plotting Alpha Training
         
 //        Double mseOffline = ExampleOfflineUtilities.computeMSE(results, integersOut).collect().get(NUM_SAMPLES - 1);

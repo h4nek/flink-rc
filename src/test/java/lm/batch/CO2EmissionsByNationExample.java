@@ -115,7 +115,7 @@ public class CO2EmissionsByNationExample {
         
 //        utilities.addLRFitToPlot(inputSet, resultsOffline, 0);
 //        
-        ExampleBatchUtilities.computeAndPrintOfflineOnlineMSE(resultsOffline, results, outputSetTest);
+        ExampleBatchUtilities.computeAndPrintOnlineOfflineMSE(results, resultsOffline, outputSetTest);
 //        
 //        ExampleBatchUtilities.plotAllAlphas(alphaList);
         

@@ -63,13 +63,31 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
                                     // 0 means fully dense reservoir, 100 means a zero matrix
     
     public enum Topology{
-        JUMPS_ONLY, // matrix with only the bidirectional jumps (connections between nodes jumpSize apart; symmetric
-                    // the jumps wil be leading from/to every node as a supplement for the missing cycle
-        JUMPS_ONLY_RANDOMIZED,  // -||- weights are individually randomized (otherwise one random constant is used)
-        CYCLIC_WITH_JUMPS,  // reservoir with a unidirectional cycle (1->2->...->N_x->1) in addition to jumps; default topology
-                            // (the jumps will create at most one big cycle, starting from node 0)
-        CYCLIC_WITH_JUMPS_RANDOMIZED, // -||- weights are individually randomized (otherwise two random constants are used)
-        SPARSE  // reservoir with random (typically) sparse topology, influenced by sparsity
+        /** Matrix with only the bidirectional jumps (connections between nodes jumpSize apart; symmetric.<br>
+         *  One random value is used for every weight.
+         *  The jumps wil be leading from/to every node as a supplement for the missing cycle. */
+        JUMPS_ONLY("Jumps Saturated"),
+        /** Like {@link #JUMPS_ONLY}, but weights are individually randomized. */
+        JUMPS_ONLY_RANDOMIZED("Jumps Saturated Randomized"),
+        /** Reservoir with a unidirectional cycle (1->2->...->N_x->1) in addition to jumps; default topology.
+         * (The jumps will create at most one big cycle, starting from node 0.)
+         * One random value for the cycle and one for the jumps is used for all weights. */
+        CYCLIC_WITH_JUMPS("Cyclic with Jumps"),
+        /** Like {@link #CYCLIC_WITH_JUMPS}, but weights are individually randomized
+         * (otherwise two random constants are used). */
+        CYCLIC_WITH_JUMPS_RANDOMIZED("Cyclic with Jumps Randomized"),
+        /** Reservoir with random (typically) sparse topology, influenced by {@link #sparsity}. */
+        SPARSE("Sparse");//TODO create Sparse topology!!
+
+        private String string;
+        Topology(String string) {
+            this.string = string;
+        }
+
+        @Override
+        public String toString() {
+            return string;
+        }
     }
     
 

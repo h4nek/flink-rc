@@ -2,6 +2,7 @@ package utilities;
 
 import lm.batch.ExampleBatchUtilities;
 import org.apache.flink.api.java.tuple.Tuple2;
+import rc_core.ESNReservoirSparse.Topology;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -20,7 +21,7 @@ public class PythonPlotting {
         POINTS
     }
     
-    private static String pathToDataOutputDir = "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plot_data\\";
+    private static String pathToDataOutputDir = "..\\python_plots\\plot_data\\";
     
     
     /**
@@ -127,6 +128,28 @@ public class PythonPlotting {
         String[] params = {
                 "python",
                 "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotReservoirHeatmap.py",
+                title,
+        };
+        Process process = Runtime.getRuntime().exec(params);
+
+        /*Read input streams*/ // TEST
+        printStream(process.getInputStream());
+        printStream(process.getErrorStream());
+        System.out.println(process.exitValue());
+    }
+    
+    public static void plotReservoirPerformanceSurface(double[][] data, Topology topology, String exampleTitle) 
+            throws IOException {
+        String topologyString = topology.toString();
+        String inputFileName = exampleTitle + " using " + topologyString + " Topology";
+        String inputFilePath = pathToDataOutputDir + "surface_data\\" + inputFileName + ".csv";
+        String title = "Reservoir of " + exampleTitle + " using " + topologyString + " Topology";
+        Utilities.write2DArrayToCSV(inputFilePath, data);
+
+        String[] params = {
+                "python",
+                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotReservoirsSurface.py",
+                inputFileName,
                 title,
         };
         Process process = Runtime.getRuntime().exec(params);

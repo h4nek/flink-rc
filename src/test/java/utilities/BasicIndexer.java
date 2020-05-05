@@ -6,8 +6,9 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.Counter;
 
 /**
- * 
- * @param <T>
+ * A very basic indexer indexing elements from 0 to N (dataset size / infinite) as they come.<br>
+ * Note that after {@link Long#MAX_VALUE} is reached, this causes an obvious overflow and indices are no longer unique.
+ * @param <T> type of elements to index
  */
 public class BasicIndexer<T> extends IndicesMapper<T> {
     private Counter counter;

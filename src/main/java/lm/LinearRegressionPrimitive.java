@@ -3,8 +3,10 @@ package lm;
 import Jama.Matrix;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple3;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,8 +53,12 @@ public class LinearRegressionPrimitive {
     public static List<Double> fit(DataSet<Tuple2<Long, List<Double>>> inputSet, 
                                    DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method) throws Exception {
         /* Prepare the data for offline training */
-        double[][] inputArr = inputDataSetToArray(inputSet);
-        double[] outputArr = outputDataSetToArray(outputSet);
+        DataSet<Tuple3<Long, List<Double>, Double>> inputOutputSet = inputSet.join(outputSet).where(0).equalTo(0)
+                .with((x,y) -> Tuple3.of(x.f0, x.f1, y.f1))
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE), Types.DOUBLE));
+        InputOutputArray ioArray = inputOutputDataSetToArray(inputOutputSet);
+        double[][] inputArr = ioArray.inputArr;
+        double[] outputArr = ioArray.outputArr;
 
         double[] alpha = linearModel(inputArr, outputArr, method);
         
@@ -76,8 +82,12 @@ public class LinearRegressionPrimitive {
                                    DataSet<Tuple2<Long, Double>> outputSet, TrainingMethod method, double learningRate) 
             throws Exception {
         /* Prepare the data for offline training */
-        double[][] inputArr = inputDataSetToArray(inputSet);
-        double[] outputArr = outputDataSetToArray(outputSet);
+        DataSet<Tuple3<Long, List<Double>, Double>> inputOutputSet = inputSet.join(outputSet).where(0).equalTo(0)
+                .with((x,y) -> Tuple3.of(x.f0, x.f1, y.f1))
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE), Types.DOUBLE));
+        InputOutputArray ioArray = inputOutputDataSetToArray(inputOutputSet);
+        double[][] inputArr = ioArray.inputArr;
+        double[] outputArr = ioArray.outputArr;
 
         double[] alpha = linearModel(inputArr, outputArr, method, learningRate);
 
@@ -200,26 +210,52 @@ public class LinearRegressionPrimitive {
         return result;
     }
     
-    private static double[][] inputDataSetToArray(DataSet<Tuple2<Long, List<Double>>> inputSet) throws Exception {
-        List<Tuple2<Long, List<Double>>> inputList = inputSet.collect();
-        double[][] inputArr = new double[inputList.size()][inputList.get(0).f1.size()];
-
-        for (int i = 0; i < inputList.size(); i++) {
-            List<Double> inputVector = inputList.get(i).f1;
+    private static InputOutputArray inputOutputDataSetToArray(DataSet<Tuple3<Long, List<Double>, Double>> inputOutputSet) throws Exception {
+        List<Tuple3<Long, List<Double>, Double>> inputOutputList = inputOutputSet.collect();
+        double[][] inputArr = new double[inputOutputList.size()][inputOutputList.get(0).f1.size()]; // setSize * N_x
+        double[] outputArr = new double[inputOutputList.size()];    // setSize * 1
+        
+        for (int i = 0; i < inputOutputList.size(); i++) {
+            List<Double> inputVector = inputOutputList.get(i).f1;
             for (int j = 0; j < inputVector.size(); j++) {
                 inputArr[i][j] = inputVector.get(j);
             }
+            outputArr[i] = inputOutputList.get(i).f2;
         }
-        return inputArr;
+        return new InputOutputArray(inputArr, outputArr);
     }
     
-    private static double[] outputDataSetToArray(DataSet<Tuple2<Long, Double>> outputSet) throws Exception {
-        List<Tuple2<Long, Double>> outputList = outputSet.collect();
-        double[] outputArr = new double[outputList.size()];
-
-        for (int i = 0; i < outputList.size(); i++) {
-            outputArr[i] = outputList.get(i).f1;
+    /** A primitive container to enable returning two arrays. */
+    private static class InputOutputArray {
+        private double[][] inputArr;
+        private double[] outputArr;
+        
+        InputOutputArray(double[][] inputArr, double[] outputArr) {
+            this.inputArr = inputArr;
+            this.outputArr = outputArr;
         }
-        return outputArr;
     }
+    
+//    private static double[][] inputDataSetToArray(DataSet<Tuple2<Long, List<Double>>> inputSet) throws Exception {
+//        List<Tuple2<Long, List<Double>>> inputList = inputSet.collect();
+//        double[][] inputArr = new double[inputList.size()][inputList.get(0).f1.size()];
+//
+//        for (int i = 0; i < inputList.size(); i++) {
+//            List<Double> inputVector = inputList.get(i).f1;
+//            for (int j = 0; j < inputVector.size(); j++) {
+//                inputArr[i][j] = inputVector.get(j);
+//            }
+//        }
+//        return inputArr;
+//    }
+//    
+//    private static double[] outputDataSetToArray(DataSet<Tuple2<Long, Double>> outputSet) throws Exception {
+//        List<Tuple2<Long, Double>> outputList = outputSet.collect();
+//        double[] outputArr = new double[outputList.size()];
+//
+//        for (int i = 0; i < outputList.size(); i++) {
+//            outputArr[i] = outputList.get(i).f1;
+//        }
+//        return outputArr;
+//    }
 }

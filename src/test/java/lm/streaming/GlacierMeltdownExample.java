@@ -167,19 +167,18 @@ public class GlacierMeltdownExample {
 
         ExampleBatchUtilities.computeAndPrintOnlineOfflineMSE(predictions, predictionsOffline, glaciersOutTest);
 
-        List<Tuple2<Long, List<Double>>> testInputTransformed = glaciersInTest.map(x -> {x.f1.remove(0); 
+        DataSet<Tuple2<Long, List<Double>>> testInputTransformed = glaciersInTest.map(x -> {x.f1.remove(0); 
         x.f1.add(x.f1.get(0) + 1945); x.f1.remove(0); return x;})
-                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect();
+                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
 //        System.out.println("new input list: " + ExampleStreamingUtilities.listToString(testInputTransformed));
 //        PythonPlotting.plotLRFit(testInputTransformed, glaciersOutput.collect(), predictions.collect(), 0, 
 //                0, "input", "Mean cumulative mass balance (mwe)", "Glaciers Meltdown", 
 //                PythonPlotting.PlotType.LINE);
         
-        PythonPlotting.plotRCPredictions(testInputTransformed, glaciersOutTest.collect(), predictions.collect(), 
+        PythonPlotting.plotRCPredictionsDataSet(testInputTransformed, glaciersOutTest, predictions, 
                 "Glaciers Meltdown LR", "Year", "Mean cumulative mass balance (mwe)", 
-                "Glaciers Meltdown LR", 0, 0, PythonPlotting.PlotType.LINE, null,
-                null, predictionsOffline.collect()
-        );
+                "Glaciers Meltdown LR", 0, PythonPlotting.PlotType.LINE, null,
+                null, predictionsOffline);
         
 //        env.execute("Glacier Meltdown Example for Matlab");
     }

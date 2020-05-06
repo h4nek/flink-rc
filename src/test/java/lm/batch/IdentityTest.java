@@ -125,9 +125,9 @@ public class IdentityTest {
 //                "'Enhanced Identity' (Combined) LR", null, headers, headersOut, resultsOffline.collect());
         integersTest = integersTest.map(x -> {x.f1.remove(0); return Tuple2.of(x.f0, x.f1);})
                 .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-        PythonPlotting.plotRCPredictions(integersTest.collect(), integersOutTest.collect(), results.collect(),
-                "Identity LR", "x", "f(x) = x", "Identity LR", 0, 0, 
-                null, headers, headersOut, resultsOffline.collect()
+        PythonPlotting.plotRCPredictionsDataSet(integersTest, integersOutTest, results,
+                "Identity LR", "x", "f(x) = x", "Identity LR", 0, null, 
+                headers, headersOut, resultsOffline
         );
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), "Identity");
     }

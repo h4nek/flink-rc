@@ -144,6 +144,8 @@ public class IdentityTest {
         List<String> headersOut = new ArrayList<>();
         headersOut.add("index");
         headersOut.add("output");
+        headersOut.add("online prediction");
+        headersOut.add("offline prediction");
         
         
         /* Scale the I/O back to original values */
@@ -162,16 +164,15 @@ public class IdentityTest {
 //            resultsOffline.printOnTaskManager("PLOTTING-OFFLINE RESULTS");
 //            System.out.println("ONLINE RESULTS AS A LIST: " + RCUtilities.listToString(results.collect()));
 //            System.out.println("OFFLINE RESULTS AS A LIST: " + RCUtilities.listToString(resultsOffline.collect()));
-            PythonPlotting.plotRCPredictions(integersTest.collect(), integersOutTest.collect(), results.collect(), 
-                    "Identity", "$x$", "$f(x) = x$", "Identity", 0, 0, 
-                    null, headers, headersOut, resultsOffline.collect());
+            PythonPlotting.plotRCPredictionsDataSet(integersTest, integersOutTest, results, 
+                    "Identity", "$x$", "$f(x) = x$", "Identity", 0, null, 
+                    headers, headersOut, resultsOffline);
         }
         else {
-            PythonPlotting.plotRCPredictions(integersTest.collect(), integersOutTest.collect(), results.collect(), 
+            PythonPlotting.plotRCPredictionsDataSet(integersTest, integersOutTest, results, 
                     "'Enhanced Identity' (Combined)", "$x$", 
                     "$f(x) = 5 + x*sin(x)/500 + (x/500)^2$", "'Enhanced Identity' (Combined)", 0, 
-                    0, null, headers, headersOut, resultsOffline.collect()
-            );
+                    null, headers, headersOut, resultsOffline);
         }
 //        PythonPlotting.plotLRFit(integers.collect(), integersOut.collect(), results.collect(), "Identity");
     }

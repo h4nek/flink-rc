@@ -100,18 +100,17 @@ public class CO2EmmissionsSingleNationExample {
         ExampleBatchUtilities.computeAndPrintOnlineOfflineMSE(results, resultsOffline, outputSetTest);
 
         // transforming the data back to the correct form for plotting
-        PythonPlotting.plotRCPredictions(inputSetTest.map(x -> {
+        PythonPlotting.plotRCPredictionsDataSet(inputSetTest.map(x -> {
             x.f1.remove(0); // removing the intercept
             double y = x.f1.remove(0);
             y *= downScaling;
             y += 1750;
             x.f1.add(0, y);
             return x; 
-        }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(),
-        results.collect(), "CO2 Emissions of " + selectNations[selectedNationIdx] + " LR", "Year", 
+        }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))), outputSetTest, results, 
+                "CO2 Emissions of " + selectNations[selectedNationIdx] + " LR", "Year", 
                 "kt of CO\\textsubscript{2}", "CO$_2$ Emissions of " + selectNations[selectedNationIdx] + " LR", 
-                0, 0, PythonPlotting.PlotType.POINTS, null, null, 
-                resultsOffline.collect()
+                0, PythonPlotting.PlotType.POINTS, null, null, resultsOffline
         );
         
         // plot the training data

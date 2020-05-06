@@ -145,13 +145,13 @@ public class PM2Point5PollutionInArea {
         System.out.println("inputTest size: " + inputListTest.size());
         System.out.println("outputTest size: " + outputSetTest.collect().size());
         System.out.println("results size: " + results.collect().size());
-        List<Tuple2<Long, Double>> resultsList = results.map(x -> Tuple2.of(x.f0 + 1, x.f1))
-                .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
-        resultsList.remove(resultsList.size() - 1);
-        PythonPlotting.plotRCPredictions(inputListTest, outputSetTest.map(x -> Tuple2.of(x.f0 + 1, x.f1))
-                        .returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect(), resultsList, 
-                "PM2pt5 Pollution in Seattle Area LR", "Day", "$\\mu g/m^3$", 
-                "PM$_{2.5}$ Pollution in Seattle Area LR", 1, 0, PythonPlotting.PlotType.POINTS);
+        DataSet<Tuple2<Long, Double>> resultsTransformed = results.map(x -> Tuple2.of(x.f0 + 1, x.f1))
+                .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+        resultsTransformed.collect().remove(resultsTransformed.collect().size() - 1);
+        PythonPlotting.plotRCPredictionsDataSet(inputSetTest.filter(x -> x.f0 >= trainingSetSize + 1), 
+                outputSetTest.map(x -> Tuple2.of(x.f0 + 1, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE)), 
+                resultsTransformed, "PM2pt5 Pollution in Seattle Area LR", "Day", "$\\mu g/m^3$", 
+                "PM$_{2.5}$ Pollution in Seattle Area LR", 1, PythonPlotting.PlotType.POINTS);
 
 //        System.out.println("MSE estimate: " + lr.getMSE(Alpha));
 //        env.execute();

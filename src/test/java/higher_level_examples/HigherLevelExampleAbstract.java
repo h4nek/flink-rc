@@ -189,7 +189,6 @@ public abstract class HigherLevelExampleAbstract {
     
     /* Plotting configuration */
     protected static int inputIndex = 0;
-    protected static int shiftData = 0;
     protected static String xlabel = "Year";
     protected static String ylabel = "Mean cumulative mass balance (mwe)";
     protected static String title = "Glaciers Meltdown";
@@ -199,11 +198,10 @@ public abstract class HigherLevelExampleAbstract {
     protected static String plotFileName = title;
     protected static Map<Integer, DataTransformation> plottingTransformers = new HashMap<>();
 
-    public static void setupPlotting(int inputIndex, int shiftData, String xlabel, String ylabel, String title,
+    public static void setupPlotting(int inputIndex, String xlabel, String ylabel, String title,
                                      PythonPlotting.PlotType plotType, List<String> inputHeaders,
                                      List<String> outputHeaders, String plotFileName) {
         HigherLevelExampleAbstract.inputIndex = inputIndex;
-        HigherLevelExampleAbstract.shiftData = shiftData;
         HigherLevelExampleAbstract.xlabel = xlabel;
         HigherLevelExampleAbstract.ylabel = ylabel;
         HigherLevelExampleAbstract.title = title;
@@ -215,10 +213,6 @@ public abstract class HigherLevelExampleAbstract {
 
     public static void setInputIndex(int inputIndex) {
         HigherLevelExampleAbstract.inputIndex = inputIndex;
-    }
-
-    public static void setShiftData(int shiftData) {
-        HigherLevelExampleAbstract.shiftData = shiftData;
     }
 
     public static void setXlabel(String xlabel) {

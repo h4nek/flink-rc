@@ -120,16 +120,16 @@ public class CO2EmissionsByNationExample {
 //        ExampleBatchUtilities.plotAllAlphas(alphaList);
         
         // transforming the data back to the correct form for plotting
-        PythonPlotting.plotRCPredictions(inputSetTest.map(x -> {
+        PythonPlotting.plotRCPredictionsDataSet(inputSetTest.map(x -> {
                 double y = x.f1.remove(1);
                 y *= downScaling;
                 y += 1750;
                 x.f1.add(1, y);
                 return x;
-            }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))).collect(), outputSetTest.collect(), 
-                results.collect(), "CO2 Emissions By Nation LR", "Year", "kt of CO\\textsubscript{2}", 
-                "CO$_2$ Emissions By Nation LR", 1, 0, PythonPlotting.PlotType.POINTS, null,
-                null, resultsOffline.collect()
+            }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))), outputSetTest, results, 
+                "CO2 Emissions By Nation LR", "Year", "kt of CO\\textsubscript{2}", 
+                "CO$_2$ Emissions By Nation LR", 1, PythonPlotting.PlotType.POINTS, 
+                null, null, resultsOffline
         );
     }
 

@@ -25,12 +25,12 @@ public class ExampleBatchUtilities {
      * @param pathToFile absolute path to the file to write to
      * @param list the collected DataSet
      * @param headers List of headers for individual columns; the whole line is omitted if null
-     * @param input specify whether its an input (true) or output (false) DataSet
+     * @param isTList specify whether {@code <T>} is a {@code List} or not
      * @param <T> the type of DataSet elements (typically Double)
      * @throws IOException
      */
     public static <T> void writeDataSetToFile(String pathToFile, List<Tuple2<Long, T>> list, List<String> headers, 
-                                              boolean input) throws IOException {
+                                              boolean isTList) throws IOException {
         File file = new File(pathToFile);
         file.getParentFile().mkdirs();
         file.createNewFile();
@@ -39,7 +39,7 @@ public class ExampleBatchUtilities {
             writer.write(Utilities.listToString(headers) + '\n');
         for (int i = 0; i < list.size(); ++i) {
             Tuple2<Long, T> elem = list.get(i);
-            writer.write(elem.f0 + "," + (input ? Utilities.listToString((List<?>) 
+            writer.write(elem.f0 + "," + (isTList ? Utilities.listToString((List<?>) 
                     elem.f1) : elem.f1) + '\n');
         }
         writer.close();

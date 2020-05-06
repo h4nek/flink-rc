@@ -104,8 +104,9 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
 
 
         if (plottingMode) {
-            DataSet<Tuple2<Long, List<Double>>> plottingInputSet = inputSet.filter(x -> x.f0 >= trainingSetSize)
-                    .map(x -> {
+            // transform data for plotting
+            // we need to take the inputs as they were before they went into the reservoir
+            DataSet<Tuple2<Long, List<Double>>> plottingInputSet = inputSet.map(x -> {
                         for (int i = 0; i < x.f1.size(); ++i) {
                             if (plottingTransformers.containsKey(i)) {
                                 Double transformed = plottingTransformers.get(i).transform(x.f1.remove(i));
@@ -114,12 +115,18 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                         }
                         return x;
                     }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-            List<Tuple2<Long, Double>> plottingOutputSet = modifyForPlotting(outputSet);
-            List<Tuple2<Long, Double>> plottingPredictions = modifyForPlotting(predictions);
-            List<Tuple2<Long, Double>> plottingPredictionsOffline = modifyForPlotting(predictionsOffline);
-            PythonPlotting.plotRCPredictions(plottingInputSet.collect(), plottingOutputSet, plottingPredictions,
-                    plotFileName, xlabel, ylabel, title, inputIndex, shiftData, plotType, inputHeaders, outputHeaders,
-                    plottingPredictionsOffline);
+//            List<Tuple2<Long, Double>> plottingOutputSet = modifyForPlotting(testingOutput);
+//            List<Tuple2<Long, Double>> plottingPredictions = modifyForPlotting(predictions);
+//            List<Tuple2<Long, Double>> plottingPredictionsOffline = modifyForPlotting(predictionsOffline);
+            if (timeStepsAhead != 0) {
+                // shift the indices back for the plotting purposes (I/O should be from common time step)
+                outputSet = shiftIndicesAndTransformForPlotting(outputSet, timeStepsAhead);
+                predictions = shiftIndicesAndTransformForPlotting(predictions, timeStepsAhead);
+                predictionsOffline = shiftIndicesAndTransformForPlotting(predictionsOffline, timeStepsAhead);
+            }
+            PythonPlotting.plotRCPredictionsDataSet(plottingInputSet, outputSet, predictions,
+                    plotFileName, xlabel, ylabel, title, inputIndex, plotType, inputHeaders, outputHeaders,
+                    predictionsOffline);//TEST
         }
     }
 
@@ -129,13 +136,27 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
     public static void run() throws Exception {
         main(null);
     }
+    
+    /** Shift (optional) all the outputs if we're dealing with time-series predictions. Also optionally transform the 
+     * values, typically by applying the inverse of the original transformation, thus getting them back to the original 
+     * scale (should be applied on all outputs - real and predictions). */
+    private static DataSet<Tuple2<Long, Double>> shiftIndicesAndTransformForPlotting(
+            DataSet<Tuple2<Long, Double>> dataSet, int shift) {
+        return dataSet.map(x -> Tuple2.of(x.f0 + shift, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE))
+                      .map(y -> {
+                            if (plottingTransformers.containsKey(N_u)) {
+                                y.f1 = plottingTransformers.get(N_u).transform(y.f1);
+                            }
+                            return y;
+                        }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+    } 
 
-    private static List<Tuple2<Long, Double>> modifyForPlotting(DataSet<Tuple2<Long, Double>> dataSet) throws Exception {
-        return dataSet.filter(x -> x.f0 >= trainingSetSize).map(y -> {
-            if (plottingTransformers.containsKey(N_u)) {
-                y.f1 = plottingTransformers.get(N_u).transform(y.f1);
-            }
-            return y;
-        }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
-    }
+//    private static List<Tuple2<Long, Double>> modifyForPlotting(DataSet<Tuple2<Long, Double>> dataSet) throws Exception {
+//        return dataSet.filter(x -> x.f0 >= trainingSetSize).map(y -> {
+//            if (plottingTransformers.containsKey(N_u)) {
+//                y.f1 = plottingTransformers.get(N_u).transform(y.f1);
+//            }
+//            return y;
+//        }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
+//    }
 }

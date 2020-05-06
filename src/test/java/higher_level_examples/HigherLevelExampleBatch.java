@@ -51,13 +51,19 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (debugging) inputSet.printOnTaskManager("IN");
         if (debugging) outputSet.printOnTaskManager("OUT");
         
+        if (timeStepsAhead != 0) {
+            // we want to shift the indices in the OPPOSITE direction, so that "future" output lines up with the input
+            outputSet = outputSet.map(x -> Tuple2.of(x.f0 - timeStepsAhead, x.f1))
+                    .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+        }
+        
         DataSet<Tuple2<Long, List<Double>>> reservoirOutput = inputSet.map(new ESNReservoirSparse(N_u, N_x, 
                 init_vector, transformation, range, shift, jumpSize, sparsity, scalingAlpha,
                 reservoirTopology, includeInput, includeBias));
         if (debugging) reservoirOutput.printOnTaskManager("Reservoir output");
 
-        DataSet<Tuple2<Long, List<Double>>> trainingInput = reservoirOutput.first(trainingSetSize);
-        DataSet<Tuple2<Long, Double>> trainingOutput = outputSet.first(trainingSetSize);
+        DataSet<Tuple2<Long, List<Double>>> trainingInput = reservoirOutput.filter(x -> x.f0 < trainingSetSize);
+        DataSet<Tuple2<Long, Double>> trainingOutput = outputSet.filter(x -> x.f0 < trainingSetSize);
         DataSet<Tuple2<Long, List<Double>>> testingInput = reservoirOutput.filter(x -> x.f0 >= trainingSetSize);
         DataSet<Tuple2<Long, Double>> testingOutput = outputSet.filter(x -> x.f0 >= trainingSetSize);
         

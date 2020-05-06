@@ -10,9 +10,10 @@ import utilities.PythonPlotting;
 import java.util.*;
 
 public abstract class HigherLevelExampleAbstract {
+    // the path to the (CSV) file with input data
     protected static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
-    protected static double learningRate = 0.01;
-    protected static String columnsBitMask = "111";
+    protected static double learningRate = 0.01;    // used for online linear regression (gradient descent)
+    protected static String columnsBitMask = "111"; // what columns of the input file should be converted to fields
     protected static int outputIdx = 1;  // index of the output column (0-based)
     protected static boolean debugging = true;    // print various data in the process
     // potential custom parsing functions for individual input columns (enables e.g. scaling - normalization of inputs)
@@ -21,14 +22,18 @@ public abstract class HigherLevelExampleAbstract {
     protected static int N_u = 2;   // dimension of the input (vectors u(t))
     protected static int N_x = 6;   // dimension of the reservoir (N_x*N_x matrix; vectors x(t))
 
-    protected static List<Double> lmAlphaInit = null; // initial value of the LM Alpha vector; has to be of length N_x (or null)
-    protected static boolean stepsDecay = true;
-    // regularization factor for LM using pseudoinverse; initialized with the closest to 0 value - avoids a singular matrix
-    protected static double regularizationFactor = Double.MIN_VALUE;
+    protected static List<Double> lmAlphaInit = null; // initial value of the LM Alpha vector; has to be of length N_x 
+                                                      // (or null - zero vector is then created)
+    protected static boolean stepsDecay = true; // a step-based decay of the learning rate (for online LR)
+    // regularization factor for LM using pseudoinverse; initialized with a small value - should avoid a singular matrix
+    protected static double regularizationFactor = 1e-10;
 
-    protected static int trainingSetSize = (int) Math.floor(69*0.5);   // number of records to be in the training dataset
-                                                                       // (rest of the file is ignored)
+    // number of records to be in the training dataset (rest of the file is ignored)
+    // we expect that the indexing is 0-based! (otherwise we'll have a different number of I/O pairs)
+    protected static int trainingSetSize = (int) Math.floor(69*0.5);
     protected static boolean includeMSE = false;
+    protected static int timeStepsAhead = 0;    // in case of time series predictions, how far ahead do we want to predict?
+                                                // changes the indexing of the output set/stream (if != 0)
 
     /**
      * Configuring the RC by providing all the general parameters before running it with <i>main</i>. Setups for 
@@ -98,6 +103,10 @@ public abstract class HigherLevelExampleAbstract {
 
     public static void setIncludeMSE(boolean includeMSE) {
         HigherLevelExampleAbstract.includeMSE = includeMSE;
+    }
+
+    public static void setTimeStepsAhead(int timeStepsAhead) {
+        HigherLevelExampleAbstract.timeStepsAhead = timeStepsAhead;
     }
 
     /**
@@ -242,6 +251,7 @@ public abstract class HigherLevelExampleAbstract {
 
     /**
      * Add a transformation of an individual (input or output) field for the purpose of Python plotting.
+     * Usually the inverse of the transformation introduced in {@link #addCustomParser(int, DataParsing)} for the same field.
      * @param index 0-based index of the vectors' field that the transformation will be applied upon. 
      *              <i>N_u</i> is considered to be the output index
      * @param transformer the transformation function

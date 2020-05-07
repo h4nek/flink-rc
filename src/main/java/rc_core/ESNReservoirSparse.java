@@ -217,22 +217,22 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         }
         
         if (W_internal != null) {
-            System.out.println("W_in is null! but W is: " + W_internal);
+            System.err.println("W_in is null! but W is: " + W_internal);
         }
 
 //        if (weightMatricesState != null) {
 //            restoreState((List<SparseStore<Double>>) weightMatricesState.get());
 //        }
 
-        System.out.println("CREATING MATRICES FOR 1st TIME");   // TEST -- runs twice for some reason (multiple serializations?)
-        System.out.println("W_in: " + W_input);
-        System.out.println("W: " + W_internal);
-        System.out.println("state: " + weightMatricesState);
+//        System.out.println("CREATING MATRICES FOR 1st TIME");   // TEST -- runs twice for some reason (multiple serializations?)
+//        System.out.println("W_in: " + W_input);
+//        System.out.println("W: " + W_internal);
+//        System.out.println("state: " + weightMatricesState);
         
         SparseStore.Factory<Double> matrixFactory = SparseStore.PRIMITIVE64;
         W_input = matrixFactory.make(N_x, N_u);
         W_input.fillAll(new Uniform(-0.5*range + shift, range));
-        System.out.println("random W_in: " + W_input);
+//        System.out.println("random W_in: " + W_input);
 
         /* Create Cycle Reservoir with Jumps */
         double cycleWeight = getRandomWeight(); // a random constant for the unidirectional cycle
@@ -240,7 +240,6 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
 
         /* SparseStore Quicker */   // fastest
         W_internal = SparseStore.makePrimitive(N_x, N_x);
-        System.out.println("W_internal before init: " + W_internal);
         // simple cycle reservoir
 //        for (int i = 1; i < N_x; ++i) {
 //            W_internal.add(i, i-1, valueW);
@@ -269,11 +268,11 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
                         W_internal.add(i, prevPos, randomized ? getRandomWeight() : jumpWeight);
                 }
                 if (i == 0) {   // unidirectional cycle
-                    System.out.println("i = " + i);
+//                    System.out.println("i = " + i);
                     W_internal.add(i, N_x - 1, randomized ? getRandomWeight() : cycleWeight);
                 }
                 else {
-                    System.out.println("i = " + i);
+//                    System.out.println("i = " + i);
                     W_internal.add(i, i-1, randomized ? getRandomWeight() : cycleWeight);   // unidirectional cycle
                 }
             }
@@ -285,7 +284,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
                 //TODO
             }
         }
-        System.out.println("reservoir W: " + W_internal);
+//        System.out.println("reservoir W: " + W_internal);
 
         /* Custom MatrixStore */    // alternative
 //        JumpsSaturatedMatrix W_input_jumps = new JumpsSaturatedMatrix(N_x, range, jumpSize);
@@ -296,7 +295,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
 
         /* Scaling W */
         W_internal = (SparseStore<Double>) W_internal.multiply(alpha/spectralRadius);
-        System.out.println("scaled W: " + W_internal);
+//        System.out.println("scaled W: " + W_internal);
     }
 
     private static final Random random = new Random();

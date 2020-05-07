@@ -24,7 +24,7 @@ public class RCUtilities {
                 (int) matrix.countColumns());
         eigenvalueDecomposition.decompose(matrix);
         List<ComplexNumber> eigenvalues = eigenvalueDecomposition.getEigenvalues();
-        System.out.println(listToString(eigenvalues));
+//        System.out.println(listToString(eigenvalues));
         double spectralRadius = Double.MIN_VALUE;
         for (ComplexNumber eigenvalue : eigenvalues) {  // selecting the largest absolute value of an eigenvalue
             double val = eigenvalue.norm();

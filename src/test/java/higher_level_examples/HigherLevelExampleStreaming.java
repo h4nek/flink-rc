@@ -52,9 +52,10 @@ public class HigherLevelExampleStreaming extends HigherLevelExampleAbstract {
         dataStream = dataStream.assignTimestampsAndWatermarks(timestampAssigner);
         DataStream<Tuple2<Long, List<Double>>> indexedDataStream = dataStream.map(new BasicIndexer<>());
 
-        DataStream<Tuple2<Long, List<Double>>> inputStream = indexedDataStream.map(x -> {x.f1.remove(outputIdx); return x;})
+        //TODO Redo I/O extraction (+plotting)
+        DataStream<Tuple2<Long, List<Double>>> inputStream = indexedDataStream.map(x -> {x.f1.remove(1); return x;})
                 .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-        DataStream<Tuple2<Long, Double>> outputStream = indexedDataStream.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)))
+        DataStream<Tuple2<Long, Double>> outputStream = indexedDataStream.map(x -> Tuple2.of(x.f0, x.f1.get(1)))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         if (debugging) inputStream.print("IN");
         if (debugging) outputStream.print("OUT");

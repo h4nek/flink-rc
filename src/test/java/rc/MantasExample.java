@@ -15,7 +15,7 @@ import java.util.List;
  */
 public class MantasExample extends HigherLevelExampleFactory {
     static {
-        INPUT_FILE_PATH = "src/test/resources/mantas/MackeyGlass_t17.txt";
+        inputFilePath = "src/test/resources/mantas/MackeyGlass_t17.txt";
         N_u = 1;
         N_x = 100;
         learningRate = 0.01;
@@ -24,7 +24,7 @@ public class MantasExample extends HigherLevelExampleFactory {
     
     public static void main(String[] args) throws Exception {
         System.out.println("Inside example... Computing average MSE for N_x = " + N_x +", spectral radius = " + scalingAlpha + ".");
-        HigherLevelExampleAbstract.setup(INPUT_FILE_PATH, "1", 1, N_u, N_x, false, 
+        HigherLevelExampleAbstract.setup(inputFilePath, "1", N_u, N_x, false, 
                 null, true, 2000, learningRate, true, 1e-8);
         HigherLevelExampleAbstract.addCustomParser(0, new DataParsing() {
             Double prevVal = null;

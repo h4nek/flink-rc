@@ -8,7 +8,7 @@ public interface DataParsing {
      * typically representing a feature of the input vector u(t) or the output scalar y(t).
      * @param inputString a value from the chosen column of a CSV file, supplied as a String
      * @param inputVector a reference to the joint input/output vector where all values (features) are expected to be 
-     *                    added
+     *                    added. the order should be: input fields | input feature for plotting | output field
      */
     void parseAndAddData(String inputString, List<Double> inputVector);
 }

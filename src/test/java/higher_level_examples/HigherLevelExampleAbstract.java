@@ -14,10 +14,9 @@ public abstract class HigherLevelExampleAbstract {
     protected static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
     protected static double learningRate = 0.01;    // used for online linear regression (gradient descent)
     protected static String columnsBitMask = "111"; // what columns of the input file should be converted to fields
-//    protected static List<Integer> inputIndices = null; // indices of the input columns (0-based); if null, 
-    protected static int outputIdx = 1;  // index of the output column (0-based)
     protected static boolean debugging = true;    // print various data in the process
     // potential custom parsing functions for individual input columns (enables e.g. scaling - normalization of inputs)
+    // the convention of field order in the initial data vector is: input fields | input feature for plotting | output field
     protected static Map<Integer, DataParsing> customParsers = new HashMap<>(); 
 
     protected static int N_u = 2;   // dimension of the input (vectors u(t))
@@ -40,12 +39,11 @@ public abstract class HigherLevelExampleAbstract {
      * Configuring the RC by providing all the general parameters before running it with <i>main</i>. Setups for 
      * reservoir and plotting are also available.
      */
-    public static void setup(String inputFilePath, String columnsBitMask, int outputIdx, int N_u, int N_x,
+    public static void setup(String inputFilePath, String columnsBitMask, int N_u, int N_x,
                              boolean debugging, List<Double> lmAlphaInit, boolean stepsDecay, int trainingSetSize,
                              double learningRate, boolean includeMSE, double regularizationFactor) {
         HigherLevelExampleAbstract.inputFilePath = inputFilePath;
         HigherLevelExampleAbstract.columnsBitMask = columnsBitMask;
-//        HigherLevelExampleAbstract.outputIdx = outputIdx;
         HigherLevelExampleAbstract.N_u = N_u;
         HigherLevelExampleAbstract.N_x = N_x;
         HigherLevelExampleAbstract.debugging = debugging;
@@ -69,10 +67,6 @@ public abstract class HigherLevelExampleAbstract {
     public static void setColumnsBitMask(String columnsBitMask) {
         HigherLevelExampleAbstract.columnsBitMask = columnsBitMask;
     }
-
-//    public static void setOutputIdx(int outputIdx) {
-//        HigherLevelExampleAbstract.outputIdx = outputIdx;
-//    }
 
     public static void setDebugging(boolean debugging) {
         HigherLevelExampleAbstract.debugging = debugging;
@@ -111,8 +105,8 @@ public abstract class HigherLevelExampleAbstract {
     }
 
     /**
-     * Add one custom parser for the specified column (representing an input feature).
-     * @param index index of the input column (0-based) this parser will be applied to
+     * Add one custom parser for the specified column (see {@link DataParsing#parseAndAddData(String, List)}).
+     * @param index index of the input file column (0-based) this parser will be applied to
      * @param parser custom parsing implementation
      */
     public static void addCustomParser(int index, DataParsing parser) {

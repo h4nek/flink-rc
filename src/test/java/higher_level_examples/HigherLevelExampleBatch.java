@@ -45,16 +45,13 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (debugging) indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
         
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(data -> {
-//            x.f1.remove(outputIdx); return x;
             List<Double> inputVector = new ArrayList<>(data.f1.subList(0, N_u)); // extract all input features
             return Tuple2.of(data.f0, inputVector);
         }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-//        DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)))
         DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.get(x.f1.size() - 1)))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         DataSet<Tuple2<Long, Double>> inputPlottingSet = indexedDataSet.map(data -> {
             // extract an input plotting feature
-//            List<Double> plottingInputVector = data.f1.subList(N_u, data.f1.size() - 1);
             double plottingInput = data.f1.get(N_u);
             return Tuple2.of(data.f0, plottingInput);
         }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));

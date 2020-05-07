@@ -8,7 +8,8 @@ import rc_core.ESNReservoirSparse.Topology;
 
 public class GlacierMeltdownExample extends HigherLevelExampleFactory {
     static {
-        INPUT_FILE_PATH = "src/test/resources/glaciers/input_data/glaciers.csv";
+        inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
+        columnsBitMask = "110";
         N_u = 1;
         N_x = 6;
         learningRate = 50;
@@ -17,7 +18,7 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
     }
 
     public static void main(String[] args) throws Exception {
-        HigherLevelExampleAbstract.setup(INPUT_FILE_PATH, "110", 2, N_u, N_x, false, 
+        HigherLevelExampleAbstract.setup(inputFilePath, columnsBitMask, N_u, N_x, false, 
                 null, true, (int) Math.floor(trainingSetRatio*70), learningRate, true,
                 0);
         HigherLevelExampleAbstract.setTimeStepsAhead(1);    // predict the next year's meltdown based on the current data

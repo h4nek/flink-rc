@@ -118,7 +118,17 @@ public abstract class HigherLevelExampleAbstract {
     public static void addCustomParser(int index, DataParsing parser) {
         customParsers.put(index, parser);
     }
-
+    
+    /**
+     * Specify only the parser. Convenient when adding a custom parser for every input index. 
+     * The index is incremented after each call.
+     * @param parser custom parsing implementation
+     */
+    public static void addCustomParser(DataParsing parser) {
+        customParsers.put(defaultIndex, parser);
+        ++defaultIndex;
+    }
+    private static int defaultIndex = 0;
 
     /* Reservoir configuration */
     protected static List<Double> init_vector = null;  // creates a 0 vector of N_x length

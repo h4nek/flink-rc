@@ -126,12 +126,10 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
 //            List<Tuple2<Long, Double>> plottingOutputSet = modifyForPlotting(testingOutput);
 //            List<Tuple2<Long, Double>> plottingPredictions = modifyForPlotting(predictions);
 //            List<Tuple2<Long, Double>> plottingPredictionsOffline = modifyForPlotting(predictionsOffline);
-            if (timeStepsAhead != 0) {
-                // shift the indices back for the plotting purposes (I/O should be from common time step)
-                outputSet = shiftIndicesAndTransformForPlotting(outputSet, timeStepsAhead);
-                predictions = shiftIndicesAndTransformForPlotting(predictions, timeStepsAhead);
-                predictionsOffline = shiftIndicesAndTransformForPlotting(predictionsOffline, timeStepsAhead);
-            }
+            // shift the indices back for the plotting purposes (I/O should be from common time step)
+            outputSet = shiftIndicesAndTransformForPlotting(outputSet, timeStepsAhead);
+            predictions = shiftIndicesAndTransformForPlotting(predictions, timeStepsAhead);
+            predictionsOffline = shiftIndicesAndTransformForPlotting(predictionsOffline, timeStepsAhead);
 //            PythonPlotting.plotRCPredictionsDataSet(plottingInputSet, outputSet, predictions,
 //                    plotFileName, xlabel, ylabel, title, inputIndex, plotType, inputHeaders, outputHeaders,
 //                    predictionsOffline);

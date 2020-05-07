@@ -114,15 +114,22 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (plottingMode) {
             // transform data for plotting
             // we need to take the inputs as they were before they went into the reservoir
-            DataSet<Tuple2<Long, List<Double>>> plottingInputSet = inputSet.map(x -> {
-                        for (int i = 0; i < x.f1.size(); ++i) {
-                            if (plottingTransformers.containsKey(i)) {
-                                Double transformed = plottingTransformers.get(i).transform(x.f1.remove(i));
-                                x.f1.add(i, transformed);
-                            }
-                        }
-                        return x;
-                    }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+//            DataSet<Tuple2<Long, List<Double>>> plottingInputSet = inputSet.map(x -> {
+//                        for (int i = 0; i < x.f1.size(); ++i) {
+//                            if (plottingTransformers.containsKey(i)) {
+//                                Double transformed = plottingTransformers.get(i).transform(x.f1.remove(i));
+//                                x.f1.add(i, transformed);
+//                            }
+//                        }
+//                        return x;
+//                    }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+            // optionally transform the input plotting set (if it couldn't be correctly initialized right away)
+            inputPlottingSet = inputPlottingSet.map(x -> {
+                if (plottingTransformers.containsKey(0)) {
+                    x.f1 = plottingTransformers.get(0).transform(x.f1);
+                }
+                return x;
+            }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
 //            List<Tuple2<Long, Double>> plottingOutputSet = modifyForPlotting(testingOutput);
 //            List<Tuple2<Long, Double>> plottingPredictions = modifyForPlotting(predictions);
 //            List<Tuple2<Long, Double>> plottingPredictionsOffline = modifyForPlotting(predictionsOffline);

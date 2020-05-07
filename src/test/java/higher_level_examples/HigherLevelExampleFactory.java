@@ -11,6 +11,7 @@ public abstract class HigherLevelExampleFactory {
     protected static int N_x = 6;
     protected static double learningRate = 0.01;
     protected static double scalingAlpha = 0.5;
+    protected static double trainingSetRatio = 0.8;
 
     protected static double onlineMSE;
     protected static double offlineMSE;

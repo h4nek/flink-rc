@@ -13,22 +13,23 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
         N_x = 6;
         learningRate = 50;
         scalingAlpha = 0.5;
+        trainingSetRatio = 0.8;
     }
 
     public static void main(String[] args) throws Exception {
         HigherLevelExampleAbstract.setup(INPUT_FILE_PATH, "110", 2, N_u, N_x, false, 
-                null, true, (int) Math.floor(0.8*70), learningRate, true,
+                null, true, (int) Math.floor(trainingSetRatio*70), learningRate, true,
                 0);
         HigherLevelExampleAbstract.setTimeStepsAhead(1);    // predict the next year's meltdown based on the current data
-//        HigherLevelExampleAbstract.addCustomParser(0, (inputString, inputVector) -> {
-//            double year = Double.parseDouble(inputString);
-//            inputVector.add(0, (year - 1945 - 35)/35);    // move the column values to be around 0
-//            inputVector.add(year);  // for plotting input
-//        });
-        HigherLevelExampleAbstract.addCustomParser(1, (x, y) -> {double mwe = Double.parseDouble(x);
+        HigherLevelExampleAbstract.addCustomParser((inputString, inputVector) -> {
+            double year = Double.parseDouble(inputString);
+//            inputVector.add(0, (year - 1945 - 35)/35);    // input feature; move the column values to be around 0
+            inputVector.add(year);  // for plotting input
+        });
+        HigherLevelExampleAbstract.addCustomParser((x, y) -> {double mwe = Double.parseDouble(x);
             double normalMwe = (mwe -14)/14; // normalization
             y.add(0, normalMwe);    // input feature
-            y.add(mwe); // for the output - time series prediction
+            y.add(normalMwe); // for the output - time series prediction
         });
 //        HigherLevelExampleAbstract.addCustomParser(2, (x, y) -> {double observations = Double.parseDouble(x); 
 //            y.add((observations - 18)/18);});
@@ -38,7 +39,7 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
 //        HigherLevelExampleAbstract.addPlottingTransformer(0, x -> x*35 + 1945 + 35);
 //        HigherLevelExampleAbstract.addPlottingTransformer(0, x -> x*14 + 14);
 //        HigherLevelExampleAbstract.addPlottingTransformer(1, x -> x*14 + 14);
-//        HigherLevelExampleAbstract.addPlottingTransformer(2, x -> x*14 + 14);   // for the output
+        HigherLevelExampleAbstract.addPlottingTransformer(1, x -> x*14 + 14);   // for the output
         HigherLevelExampleBatch.run();
         
         onlineMSE = HigherLevelExampleBatch.getOnlineMSE();

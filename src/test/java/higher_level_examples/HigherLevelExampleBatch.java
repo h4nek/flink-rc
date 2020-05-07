@@ -44,12 +44,23 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         DataSet<Tuple2<Long, List<Double>>> indexedDataSet = dataSet.map(new BasicIndexer<>());
         if (debugging) indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
         
-        DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(x -> {x.f1.remove(outputIdx); return x;})
-                .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-        DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)))
+        DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(data -> {
+//            x.f1.remove(outputIdx); return x;
+            List<Double> inputVector = new ArrayList<>(data.f1.subList(0, N_u)); // extract all input features
+            return Tuple2.of(data.f0, inputVector);
+        }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+//        DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.get(outputIdx)))
+        DataSet<Tuple2<Long, Double>> outputSet = indexedDataSet.map(x -> Tuple2.of(x.f0, x.f1.get(x.f1.size() - 1)))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+        DataSet<Tuple2<Long, Double>> inputPlottingSet = indexedDataSet.map(data -> {
+            // extract an input plotting feature
+//            List<Double> plottingInputVector = data.f1.subList(N_u, data.f1.size() - 1);
+            double plottingInput = data.f1.get(N_u);
+            return Tuple2.of(data.f0, plottingInput);
+        }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         if (debugging) inputSet.printOnTaskManager("IN");
         if (debugging) outputSet.printOnTaskManager("OUT");
+        if (debugging) inputPlottingSet.printOnTaskManager("IN PLOT");
         
         if (timeStepsAhead != 0) {
             // we want to shift the indices in the OPPOSITE direction, so that "future" output lines up with the input
@@ -124,9 +135,12 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                 predictions = shiftIndicesAndTransformForPlotting(predictions, timeStepsAhead);
                 predictionsOffline = shiftIndicesAndTransformForPlotting(predictionsOffline, timeStepsAhead);
             }
-            PythonPlotting.plotRCPredictionsDataSet(plottingInputSet, outputSet, predictions,
-                    plotFileName, xlabel, ylabel, title, inputIndex, plotType, inputHeaders, outputHeaders,
-                    predictionsOffline);//TEST
+//            PythonPlotting.plotRCPredictionsDataSet(plottingInputSet, outputSet, predictions,
+//                    plotFileName, xlabel, ylabel, title, inputIndex, plotType, inputHeaders, outputHeaders,
+//                    predictionsOffline);
+            // todo unified headers; remove inputIndex
+            PythonPlotting.plotRCPredictionsDataSetNew(inputPlottingSet, outputSet, predictions,
+                    plotFileName, xlabel, ylabel, title, plotType, null, predictionsOffline);
         }
     }
 

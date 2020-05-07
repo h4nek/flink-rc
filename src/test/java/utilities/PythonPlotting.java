@@ -133,6 +133,79 @@ public class PythonPlotting {
         plotRCPredictionsDataSet(inputSet, outputSet, predictionSet, plotFileName, xlabel, ylabel, title, inputIndex, 
                 plotType, null, null, null);
     }
+
+    /**
+     * Creates a custom RC predictions plot using Python's matplotlib. All Strings have to be non-empty (otherwise the 
+     * parameters will not be passed properly).
+     * 
+     * New version of plotting //TODO specify this; replace, or modify the old for diff. use cases.
+     * @throws IOException
+     */
+    public static void plotRCPredictionsNew(List<Tuple2<Long, List<Double>>> inputOutputList, String plotFileName, 
+                                            String xlabel, String ylabel, String title, PlotType plotType,
+                                         List<String> headers) throws IOException {
+//        if (inputHeaders != null && outputHeaders != null && (inputHeaders.size() != inputOutputList.get(0).f1.size() + 1 ||
+//                outputHeaders.size() != outputList.get(0).f1.size() + 1)) {
+//            System.err.println("input headers size: " + inputHeaders.size());
+//            System.err.println("output headers size: " + outputHeaders.size());
+//            throw new IllegalArgumentException("At least one of the lists of headers has wrong number of elements.");
+//        }
+        String plotTypeString = "-";
+        if (plotType == PlotType.POINTS) {
+            plotTypeString = ".";
+        }
+
+        // write to CSV with columns: index | (plotting) input | ouput | online prediction | offline prediction
+        ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + plotFileName + "_PlottingData.csv",
+                inputOutputList, headers, true);
+//        ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + plotFileName + "_OutputData.csv",
+//                outputList, outputHeaders, true);
+
+        String[] params = {
+                "python",
+                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotRCPredictionsNew.py",
+                plotFileName + "_PlottingData",
+                plotFileName,
+                xlabel,
+                ylabel,
+                title,
+                plotTypeString,
+        };
+        Process process = Runtime.getRuntime().exec(params);
+
+        /*Read input streams*/ // Debugging
+        printStream(process.getInputStream());
+        printStream(process.getErrorStream());
+        System.out.println(process.exitValue());
+    }
+    
+    /**
+     * Using only one feature of the input set to be transferred for storage in CSV and usage in the plot.
+     * Probably more optimal and simpler than the old way.
+     */
+    public static void plotRCPredictionsDataSetNew(DataSet<Tuple2<Long, Double>> inputSet,
+                                                   DataSet<Tuple2<Long, Double>> outputSet,
+                                                   DataSet<Tuple2<Long, Double>> predictionSet, String plotFileName,
+                                                   String xlabel, String ylabel, String title,
+                                                   PlotType plotType, List<String> headers,
+                                                   DataSet<Tuple2<Long, Double>> predictionOfflineSet) throws Exception {
+        // join inputs, outputs and online/offline predictions
+        DataSet<Tuple2<Long, List<Double>>> combinedInputOutputSet = inputSet.join(outputSet).where(0).equalTo(0)
+                .with((x,y) -> {List<Double> data = new ArrayList<>(); data.add(x.f1); data.add(y.f1); 
+                    return Tuple2.of(x.f0, data);} ).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)))
+                .join(predictionSet).where(0).equalTo(0)
+                .with((x,y) -> {List<Double> data = new ArrayList<>(x.f1); data.add(y.f1);
+                    return Tuple2.of(x.f0, data);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        if (predictionOfflineSet != null) {
+            combinedInputOutputSet = combinedInputOutputSet.join(predictionOfflineSet).where(0).equalTo(0)
+                    .with((x,y) -> {List<Double> data = new ArrayList<>(x.f1); data.add(y.f1); 
+                    return Tuple2.of(x.f0, data);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        }
+
+//        List<Tuple2<Long, Double>> inputList = inputSet.collect();
+        List<Tuple2<Long, List<Double>>> combinedInputOutputList = combinedInputOutputSet.collect();
+        plotRCPredictionsNew(combinedInputOutputList, plotFileName, xlabel, ylabel, title, plotType, headers);
+    }
     
     public static void  plotMatrixHeatmap(double[][] matrix, String title) throws IOException {
         String filePath = pathToDataOutputDir + "heatmap_data\\" + title + ".csv";

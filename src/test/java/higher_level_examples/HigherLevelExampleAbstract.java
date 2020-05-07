@@ -14,6 +14,7 @@ public abstract class HigherLevelExampleAbstract {
     protected static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
     protected static double learningRate = 0.01;    // used for online linear regression (gradient descent)
     protected static String columnsBitMask = "111"; // what columns of the input file should be converted to fields
+//    protected static List<Integer> inputIndices = null; // indices of the input columns (0-based); if null, 
     protected static int outputIdx = 1;  // index of the output column (0-based)
     protected static boolean debugging = true;    // print various data in the process
     // potential custom parsing functions for individual input columns (enables e.g. scaling - normalization of inputs)
@@ -44,7 +45,7 @@ public abstract class HigherLevelExampleAbstract {
                              double learningRate, boolean includeMSE, double regularizationFactor) {
         HigherLevelExampleAbstract.inputFilePath = inputFilePath;
         HigherLevelExampleAbstract.columnsBitMask = columnsBitMask;
-        HigherLevelExampleAbstract.outputIdx = outputIdx;
+//        HigherLevelExampleAbstract.outputIdx = outputIdx;
         HigherLevelExampleAbstract.N_u = N_u;
         HigherLevelExampleAbstract.N_x = N_x;
         HigherLevelExampleAbstract.debugging = debugging;
@@ -69,9 +70,9 @@ public abstract class HigherLevelExampleAbstract {
         HigherLevelExampleAbstract.columnsBitMask = columnsBitMask;
     }
 
-    public static void setOutputIdx(int outputIdx) {
-        HigherLevelExampleAbstract.outputIdx = outputIdx;
-    }
+//    public static void setOutputIdx(int outputIdx) {
+//        HigherLevelExampleAbstract.outputIdx = outputIdx;
+//    }
 
     public static void setDebugging(boolean debugging) {
         HigherLevelExampleAbstract.debugging = debugging;
@@ -258,6 +259,9 @@ public abstract class HigherLevelExampleAbstract {
      * An input processing function, common for all HLEs.
      * Accepts lines of CSV file as {@code String} values. Converts each into a vector ({@code List<Double>}), 
      * possibly using custom parsers.
+     * <br><br>
+     * The vector is later broken into input, output and input for plotting parts. If we want one column to be used for 
+     * both input and output, we can duplicate it through the custom parser.
      */
     public static class ProcessInput implements FlatMapFunction<String, List<Double>> {
         @Override

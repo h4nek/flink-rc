@@ -4,7 +4,6 @@ import higher_level_examples.*;
 import org.apache.flink.api.java.tuple.Tuple2;
 import utilities.PythonPlotting;
 
-import java.util.List;
 
 /**
  * Flink implementation of an example used by Mantas Lukoševičius to demonstrate ESN capabilities. It uses Mackey-Glass 
@@ -26,27 +25,28 @@ public class MantasExample extends HigherLevelExampleFactory {
     public static void main(String[] args) throws Exception {
         HigherLevelExampleAbstract.setup(inputFilePath, columnsBitMask, N_u, N_x, false, 
                 null, true, 2000, learningRate, true, 1e-8);
+        HigherLevelExampleAbstract.setTimeStepsAhead(1);    // predicting (t+1) from t
         // we use the field for all input, plotting input, and output
         // we won't normalize the data as it's not done in the reference code (offline learning is mainly used); 
         // and they are already close to 0
-        HigherLevelExampleAbstract.addCustomParser(new DataParsing() {
-            private Double prevVal = null;  // to realize the input/output shift
-            private int idx = 0;    // for plotting input
-            @Override
-            public void parseAndAddData(String inputString, List<Double> inputVector) {
-                double val = Double.parseDouble(inputString);
-                if (prevVal == null) {  // we need to wait for the second iteration where y(0) = u(1) comes
-                    prevVal = val;
-                    throw new IllegalArgumentException("waiting for the next input");
-                }
-                inputVector.add(0, prevVal);    // input value
-                inputVector.add(1, (double) idx++); // for plotting input - represents indices (time)
-                inputVector.add(2, val);    // output value -- equals input in (t+1)
-                prevVal = val;
-            }
+        HigherLevelExampleAbstract.addCustomParser((inputString, inputVector) -> {
+            double val = Double.parseDouble(inputString);
+            inputVector.add(0, val);    // input value
+            inputVector.add(1, val); // for plotting input - placeholder value (replaced later)
+            inputVector.add(2, val);    // output value -- later shifted to equal input in (t+1)
         });
         
         HigherLevelExampleAbstract.setScalingAlpha(scalingAlpha);
+        
+        // since Flink reads the input file multiple times, it messes up the index incrementing and we need to create 
+        // correct plotting input later...
+        HigherLevelExampleAbstract.addPlottingTransformer(0, new DataTransformation() {
+            private int idx = 0;    // represents indices (time)
+            @Override
+            public double transform(double input) {
+                return idx++;
+            }
+        });
         
         String title = "Mackey-Glass Time Series";
         HigherLevelExampleAbstract.setupPlotting(0, "index", "$y(index + 2000)$", title, 

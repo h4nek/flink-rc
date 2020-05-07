@@ -26,8 +26,12 @@ public class MantasExample extends HigherLevelExampleFactory {
     public static void main(String[] args) throws Exception {
         HigherLevelExampleAbstract.setup(inputFilePath, columnsBitMask, N_u, N_x, false, 
                 null, true, 2000, learningRate, true, 1e-8);
-        HigherLevelExampleAbstract.addCustomParser(0, new DataParsing() {
-            Double prevVal = null;
+        // we use the field for all input, plotting input, and output
+        // we won't normalize the data as it's not done in the reference code (offline learning is mainly used); 
+        // and they are already close to 0
+        HigherLevelExampleAbstract.addCustomParser(new DataParsing() {
+            private Double prevVal = null;  // to realize the input/output shift
+            private int idx = 0;    // for plotting input
             @Override
             public void parseAndAddData(String inputString, List<Double> inputVector) {
                 double val = Double.parseDouble(inputString);
@@ -35,21 +39,15 @@ public class MantasExample extends HigherLevelExampleFactory {
                     prevVal = val;
                     throw new IllegalArgumentException("waiting for the next input");
                 }
-                inputVector.add(0, prevVal);
-                inputVector.add(1, val);    // serves as the output value -- equals input in (t+1)
+                inputVector.add(0, prevVal);    // input value
+                inputVector.add(1, (double) idx++); // for plotting input - represents indices (time)
+                inputVector.add(2, val);    // output value -- equals input in (t+1)
                 prevVal = val;
             }
         });
         
         HigherLevelExampleAbstract.setScalingAlpha(scalingAlpha);
         
-        HigherLevelExampleAbstract.addPlottingTransformer(0, new DataTransformation() {
-            int idx = 0;
-            @Override
-            public double transform(double input) { // replace input values with indices (time)
-                return idx++;
-            }
-        });
         String title = "Mackey-Glass Time Series";
         HigherLevelExampleAbstract.setupPlotting(0, "index", "$y(index + 2000)$", title, 
                 PythonPlotting.PlotType.LINE, null, null, title);

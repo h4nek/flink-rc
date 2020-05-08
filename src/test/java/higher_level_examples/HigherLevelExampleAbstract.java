@@ -20,13 +20,15 @@ public abstract class HigherLevelExampleAbstract {
 
     protected static int N_u = 2;   // dimension of the input (vectors u(t))
     protected static int N_x = 6;   // dimension of the reservoir (N_x*N_x matrix; vectors x(t))
-
+    
     protected static List<Double> lmAlphaInit = null; // initial value of the LM Alpha vector; has to be of length N_x 
                                                       // (or null - zero vector is then created)
     protected static boolean stepsDecay = true; // a step-based decay of the learning rate (for online LR)
     // regularization factor for LM using pseudoinverse; initialized with a small value - should avoid a singular matrix
     protected static double regularizationFactor = 1e-10;
-
+    // specify if we want to apply only Linear Regression (readout phase) and leave out the reservoir
+    protected static boolean lrOnly = false;
+    
     // number of records to be in the training dataset (rest of the file is ignored)
     // we expect that the indexing is 0-based! (otherwise we'll have a different number of I/O pairs)
     protected static int trainingSetSize = (int) Math.floor(69*0.5);
@@ -95,6 +97,10 @@ public abstract class HigherLevelExampleAbstract {
         HigherLevelExampleAbstract.regularizationFactor = regularizationFactor;
     }
 
+    public static void setLrOnly(boolean lrOnly) {
+        HigherLevelExampleAbstract.lrOnly = lrOnly;
+    }
+
     public static void setIncludeMSE(boolean includeMSE) {
         HigherLevelExampleAbstract.includeMSE = includeMSE;
     }
@@ -129,7 +135,7 @@ public abstract class HigherLevelExampleAbstract {
     protected static double range = 1;
     protected static double shift = 0;
     protected static long jumpSize = 2;
-    protected static double sparsity = 80;
+    protected static double sparsity = 0.8;
     protected static double scalingAlpha = 0.5;
     protected static Topology reservoirTopology = Topology.CYCLIC_WITH_JUMPS;
     protected static boolean includeInput = true;

@@ -39,10 +39,10 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
 
         DataSet<List<Double>> dataSet = env.readFile(new TextInputFormat(new Path(inputFilePath)), inputFilePath)
                 .flatMap(new ProcessInput()).returns(Types.LIST(Types.DOUBLE));
-        if (debugging) dataSet.printOnTaskManager("DATA"); //TEST
+        if (debugging) dataSet.printOnTaskManager("DATA");
 
         DataSet<Tuple2<Long, List<Double>>> indexedDataSet = dataSet.map(new BasicIndexer<>());
-        if (debugging) indexedDataSet.printOnTaskManager("INDEXED DATA");  //TEST
+        if (debugging) indexedDataSet.printOnTaskManager("INDEXED DATA");
         
         DataSet<Tuple2<Long, List<Double>>> inputSet = indexedDataSet.map(data -> {
             List<Double> inputVector = new ArrayList<>(data.f1.subList(0, N_u)); // extract all input features
@@ -65,14 +65,20 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                     .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
         }
         
-        DataSet<Tuple2<Long, List<Double>>> reservoirOutput = inputSet.map(new ESNReservoirSparse(N_u, N_x, 
-                init_vector, transformation, range, shift, jumpSize, sparsity, scalingAlpha,
-                reservoirTopology, includeInput, includeBias));
-        if (debugging) reservoirOutput.printOnTaskManager("Reservoir output");
+        if (!lrOnly) {
+            inputSet = inputSet.map(new ESNReservoirSparse(N_u, N_x, 
+                    init_vector, transformation, range, shift, jumpSize, sparsity, scalingAlpha,
+                    reservoirTopology, includeInput, includeBias));
+            if (debugging) inputSet.printOnTaskManager("Reservoir output");
+        }
+        else {  // add the intercept constant (otherwise added at the end of ESNReservoir)
+            inputSet = inputSet.map(x -> {x.f1.add(0, 1.0); return x;})
+                    .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        }
 
-        DataSet<Tuple2<Long, List<Double>>> trainingInput = reservoirOutput.filter(x -> x.f0 < trainingSetSize);
+        DataSet<Tuple2<Long, List<Double>>> trainingInput = inputSet.filter(x -> x.f0 < trainingSetSize);
         DataSet<Tuple2<Long, Double>> trainingOutput = outputSet.filter(x -> x.f0 < trainingSetSize);
-        DataSet<Tuple2<Long, List<Double>>> testingInput = reservoirOutput.filter(x -> x.f0 >= trainingSetSize);
+        DataSet<Tuple2<Long, List<Double>>> testingInput = inputSet.filter(x -> x.f0 >= trainingSetSize);
         DataSet<Tuple2<Long, Double>> testingOutput = outputSet.filter(x -> x.f0 >= trainingSetSize);
         
         LinearRegression lr = new LinearRegression();
@@ -141,6 +147,10 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
 //                    plotFileName, xlabel, ylabel, title, inputIndex, plotType, inputHeaders, outputHeaders,
 //                    predictionsOffline);
             // todo unified headers; remove inputIndex
+            if (lrOnly) {   // add LR to titles
+                title += " LR";
+                plotFileName += " LR";
+            }
             PythonPlotting.plotRCPredictionsDataSetNew(inputPlottingSet, outputSet, predictions,
                     plotFileName, xlabel, ylabel, title, plotType, null, predictionsOffline);
         }

@@ -272,11 +272,12 @@ public abstract class HigherLevelExampleAbstract {
     /**
      * Add a standard min-max normalization, so that all values are roughly in [-1; 1] range.
      * <br>
-     * Applied to the column that's "next in line".
+     * Applied to the column that's "next in line". Useful for ESN input and output features.
      * @param max maximum observed value
      * @param min minimum observed value
+     * @param indices vector coordinates that the normalized value should be assigned to
      */
-    public static void normalizeData(double max, double min) {
+    public static void addDataNormalizer(double max, double min, int... indices) {
         addCustomParser(new DataParsing() {
             @Override
             public void parseAndAddData(String inputString, List<Double> inputVector) {
@@ -284,10 +285,21 @@ public abstract class HigherLevelExampleAbstract {
                 // first we shift the min to 0; then divide by 1/2 of the total span, and then again shift the values 
                 // from [0, 2] to [-1, 1] range
                 double normalValue = (value - min)/((max - min)/2) - 1; // normalization
-                inputVector.add(normalValue);
+                for (int index : indices) {
+                    inputVector.add(index, normalValue);
+                }
             }
         });
-        addPlottingTransformer(new DataTransformation() {
+    }
+
+    /**
+     * Used for output/prediction features plotting.
+     * @param max maximum observed value
+     * @param min minimum observed value
+     * @param N_u size of the input vector; used to add the transformation at the right place
+     */
+    public static void addOutputDenormalizer(double max, double min, int N_u) {
+        addPlottingTransformer(N_u, new DataTransformation() {
             @Override
             public double transform(double input) {
                 return (input + 1)*((max - min)/2) + min; // denormalization -- apply inverse transformation

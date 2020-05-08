@@ -47,8 +47,8 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     private UnaryFunction<Double> unaryFunction;  // an applicable version of the transformation
     private final List<Double> initVector; // an initial (internal) state vector (x(0)); has to have size N_x*1 or be null
                                             // (0 vector is created in that case)
-    private final double range; // range in which the values of matrices will be randomly chosen, centered at 0
-    private final double shift; // shift of the interval for generating random values
+    private final double range; // range in which the values of matrices will be randomly chosen, centered at 0 by default
+    private final double shift; // shift of the interval (0-centered by default) for generating random values
     private final long jumpSize; // the size of bidirectional jumps when W is initialized using a deterministic pattern
     private final double alpha;   // scaling hyperparameter
 //    private final boolean randomized;  // signifies if W should consist of individually randomized weights 
@@ -59,8 +59,9 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     private final boolean includeBias;  // include the bias constant as part of the output ([1 x(t)] or [1 u(t) x(t)])
                                         // (corresponds to the y-intercept in LR)
     private final Topology reservoirTopology;
-    private final double sparsity;  // a number between 0-100 (%), valid if SPARSE Topology is chosen.
-                                    // 0 means fully dense reservoir, 100 means a zero matrix
+    private final double sparsity;  // a number between 0-1 (*100 %), valid if SPARSE Topology is chosen.
+                                    // 0 means fully dense reservoir, 1 means a zero matrix
+                                    // the actual sparsity of W will be higher than or equal to the specified value
     
     public enum Topology{
         /** Matrix with only the bidirectional jumps (connections between nodes jumpSize apart; symmetric.<br>
@@ -77,7 +78,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
          * (otherwise two random constants are used). */
         CYCLIC_WITH_JUMPS_RANDOMIZED("Cyclic with Jumps Randomized"),
         /** Reservoir with random (typically) sparse topology, influenced by {@link #sparsity}. */
-        SPARSE("Sparse");//TODO create Sparse topology!!
+        SPARSE("Sparse");
 
         private String string;
         Topology(String string) {
@@ -168,7 +169,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     }
     
     public ESNReservoirSparse(int N_u, int N_x, List<Double> initVector, Transformation transformation) {
-        this(N_u, N_x, initVector, transformation, 1, 0, 2, 80, 0.5, 
+        this(N_u, N_x, initVector, transformation, 1, 0, 2, 0.8, 0.5, 
                 Topology.CYCLIC_WITH_JUMPS, true, true);
     }
 
@@ -247,44 +248,55 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         boolean randomized = false;
         boolean jumpsOnly = false;
         boolean cycle = false;
-        if (reservoirTopology == Topology.CYCLIC_WITH_JUMPS_RANDOMIZED || 
-                reservoirTopology == Topology.JUMPS_ONLY_RANDOMIZED) {
-            randomized = true;
-        }
-        if (reservoirTopology == Topology.JUMPS_ONLY || reservoirTopology == Topology.JUMPS_ONLY_RANDOMIZED) {
-            jumpsOnly = true;
-        }
-        if (reservoirTopology == Topology.CYCLIC_WITH_JUMPS || reservoirTopology == Topology.CYCLIC_WITH_JUMPS_RANDOMIZED) {
-            cycle = true;
-        }
-        for (int i = 0; i < N_x; i++) {
-            if (cycle) {
-                if (i % jumpSize == 0) {    // jumps will start at "node 0" and end there or before
-                    long nextPos = (i + jumpSize) % N_x;
-                    long prevPos = (i - jumpSize + N_x) % N_x;
-                    if (nextPos % jumpSize == 0)    // can be violated at the "last" node (if jumpSize ∤ N_x)
-                        W_internal.add(i, nextPos, randomized ? getRandomWeight() : jumpWeight);
-                    if (prevPos % jumpSize == 0)    // can be violated at the "node 0" (if jumpSize ∤ N_x)
-                        W_internal.add(i, prevPos, randomized ? getRandomWeight() : jumpWeight);
-                }
-                if (i == 0) {   // unidirectional cycle
-//                    System.out.println("i = " + i);
-                    W_internal.add(i, N_x - 1, randomized ? getRandomWeight() : cycleWeight);
-                }
-                else {
-//                    System.out.println("i = " + i);
-                    W_internal.add(i, i-1, randomized ? getRandomWeight() : cycleWeight);   // unidirectional cycle
-                }
+        if (reservoirTopology == Topology.SPARSE) {
+            List<Integer> indices = new ArrayList<>(N_x*N_x);
+            for (int i = 0; i < N_x*N_x; i++) {
+                indices.add(i); // represents the matrix indices in a serialized fashion
             }
-            else if (jumpsOnly) {  // jumps saturated matrix -- symmetric with exactly two values in each row/col
-                W_internal.add(i, (i + jumpSize) % N_x, randomized ? getRandomWeight() : jumpWeight);
-                W_internal.add(i, (i - jumpSize + N_x) % N_x, randomized ? getRandomWeight() : jumpWeight);
-            }
-            else if (reservoirTopology == Topology.SPARSE) {
-                //TODO
+            Collections.shuffle(indices); // create a random permutation of the indices
+            // now we select the first sparsity % of indices to hold a (pseudo)random (practically) non-zero value
+            for (int i = 0; i < sparsity*N_x*N_x; ++i) {
+                int index = indices.get(i);
+                W_internal.add(index, getRandomWeight()); // the index is "deserialized" automatically by ojAlgo
             }
         }
-//        System.out.println("reservoir W: " + W_internal);
+        else {
+            if (reservoirTopology == Topology.CYCLIC_WITH_JUMPS_RANDOMIZED || 
+                    reservoirTopology == Topology.JUMPS_ONLY_RANDOMIZED) {
+                randomized = true;
+            }
+            if (reservoirTopology == Topology.JUMPS_ONLY || reservoirTopology == Topology.JUMPS_ONLY_RANDOMIZED) {
+                jumpsOnly = true;
+            }
+            if (reservoirTopology == Topology.CYCLIC_WITH_JUMPS || reservoirTopology == Topology.CYCLIC_WITH_JUMPS_RANDOMIZED) {
+                cycle = true;
+            }
+            for (int i = 0; i < N_x; i++) {
+                if (cycle) {
+                    if (i % jumpSize == 0) {    // jumps will start at "node 0" and end there or before
+                        long nextPos = (i + jumpSize) % N_x;
+                        long prevPos = (i - jumpSize + N_x) % N_x;
+                        if (nextPos % jumpSize == 0)    // can be violated at the "last" node (if jumpSize ∤ N_x)
+                            W_internal.add(i, nextPos, randomized ? getRandomWeight() : jumpWeight);
+                        if (prevPos % jumpSize == 0)    // can be violated at the "node 0" (if jumpSize ∤ N_x)
+                            W_internal.add(i, prevPos, randomized ? getRandomWeight() : jumpWeight);
+                    }
+                    if (i == 0) {   // unidirectional cycle
+    //                    System.out.println("i = " + i);
+                        W_internal.add(i, N_x - 1, randomized ? getRandomWeight() : cycleWeight);
+                    }
+                    else {
+    //                    System.out.println("i = " + i);
+                        W_internal.add(i, i-1, randomized ? getRandomWeight() : cycleWeight);   // unidirectional cycle
+                    }
+                }
+                else if (jumpsOnly) {  // jumps saturated matrix -- symmetric with exactly two values in each row/col
+                    W_internal.add(i, (i + jumpSize) % N_x, randomized ? getRandomWeight() : jumpWeight);
+                    W_internal.add(i, (i - jumpSize + N_x) % N_x, randomized ? getRandomWeight() : jumpWeight);
+                }
+            }
+        }
+        System.out.println("reservoir W: " + W_internal);
 
         /* Custom MatrixStore */    // alternative
 //        JumpsSaturatedMatrix W_input_jumps = new JumpsSaturatedMatrix(N_x, range, jumpSize);

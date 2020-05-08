@@ -13,6 +13,12 @@ public abstract class HigherLevelExampleFactory {
     protected static double learningRate = 0.01;
     protected static double scalingAlpha = 0.5;
     protected static double trainingSetRatio = 0.8;
+    
+    // used for min-max normalization
+    /** maximum observed value (roughly) */
+    protected static double max;
+    /** minimum observed value (roughly) */
+    protected static double min;
 
     protected static double onlineMSE;
     protected static double offlineMSE;

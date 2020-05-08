@@ -15,6 +15,9 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
         learningRate = 50;
         scalingAlpha = 0.5;
         trainingSetRatio = 0.8;
+        
+        max = 0;
+        min = -20;
     }
 
     public static void main(String[] args) throws Exception {
@@ -33,7 +36,7 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
 //            y.add(0, normalMwe);    // input feature
 //            y.add(normalMwe); // for the output - time series prediction
 //        });
-        HigherLevelExampleAbstract.addDataNormalizer(0, -20, 0, 2);
+        HigherLevelExampleAbstract.addDataNormalizer(max, min, 0, 2);
 //        HigherLevelExampleAbstract.addCustomParser(2, (x, y) -> {double observations = Double.parseDouble(x); 
 //            y.add((observations - 18)/18);});
         HigherLevelExampleAbstract.setupReservoir(null, Math::tanh, 1, 0, 2, .8, 
@@ -43,7 +46,7 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
 //        HigherLevelExampleAbstract.addPlottingTransformer(0, x -> x*14 + 14);
 //        HigherLevelExampleAbstract.addPlottingTransformer(1, x -> x*14 + 14);
 //        HigherLevelExampleAbstract.addPlottingTransformer(1, x -> x*14 + 14);   // for the output
-        HigherLevelExampleAbstract.addOutputDenormalizer(0, -20, N_u);
+        HigherLevelExampleAbstract.addOutputDenormalizer(max, min, N_u);
         
         HigherLevelExampleBatch.run();
         

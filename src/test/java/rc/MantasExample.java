@@ -49,7 +49,7 @@ public class MantasExample extends HigherLevelExampleFactory {
         });
         
         String title = "Mackey-Glass Time Series";
-        HigherLevelExampleAbstract.setupPlotting(0, "index", "$y(index + 2000)$", title, 
+        HigherLevelExampleAbstract.setupPlotting(0, title, "index", "$y(index + 2000)$",
                 PythonPlotting.PlotType.LINE, null, null, title);
         HigherLevelExampleBatch.run();
 

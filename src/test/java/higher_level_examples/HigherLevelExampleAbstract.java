@@ -1,7 +1,6 @@
 package higher_level_examples;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.util.Collector;
 import rc_core.ESNReservoirSparse.Topology;
 import rc_core.Transformation;
@@ -119,10 +118,10 @@ public abstract class HigherLevelExampleAbstract {
      * @param parser custom parsing implementation
      */
     public static void addCustomParser(DataParsing parser) {
-        customParsers.put(defaultIndex, parser);
-        ++defaultIndex;
+        customParsers.put(defaultParsingIndex, parser);
+        ++defaultParsingIndex;
     }
-    private static int defaultIndex = 0;
+    private static int defaultParsingIndex = 0;
 
     /* Reservoir configuration */
     protected static List<Double> init_vector = null;  // creates a 0 vector of N_x length
@@ -203,7 +202,7 @@ public abstract class HigherLevelExampleAbstract {
     protected static String plotFileName = title;
     protected static Map<Integer, DataTransformation> plottingTransformers = new HashMap<>();
 
-    public static void setupPlotting(int inputIndex, String xlabel, String ylabel, String title,
+    public static void setupPlotting(int inputIndex, String title, String xlabel, String ylabel,
                                      PythonPlotting.PlotType plotType, List<String> inputHeaders,
                                      List<String> outputHeaders, String plotFileName) {
         HigherLevelExampleAbstract.inputIndex = inputIndex;
@@ -260,6 +259,43 @@ public abstract class HigherLevelExampleAbstract {
     }
 
     /**
+     * Specify only the transformer. Convenient when adding a custom plotting transformation for every input/output index. 
+     * The index is incremented after each call.
+     * @param transformer custom transformation
+     */
+    public static void addPlottingTransformer(DataTransformation transformer) {
+        plottingTransformers.put(defaultTransformerIndex, transformer);
+        ++defaultTransformerIndex;
+    }
+    private static int defaultTransformerIndex = 0;
+
+    /**
+     * Add a standard min-max normalization, so that all values are roughly in [-1; 1] range.
+     * <br>
+     * Applied to the column that's "next in line".
+     * @param max maximum observed value
+     * @param min minimum observed value
+     */
+    public static void normalizeData(double max, double min) {
+        addCustomParser(new DataParsing() {
+            @Override
+            public void parseAndAddData(String inputString, List<Double> inputVector) {
+                double value = Double.parseDouble(inputString);
+                // first we shift the min to 0; then divide by 1/2 of the total span, and then again shift the values 
+                // from [0, 2] to [-1, 1] range
+                double normalValue = (value - min)/((max - min)/2) - 1; // normalization
+                inputVector.add(normalValue);
+            }
+        });
+        addPlottingTransformer(new DataTransformation() {
+            @Override
+            public double transform(double input) {
+                return (input + 1)*((max - min)/2) + min; // denormalization -- apply inverse transformation
+            }
+        });
+    }
+
+    /**
      * An input processing function, common for all HLEs.
      * Accepts lines of CSV file as {@code String} values. Converts each into a vector ({@code List<Double>}), 
      * possibly using custom parsers.
@@ -273,7 +309,8 @@ public abstract class HigherLevelExampleAbstract {
             String[] items = line.split(",");
             List<Double> inputVector = new ArrayList<>();
             for (int i = 0; i < items.length; ++i) {
-                // "normalize" the data to be in some reasonable range for the transformation
+                // perform any necessary modifications
+                // (e.g. "normalize" the data to be in some reasonable range for the transformation)
                 if (columnsBitMask.charAt(i) != '0') {
                     try {
                         if (customParsers != null && customParsers.containsKey(i)) {
@@ -282,7 +319,7 @@ public abstract class HigherLevelExampleAbstract {
                             inputVector.add(Double.parseDouble(items[i]));
                         }
                     }
-                    catch (Exception e) {   // dealing with invalid lines - exclude them
+                    catch (Exception e) {   // dealing with invalid/unwanted lines - exclude them
                         if (debugging) {
                             System.err.println("invalid cell: " + items[i]);
                             System.err.println("line: " + line);

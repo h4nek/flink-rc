@@ -17,7 +17,6 @@ import utilities.Utilities;
 import java.util.*;
 
 public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
-    private static boolean plottingMode = true;
     private static double onlineMSE;
     private static double offlineMSE;
 
@@ -29,9 +28,6 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         return offlineMSE;
     }
 
-    public static void setPlottingMode(boolean plottingMode) {
-        HigherLevelExampleBatch.plottingMode = plottingMode;
-    }
 
     public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();

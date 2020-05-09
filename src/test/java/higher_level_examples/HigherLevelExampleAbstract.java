@@ -35,7 +35,9 @@ public abstract class HigherLevelExampleAbstract {
     protected static boolean includeMSE = false;
     protected static int timeStepsAhead = 0;    // in case of time series predictions, how far ahead do we want to predict?
                                                 // changes the indexing of the output set/stream (if != 0)
-
+    /** if we want to plot or not */
+    protected static boolean plottingMode = true;
+    
     /**
      * Configuring the RC by providing all the general parameters before running it with <i>main</i>. Setups for 
      * reservoir and plotting are also available.
@@ -107,6 +109,10 @@ public abstract class HigherLevelExampleAbstract {
 
     public static void setTimeStepsAhead(int timeStepsAhead) {
         HigherLevelExampleAbstract.timeStepsAhead = timeStepsAhead;
+    }
+
+    public static void setPlottingMode(boolean plottingMode) {
+        HigherLevelExampleAbstract.plottingMode = plottingMode;
     }
 
     /**

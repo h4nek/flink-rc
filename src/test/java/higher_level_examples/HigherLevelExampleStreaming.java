@@ -2,6 +2,7 @@ package higher_level_examples;
 
 import lm.LinearRegression;
 import lm.streaming.ExampleStreamingUtilities;
+import org.apache.flink.api.java.DataSet;
 import utilities.BasicIndexer;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.io.TextInputFormat;
@@ -22,13 +23,15 @@ import rc_core.ESNReservoirSparse;
 import java.util.*;
 
 /**
- * An example that runs the common code and provides the ability to test Reservoir Computing with custom configuration 
- * and data. A version using only {@link DataStream}.
- * 
+ * A general "example" that runs the common code and provides the ability to test Reservoir Computing with custom 
+ * configuration and data. A version using only {@link DataStream}.
+ *
  * It supports input in form of a CSV file, where each row is a DataSet record and each column corresponds to a feature.
  * There might be more columns than required for the regression. The needed columns can be specified with a bit mask.
- * 
- * The class should first be configured with the setup() method and/or individual setters. Then, the main method 
+ * There might also be invalid or unwanted rows, which may be filtered out by throwing an {@link Exception} using custom 
+ * parsers.
+ *
+ * The class should first be configured with the setup methods and/or individual setters. Then, the main method 
  * should be called for execution.
  */
 public class HigherLevelExampleStreaming extends HigherLevelExampleAbstract {

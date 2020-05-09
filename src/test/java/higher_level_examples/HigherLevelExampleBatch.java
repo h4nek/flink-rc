@@ -9,6 +9,7 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.io.TextInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import rc_core.ESNReservoirSparse;
 import utilities.BasicIndexer;
 import utilities.PythonPlotting;
@@ -16,6 +17,18 @@ import utilities.Utilities;
 
 import java.util.*;
 
+/**
+ * A general "example" that runs the common code and provides the ability to test Reservoir Computing with custom 
+ * configuration and data. A version using only {@link DataSet}.
+ *
+ * It supports input in form of a CSV file, where each row is a DataSet record and each column corresponds to a feature.
+ * There might be more columns than required for the regression. The needed columns can be specified with a bit mask.
+ * There might also be invalid or unwanted rows, which may be filtered out by throwing an {@link Exception} using custom 
+ * parsers.
+ *
+ * The class should first be configured with the setup methods and/or individual setters. Then, the main method 
+ * should be called for execution.
+ */
 public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
     private static double onlineMSE;
     private static double offlineMSE;

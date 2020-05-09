@@ -13,7 +13,9 @@ import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
 import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 
 import java.io.Serializable;
@@ -80,11 +82,11 @@ public class LinearRegression implements Serializable {
     public DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       DataStream<Tuple2<Long, Double>> outputStream,
                                                       List<Double> alphaInit,
-                                                      double learningRate, int numSamples, boolean includeMSE, 
-                                                      boolean stepsDecay) {
-        return inputStream.coGroup(outputStream).where(x -> x.f0).equalTo(y -> y.f0).window(TumblingEventTimeWindows
-                .of(Time.seconds(1))).apply(new MLRFitCoGroupFunction(alphaInit, learningRate, numSamples, includeMSE,
-                stepsDecay, 32, 1.0/16));
+                                                      double learningRate, int numSamples, boolean includeMSE,
+                                                      boolean stepsDecay, WindowAssigner<Object, TimeWindow> windowAssigner) {
+        return inputStream.coGroup(outputStream).where(x -> x.f0).equalTo(y -> y.f0).window(windowAssigner)
+                .apply(new MLRFitCoGroupFunction(alphaInit, learningRate, numSamples, includeMSE, stepsDecay, 
+                        32, 1.0/16));
     }
     
     /**
@@ -142,9 +144,10 @@ public class LinearRegression implements Serializable {
     
     private static class MLRPredictCoProcessFunction extends CoProcessFunction<Tuple2<Long, List<Double>>, 
             Tuple2<Long, List<Double>>, Tuple2<Long, Double>> {
-        private List<Double> alpha;
-        private long alphaTimestamp = Long.MIN_VALUE;
-        private List<Tuple2<Long, List<Double>>> inputsBacklog = new ArrayList<>();
+        private List<Double> alpha; // latest alpha vector
+        private long alphaTimestamp = Long.MIN_VALUE; // timestamp of the latest alpha vector
+        private List<Tuple2<Long, List<Double>>> inputsBacklog = new ArrayList<>(); // input vectors that are yet to be 
+                                                                      // processed after the final alpha vector arrives
         private long EOTRAINING_TIMESTAMP;
         
         public MLRPredictCoProcessFunction(long EOTRAINING_TIMESTAMP) {
@@ -156,6 +159,7 @@ public class LinearRegression implements Serializable {
                                     Collector<Tuple2<Long, Double>> out) throws Exception {
             if (alphaTimestamp < EOTRAINING_TIMESTAMP) {
 //                System.out.println("storing the input");
+//                System.out.println("input:" + input);
                 inputsBacklog.add(input);
             }
             else if (inputsBacklog.size() > 0) {
@@ -163,6 +167,7 @@ public class LinearRegression implements Serializable {
                 for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {
                     predict(oldInput, out, alpha);
                 }
+                inputsBacklog.clear();
             }
             else {
 //                System.out.println("outputting the new input");
@@ -183,6 +188,8 @@ public class LinearRegression implements Serializable {
         @Override
         public void processElement2(Tuple2<Long, List<Double>> alpha, Context ctx, 
                                     Collector<Tuple2<Long, Double>> out) throws Exception {
+//            System.out.println("stored alpha timestamp: " + alphaTimestamp);
+//            System.out.println("incoming alpha timestamp: " + ctx.timestamp());
             if (ctx.timestamp() > alphaTimestamp) { // update the model with newest Alpha
 //                System.out.println("current alpha timestamp: " + ctx.timestamp());
                 this.alpha = alpha.f1;
@@ -193,6 +200,7 @@ public class LinearRegression implements Serializable {
                 for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {
                     predict(oldInput, out, this.alpha);
                 }
+                inputsBacklog.clear();
             }
         }
     }

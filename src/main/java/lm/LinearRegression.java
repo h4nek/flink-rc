@@ -1,17 +1,12 @@
 package lm;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
-import org.apache.flink.api.common.state.ListState;
-import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
-import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
 import org.apache.flink.streaming.api.windowing.time.Time;
@@ -133,31 +128,45 @@ public class LinearRegression implements Serializable {
 
     /**
      * MLR model prediction using DataStreams. Training is separate and considered finished by 
-     * passing the EOTRAINING_TIMESTAMP.
+     * producing the final Alpha with (trainingSetSize - 1) index.
      */
     public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                                     DataStream<Tuple2<Long, List<Double>>> alphaStream,
-                                                                    long EOTRAINING_TIMESTAMP) {
-        return inputStream.connect(alphaStream).process(new MLRPredictCoProcessFunction(EOTRAINING_TIMESTAMP))
+                                                                    int trainingSetSize) {
+        return inputStream.connect(alphaStream).process(new MLRPredictCoProcessFunction(trainingSetSize))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
     }
-    
+
+    /**
+     * A CoProcessFunction that buffers the input elements until the final alpha arrives.
+     * Then it starts to emit predictions using the trained LM for all past and future inputs.
+     * 
+     * Note that the timestamp of the output is based on the timestamp of the element currently being processed
+     * (even if we emmit another element). (E.g. if we emit predictions of past inputs during the final alpha process,
+     * they will all have this alpha's timestamp.)
+     */
     private static class MLRPredictCoProcessFunction extends CoProcessFunction<Tuple2<Long, List<Double>>, 
             Tuple2<Long, List<Double>>, Tuple2<Long, Double>> {
         private List<Double> alpha; // latest alpha vector
-        private long alphaTimestamp = Long.MIN_VALUE; // timestamp of the latest alpha vector
+//        private long alphaTimestamp = Long.MIN_VALUE; // timestamp of the latest alpha vector
+        private long alphaIndex = Long.MIN_VALUE; // index of the latest alpha vector
         private List<Tuple2<Long, List<Double>>> inputsBacklog = new ArrayList<>(); // input vectors that are yet to be 
                                                                       // processed after the final alpha vector arrives
-        private long EOTRAINING_TIMESTAMP;
+//        private long EOTRAINING_TIMESTAMP;
+        private int trainingSetSize;
         
-        public MLRPredictCoProcessFunction(long EOTRAINING_TIMESTAMP) {
-            this.EOTRAINING_TIMESTAMP = EOTRAINING_TIMESTAMP;
+//        public MLRPredictCoProcessFunction(long EOTRAINING_TIMESTAMP) {
+//            this.EOTRAINING_TIMESTAMP = EOTRAINING_TIMESTAMP;
+//        }
+        public MLRPredictCoProcessFunction(int trainingSetSize) {
+            this.trainingSetSize = trainingSetSize;
         }
 
         @Override
         public void processElement1(Tuple2<Long, List<Double>> input, Context ctx, 
                                     Collector<Tuple2<Long, Double>> out) throws Exception {
-            if (alphaTimestamp < EOTRAINING_TIMESTAMP) {
+//            if (alphaTimestamp < EOTRAINING_TIMESTAMP) {
+            if (alphaIndex < trainingSetSize) {
 //                System.out.println("storing the input");
 //                System.out.println("input:" + input);
                 inputsBacklog.add(input);
@@ -177,26 +186,29 @@ public class LinearRegression implements Serializable {
 
         private static void predict(Tuple2<Long, List<Double>> input, Collector<Tuple2<Long, Double>> out, 
                                     List<Double> alpha) {
+            System.out.println("used alpha: " + alpha);
             List<Double> inputVector = input.f1;
             double y_pred = 0;
             for (int i = 0; i < alpha.size(); i++) {
                 y_pred += alpha.get(i) * inputVector.get(i);
             }
+            System.out.println("computed pred: " + y_pred);
             out.collect(Tuple2.of(input.f0, y_pred));
         }
 
         @Override
         public void processElement2(Tuple2<Long, List<Double>> alpha, Context ctx, 
                                     Collector<Tuple2<Long, Double>> out) throws Exception {
-//            System.out.println("stored alpha timestamp: " + alphaTimestamp);
-//            System.out.println("incoming alpha timestamp: " + ctx.timestamp());
-            if (ctx.timestamp() > alphaTimestamp) { // update the model with newest Alpha
-//                System.out.println("current alpha timestamp: " + ctx.timestamp());
+            System.out.println("alpha value: " + alpha);
+            System.out.println("incoming alpha timestamp: " + ctx.timestamp());
+//            if (ctx.timestamp() > alphaTimestamp) { // update the model with newest Alpha
+            if (alpha.f0 > alphaIndex) { // update the model with newest Alpha
                 this.alpha = alpha.f1;
-                alphaTimestamp = ctx.timestamp();
+                alphaIndex = alpha.f0;
             }
-            if (alphaTimestamp >= EOTRAINING_TIMESTAMP) {
-//                System.out.println("Releasing the backlog (from the Alpha process)");
+//            if (alphaTimestamp >= EOTRAINING_TIMESTAMP) {
+            if (alphaIndex >= trainingSetSize - 1) {    // we have the final Alpha
+                System.out.println("Releasing the backlog (from the Alpha process)");
                 for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {
                     predict(oldInput, out, this.alpha);
                 }

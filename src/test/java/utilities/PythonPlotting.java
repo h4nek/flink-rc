@@ -2,16 +2,23 @@ package utilities;
 
 import lm.batch.ExampleBatchUtilities;
 import org.apache.flink.api.common.functions.FlatJoinFunction;
+import org.apache.flink.api.common.serialization.Encoder;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.core.fs.Path;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
+import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink;
+import org.apache.flink.streaming.api.functions.windowing.ProcessAllWindowFunction;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
+import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 import rc_core.ESNReservoirSparse.Topology;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -202,9 +209,104 @@ public class PythonPlotting {
                     return Tuple2.of(x.f0, data);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         }
 
-//        List<Tuple2<Long, Double>> inputList = inputSet.collect();
         List<Tuple2<Long, List<Double>>> combinedInputOutputList = combinedInputOutputSet.collect();
         plotRCPredictionsNew(combinedInputOutputList, plotFileName, xlabel, ylabel, title, plotType, headers);
+    }
+
+    /**
+     * Using only one feature of the input set to be transferred for storage in CSV and usage in the plot.
+     * Probably more optimal and simpler than the old way.
+     */
+    public static void plotRCPredictionsDataStreamNew(DataStream<Tuple2<Long, Double>> inputStream,
+                                                      DataStream<Tuple2<Long, Double>> outputStream,
+                                                      DataStream<Tuple2<Long, Double>> predictionStream, String plotFileName,
+                                                      String xlabel, String ylabel, String title,
+                                                      PlotType plotType, List<String> headers,
+                                                      DataStream<Tuple2<Long, Double>> predictionOfflineStream, 
+                                                      WindowAssigner<Object, TimeWindow> windowAssigner) throws Exception {
+        // join inputs, outputs and online/offline predictions
+        DataStream<Tuple2<Long, List<Double>>> combinedInputOutputStream = inputStream.join(outputStream)
+                .where(x -> x.f0).equalTo(y -> y.f0).window(windowAssigner)
+                .apply((x, y) -> {List<Double> data = new ArrayList<>(); data.add(x.f1); data.add(y.f1); 
+                    return Tuple2.of(x.f0, data);}, Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)))
+                .join(predictionStream).where(x -> x.f0).equalTo(y -> y.f0).window(windowAssigner)
+                .apply((x,y) -> {List<Double> data = new ArrayList<>(x.f1); data.add(y.f1); return Tuple2.of(x.f0, data);}, 
+                        Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        if (predictionOfflineStream != null) {
+            combinedInputOutputStream = combinedInputOutputStream.join(predictionOfflineStream).where(x -> x.f0).equalTo(y -> y.f0)
+                    .window(windowAssigner).apply((x,y) -> {List<Double> data = new ArrayList<>(x.f1); data.add(y.f1); 
+                        return Tuple2.of(x.f0, data);}, Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+        }
+        combinedInputOutputStream.print("To be saved in file");//TEST
+        // plotting through DataStreams (windows) - we can't collect them
+//        plotRCPredictionsNew(combinedInputOutputList, plotFileName, xlabel, ylabel, title, plotType, headers);
+        combinedInputOutputStream.windowAll(windowAssigner).process(
+                new ProcessAllWindowFunction<Tuple2<Long, List<Double>>, String, TimeWindow>() {
+                    @Override
+                    public void process(Context context, Iterable<Tuple2<Long, List<Double>>> elements, 
+                                        Collector<String> out) throws Exception {
+                        StringBuilder stringRecords = new StringBuilder();
+                        if (headers != null)
+                            stringRecords.append(Utilities.listToString(headers)).append('\n');
+                        for (Tuple2<Long, List<Double>> elem : elements) {  // we expect the elements to be in order
+                            stringRecords.append(elem.f0).append(",")
+                                    .append(Utilities.listToString(elem.f1)).append('\n');
+                        }
+                        System.out.println("time: " + context.window().getEnd());
+                        System.out.println("records to write: " + elements);
+                        out.collect(stringRecords.toString());
+                    }
+                })
+            .addSink(new SinkFunction<String>() {   // write to a new CSV file for every window
+                    @Override
+                    public void invoke(String value, Context context) throws Exception {
+                        // write records to CSV
+                        String pathToFile = pathToDataOutputDir + "streaming\\" + plotFileName + 
+                                "_PlottingData_"+ context.timestamp() + ".csv";
+                        File file = new File(pathToFile);
+                        file.getParentFile().mkdirs();
+                        file.createNewFile();
+                        FileWriter writer = new FileWriter(file);
+                        writer.write(value);
+                        writer.close();
+                        
+                        // invoke the Python plotting script
+                        String plotTypeString = "-";
+                        if (plotType == PlotType.POINTS) {
+                            plotTypeString = ".";
+                        }
+
+                        String[] params = {
+                                "python",
+                                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotRCPredictionsNew.py",
+                                "streaming\\" + plotFileName + "_PlottingData_"+ context.timestamp(),
+                                plotFileName,
+                                xlabel,
+                                ylabel,
+                                title,
+                                plotTypeString,
+                        };
+                        Process process = Runtime.getRuntime().exec(params);
+                        
+                        /*Read input streams*/ // Debugging
+                        printStream(process.getInputStream());
+                        printStream(process.getErrorStream());
+                        System.out.println(process.exitValue());
+                    }
+        });
+    }
+
+    /**
+     * A version without offline predictions.
+     */
+    public static void plotRCPredictionsDataStreamNew(DataStream<Tuple2<Long, Double>> inputStream,
+                                                      DataStream<Tuple2<Long, Double>> outputStream,
+                                                      DataStream<Tuple2<Long, Double>> predictionStream, String plotFileName,
+                                                      String xlabel, String ylabel, String title,
+                                                      PlotType plotType, List<String> headers, 
+                                                      WindowAssigner<Object, TimeWindow> windowAssigner) throws Exception {
+        plotRCPredictionsDataStreamNew(inputStream, outputStream, predictionStream, plotFileName, xlabel, ylabel, 
+                title, plotType, headers, null, windowAssigner);
     }
     
     public static void  plotMatrixHeatmap(double[][] matrix, String title) throws IOException {
@@ -218,7 +320,7 @@ public class PythonPlotting {
         };
         Process process = Runtime.getRuntime().exec(params);
 
-        /*Read input streams*/ // TEST
+        /*Read input streams*/ // Debugging
         printStream(process.getInputStream());
         printStream(process.getErrorStream());
         System.out.println(process.exitValue());

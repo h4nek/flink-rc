@@ -67,7 +67,7 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                     reservoirTopology, includeInput, includeBias));
             if (debugging) inputSet.printOnTaskManager("Reservoir output");
         }
-        else {  // add the intercept constant (otherwise added at the end of ESNReservoir)
+        else {  // add the intercept constant (normally added at the end of ESNReservoir)
             inputSet = inputSet.map(x -> {x.f1.add(0, 1.0); return x;})
                     .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         }
@@ -114,17 +114,7 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
 
 
         if (plottingMode) {
-            // transform data for plotting
-            // we need to take the inputs as they were before they went into the reservoir
-//            DataSet<Tuple2<Long, List<Double>>> plottingInputSet = inputSet.map(x -> {
-//                        for (int i = 0; i < x.f1.size(); ++i) {
-//                            if (plottingTransformers.containsKey(i)) {
-//                                Double transformed = plottingTransformers.get(i).transform(x.f1.remove(i));
-//                                x.f1.add(i, transformed);
-//                            }
-//                        }
-//                        return x;
-//                    }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
+            // transform data for plotting);
             // optionally transform the input plotting set (if it couldn't be correctly initialized right away)
             inputPlottingSet = inputPlottingSet.map(x -> {
                 if (plottingTransformers.containsKey(0)) {
@@ -132,11 +122,8 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                 }
                 return x;
             }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
-//            List<Tuple2<Long, Double>> plottingOutputSet = modifyForPlotting(testingOutput);
-//            List<Tuple2<Long, Double>> plottingPredictions = modifyForPlotting(predictions);
-//            List<Tuple2<Long, Double>> plottingPredictionsOffline = modifyForPlotting(predictionsOffline);
             // shift the indices back for the plotting purposes (I/O should be from common time step)
-            outputSet = shiftIndicesAndTransformForPlotting(outputSet, timeStepsAhead);
+            testingOutput = shiftIndicesAndTransformForPlotting(testingOutput, timeStepsAhead);
             predictions = shiftIndicesAndTransformForPlotting(predictions, timeStepsAhead);
             predictionsOffline = shiftIndicesAndTransformForPlotting(predictionsOffline, timeStepsAhead);
 //            PythonPlotting.plotRCPredictionsDataSet(plottingInputSet, outputSet, predictions,
@@ -147,7 +134,7 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                 title += " LR";
                 plotFileName += " LR";
             }
-            PythonPlotting.plotRCPredictionsDataSetNew(inputPlottingSet, outputSet, predictions,
+            PythonPlotting.plotRCPredictionsDataSetNew(inputPlottingSet, testingOutput, predictions,
                     plotFileName, xlabel, ylabel, title, plotType, null, predictionsOffline);
         }
     }
@@ -171,14 +158,5 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                             }
                             return y;
                         }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
-    } 
-
-//    private static List<Tuple2<Long, Double>> modifyForPlotting(DataSet<Tuple2<Long, Double>> dataSet) throws Exception {
-//        return dataSet.filter(x -> x.f0 >= trainingSetSize).map(y -> {
-//            if (plottingTransformers.containsKey(N_u)) {
-//                y.f1 = plottingTransformers.get(N_u).transform(y.f1);
-//            }
-//            return y;
-//        }).returns(Types.TUPLE(Types.LONG, Types.DOUBLE)).collect();
-//    }
+    }
 }

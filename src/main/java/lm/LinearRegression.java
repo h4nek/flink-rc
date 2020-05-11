@@ -91,10 +91,11 @@ public class LinearRegression implements Serializable {
                                                       DataStream<Tuple2<Long, Double>> outputStream,
                                                       List<Double> alphaInit,
                                                       double learningRate, int numSamples, boolean includeMSE,
-                                                      boolean stepsDecay, double decayGranularity, double decayAmount) {
-        return inputStream.coGroup(outputStream).where(x -> x.f0).equalTo(y -> y.f0).window(TumblingEventTimeWindows
-                .of(Time.seconds(1))).apply(new MLRFitCoGroupFunction(alphaInit, learningRate, numSamples, includeMSE, 
-                stepsDecay, decayGranularity, decayAmount));
+                                                      boolean stepsDecay, double decayGranularity, double decayAmount,
+                                                      WindowAssigner<Object, TimeWindow> windowAssigner) {
+        return inputStream.coGroup(outputStream).where(x -> x.f0).equalTo(y -> y.f0).window(windowAssigner)
+                .apply(new MLRFitCoGroupFunction(alphaInit, learningRate, numSamples, includeMSE, stepsDecay, 
+                        decayGranularity, decayAmount));
     }
     
 

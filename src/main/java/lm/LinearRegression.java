@@ -11,6 +11,7 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindo
 import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
+import org.apache.flink.streaming.api.windowing.windows.Window;
 import org.apache.flink.util.Collector;
 
 import java.io.Serializable;
@@ -74,11 +75,11 @@ public class LinearRegression implements Serializable {
     /**
      * Create a linear model from training DataStreams using Gradient Descent. A version with default decay values.
      */
-    public DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
+    public <W extends Window> DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       DataStream<Tuple2<Long, Double>> outputStream,
                                                       List<Double> alphaInit,
                                                       double learningRate, int numSamples, boolean includeMSE,
-                                                      boolean stepsDecay, WindowAssigner<Object, TimeWindow> windowAssigner) {
+                                                      boolean stepsDecay, WindowAssigner<Object, W> windowAssigner) {
         return inputStream.coGroup(outputStream).where(x -> x.f0).equalTo(y -> y.f0).window(windowAssigner)
                 .apply(new MLRFitCoGroupFunction(alphaInit, learningRate, numSamples, includeMSE, stepsDecay, 
                         32, 1.0/16));
@@ -87,12 +88,12 @@ public class LinearRegression implements Serializable {
     /**
      * Create a linear model from training DataStreams using Gradient Descent.
      */
-    public DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
+    public <W extends Window> DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       DataStream<Tuple2<Long, Double>> outputStream,
                                                       List<Double> alphaInit,
                                                       double learningRate, int numSamples, boolean includeMSE,
                                                       boolean stepsDecay, double decayGranularity, double decayAmount,
-                                                      WindowAssigner<Object, TimeWindow> windowAssigner) {
+                                                      WindowAssigner<Object, W> windowAssigner) {
         return inputStream.coGroup(outputStream).where(x -> x.f0).equalTo(y -> y.f0).window(windowAssigner)
                 .apply(new MLRFitCoGroupFunction(alphaInit, learningRate, numSamples, includeMSE, stepsDecay, 
                         decayGranularity, decayAmount));

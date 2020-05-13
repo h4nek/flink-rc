@@ -36,7 +36,7 @@ public class Utilities {
         return inputList;
     }
 
-    public static <T> void write2DArrayToCSV(String pathToFile, double[][] data) throws IOException {
+    public static <T> void write2DArrayToCSV(String pathToFile, Object[][] data) throws IOException {
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < data.length; ++i) {
             stringBuilder.append(data[i][0]);   // first element isn't preceded by a comma

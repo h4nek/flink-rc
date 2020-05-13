@@ -1,5 +1,6 @@
 package rc_core;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.ojalgo.matrix.store.SparseStore;
 import utilities.PythonPlotting;
@@ -40,7 +41,12 @@ public class ReservoirHeatmapPlot {
         System.out.println("W after open in details: " + Arrays.deepToString(W_internal.toRawCopy2D()));
 
         /* Call the heatmap plotting function that invokes the corresponding Python script */
-        double[][] W_internal_arr = W_internal.toRawCopy2D();
+        double[][] W_internal_primitive = W_internal.toRawCopy2D();
+        // convert the primitive array to object array
+        Double[][] W_internal_arr = new Double[W_internal_primitive.length][W_internal_primitive[0].length];
+        for (int i = 0; i < W_internal_primitive.length; i++) {
+            W_internal_arr[i] = ArrayUtils.toObject(W_internal_primitive[i]);
+        }
         
         if (cycle)
             if (randomized)

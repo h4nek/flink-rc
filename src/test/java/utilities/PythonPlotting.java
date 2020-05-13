@@ -238,8 +238,7 @@ public class PythonPlotting {
                         return Tuple2.of(x.f0, data);}, Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         }
         combinedInputOutputStream.print("To be saved in file");//TEST
-        // plotting through DataStreams (windows) - we can't collect them
-//        plotRCPredictionsNew(combinedInputOutputList, plotFileName, xlabel, ylabel, title, plotType, headers);
+        // plotting DataStreams (windows) - we can't collect them
         combinedInputOutputStream.windowAll(windowAssigner).process(
                 new ProcessAllWindowFunction<Tuple2<Long, List<Double>>, String, TimeWindow>() {
                     @Override
@@ -309,7 +308,7 @@ public class PythonPlotting {
                 title, plotType, headers, null, windowAssigner);
     }
     
-    public static void  plotMatrixHeatmap(double[][] matrix, String title) throws IOException {
+    public static void  plotMatrixHeatmap(Double[][] matrix, String title) throws IOException {
         String filePath = pathToDataOutputDir + "heatmap_data\\" + title + ".csv";
         Utilities.write2DArrayToCSV(filePath, matrix);
 
@@ -326,7 +325,7 @@ public class PythonPlotting {
         System.out.println(process.exitValue());
     }
     
-    public static void plotReservoirPerformanceSurface(double[][] data, Topology topology, String exampleTitle) 
+    public static void plotReservoirPerformanceSurface(Double[][] data, Topology topology, String exampleTitle) 
             throws IOException {
         String topologyString = topology.toString();
         String inputFileName = exampleTitle + " using " + topologyString + " Topology";

@@ -38,6 +38,14 @@ public abstract class HigherLevelExampleAbstract {
     /** if we want to plot or not */
     protected static boolean plottingMode = true;
     
+    protected enum TrainingMethod {
+        COMBINED,
+        ONLINE,
+        OFFLINE, // not compatible with standard plotting yet
+    };
+    /** Choose the readout training method (online, offline, or both)*/
+    protected static TrainingMethod trainingMethod = TrainingMethod.COMBINED;
+    
     /**
      * Configuring the RC by providing all the general parameters before running it with <i>main</i>. Setups for 
      * reservoir and plotting are also available.
@@ -113,6 +121,10 @@ public abstract class HigherLevelExampleAbstract {
 
     public static void setPlottingMode(boolean plottingMode) {
         HigherLevelExampleAbstract.plottingMode = plottingMode;
+    }
+
+    public static void setTrainingMethod(TrainingMethod trainingMethod) {
+        HigherLevelExampleAbstract.trainingMethod = trainingMethod;
     }
 
     /**

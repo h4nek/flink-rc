@@ -89,34 +89,51 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         DataSet<Tuple2<Long, Double>> trainingOutput = outputSet.filter(x -> x.f0 < trainingSetSize);
         DataSet<Tuple2<Long, List<Double>>> testingInput = inputSet.filter(x -> x.f0 >= trainingSetSize);
         DataSet<Tuple2<Long, Double>> testingOutput = outputSet.filter(x -> x.f0 >= trainingSetSize);
-        
-        LinearRegression lr = new LinearRegression();
-        DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(trainingInput, trainingOutput, lmAlphaInit,
-                learningRate, trainingSetSize, includeMSE, stepsDecay);
-        if (includeMSE) {
-            DataSet<Tuple2<Long, List<Double>>> MSEs = alphas.filter(x -> x.f0 == -1);
-            alphas = alphas.filter(x -> x.f0 != -1);
-            if (debugging) MSEs.printOnTaskManager("MSE");
-        }
-        if (debugging) alphas.printOnTaskManager("ALPHA");
 
-        List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
-        List<Double> finalAlpha = alphaList.get(alphaList.size() - 1);
-        if (debugging) System.out.println("Final Alpha: " + Utilities.listToString(finalAlpha));
-        
-        DataSet<Tuple2<Long, Double>> predictions = LinearRegressionPrimitive.predict(testingInput, finalAlpha);
+        DataSet<Tuple2<Long, Double>> predictions = null;  // online predictions
+        if (trainingMethod != TrainingMethod.OFFLINE) {
+            LinearRegression lr = new LinearRegression();
+            DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(trainingInput, trainingOutput, lmAlphaInit,
+                    learningRate, trainingSetSize, includeMSE, stepsDecay);
+            if (includeMSE) {
+                DataSet<Tuple2<Long, List<Double>>> MSEs = alphas.filter(x -> x.f0 == -1);
+                alphas = alphas.filter(x -> x.f0 != -1);
+                if (debugging) MSEs.printOnTaskManager("MSE");
+            }
+            if (debugging) alphas.printOnTaskManager("ALPHA");
+
+            List<List<Double>> alphaList = alphas.map(x -> x.f1).returns(Types.LIST(Types.DOUBLE)).collect();
+            List<Double> finalAlpha = alphaList.get(alphaList.size() - 1);
+            if (debugging) System.out.println("Final Alpha: " + Utilities.listToString(finalAlpha));
+
+            predictions = LinearRegressionPrimitive.predict(testingInput, finalAlpha);   
+        }
 
         /* Do the offline (pseudoinverse) fitting for comparison */
-        List<Double> AlphaOffline = LinearRegressionPrimitive.fit(trainingInput, trainingOutput, 
-                LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, regularizationFactor);
-        if (debugging) System.out.println("Offline Alpha: " + AlphaOffline);
-        DataSet<Tuple2<Long, Double>> predictionsOffline = LinearRegressionPrimitive.predict(testingInput, AlphaOffline);
+        DataSet<Tuple2<Long, Double>> predictionsOffline = null;
+        if (trainingMethod != TrainingMethod.ONLINE) {
+            List<Double> AlphaOffline = LinearRegressionPrimitive.fit(trainingInput, trainingOutput,
+                    LinearRegressionPrimitive.TrainingMethod.PSEUDOINVERSE, regularizationFactor);
+            if (debugging) System.out.println("Offline Alpha: " + AlphaOffline);
+            predictionsOffline = LinearRegressionPrimitive.predict(testingInput, AlphaOffline);
+        }
         
-        Tuple2<Double, Double> mses = ExampleBatchUtilities.getOnlineOfflineMSE(predictions, predictionsOffline, testingOutput);
-        onlineMSE = mses.f0;
-        offlineMSE = mses.f1;
+        if (trainingMethod == TrainingMethod.COMBINED) {
+            Tuple2<Double, Double> mses = ExampleBatchUtilities.getOnlineOfflineMSE(predictions, predictionsOffline, testingOutput);
+            onlineMSE = mses.f0;
+            offlineMSE = mses.f1;
+        }
+        else if (trainingMethod == TrainingMethod.ONLINE) {
+            List<Double> mses = ExampleBatchUtilities.computeMSE(predictions, testingOutput).collect();
+            onlineMSE = mses.get(mses.size() - 1);
+        }
+        else if (trainingMethod == TrainingMethod.OFFLINE) {
+            List<Double> mses = ExampleBatchUtilities.computeMSE(predictionsOffline, testingOutput).collect();
+            offlineMSE = mses.get(mses.size() - 1);
+        }
         
-        if (debugging)  // format: (index, [input, output, prediction, offline prediction])
+        
+        if (debugging && trainingMethod == TrainingMethod.COMBINED)  // format: (index, [input, output, prediction, offline prediction])
             indexedDataSet.join(predictions).where(0).equalTo(0)
                 .with((x,y) -> {List<Double> inputOutput = x.f1; inputOutput.add(y.f1); return Tuple2.of(x.f0, inputOutput);})
                 .returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)))

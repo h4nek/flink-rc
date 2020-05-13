@@ -169,7 +169,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     }
     
     public ESNReservoirSparse(int N_u, int N_x, List<Double> initVector, Transformation transformation) {
-        this(N_u, N_x, initVector, transformation, 1, 0, 2, 0.8, 0.5, 
+        this(N_u, N_x, initVector, transformation, 1, 0, 2, 0.8, 0.8, 
                 Topology.CYCLIC_WITH_JUMPS, true, true);
     }
 

@@ -3,6 +3,7 @@ package rc;
 import higher_level_examples.HigherLevelExampleAbstract;
 import higher_level_examples.HigherLevelExampleBatch;
 import higher_level_examples.HigherLevelExampleFactory;
+import higher_level_examples.HigherLevelExampleStreaming;
 import org.apache.flink.api.java.tuple.Tuple2;
 import rc_core.ESNReservoirSparse.Topology;
 
@@ -12,8 +13,8 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
         columnsBitMask = "110";
         N_u = 1;
         N_x = 6;
-        learningRate = 50;
-        scalingAlpha = 0.5;
+        learningRate = 20;
+        scalingAlpha = 0.8;
         trainingSetRatio = 0.8;
         
         max = 0;
@@ -21,7 +22,7 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
     }
 
     public static void main(String[] args) throws Exception {
-        HigherLevelExampleAbstract.setup(inputFilePath, columnsBitMask, N_u, N_x, false, 
+        HigherLevelExampleAbstract.setup(inputFilePath, columnsBitMask, N_u, N_x, true, 
                 null, true, (int) Math.floor(trainingSetRatio*70), learningRate, true,
                 0);
         HigherLevelExampleAbstract.setLrOnly(false);
@@ -40,7 +41,7 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
 //        HigherLevelExampleAbstract.addCustomParser(2, (x, y) -> {double observations = Double.parseDouble(x); 
 //            y.add((observations - 18)/18);});
         HigherLevelExampleAbstract.setupReservoir(null, Math::tanh, 1, 0, 2, .8, 
-                scalingAlpha, Topology.SPARSE, true, true);
+                scalingAlpha, Topology.CYCLIC_WITH_JUMPS, true, true);
 //        HigherLevelExampleAbstract.setupPlotting();
 //        HigherLevelExampleAbstract.addPlottingTransformer(0, x -> x*35 + 1945 + 35);
 //        HigherLevelExampleAbstract.addPlottingTransformer(0, x -> x*14 + 14);

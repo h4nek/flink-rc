@@ -29,8 +29,18 @@ import java.util.List;
 public class PythonPlotting {
     
     public enum PlotType {
-        LINE,
-        POINTS
+        LINE("-"),
+        POINTS(".");
+
+        private String string;
+        PlotType(String string) {
+            this.string = string;
+        }
+
+        @Override
+        public String toString() {
+            return string;
+        }
     }
     
     private static String pathToDataOutputDir = "..\\python_plots\\plot_data\\";
@@ -51,11 +61,7 @@ public class PythonPlotting {
             System.err.println("output headers size: " + outputHeaders.size());
             throw new IllegalArgumentException("At least one of the lists of headers has wrong number of elements.");
         }
-        String plotTypeString = "-";
-        if (plotType == PlotType.POINTS) {
-            plotTypeString = ".";
-        }
-
+        
         ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + plotFileName + "_InputData.csv",
                 inputList, inputHeaders, true);
         ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + plotFileName + "_OutputData.csv",
@@ -71,7 +77,7 @@ public class PythonPlotting {
                 xlabel,
                 ylabel,
                 title,
-                plotTypeString,
+                plotType.toString(),
         };
         Process process = Runtime.getRuntime().exec(params);
 
@@ -157,10 +163,6 @@ public class PythonPlotting {
 //            System.err.println("output headers size: " + outputHeaders.size());
 //            throw new IllegalArgumentException("At least one of the lists of headers has wrong number of elements.");
 //        }
-        String plotTypeString = "-";
-        if (plotType == PlotType.POINTS) {
-            plotTypeString = ".";
-        }
 
         // write to CSV with columns: index | (plotting) input | ouput | online prediction | offline prediction
         ExampleBatchUtilities.writeDataSetToFile( pathToDataOutputDir + plotFileName + "_PlottingData.csv",
@@ -176,7 +178,7 @@ public class PythonPlotting {
                 xlabel,
                 ylabel,
                 title,
-                plotTypeString,
+                plotType.toString(),
         };
         Process process = Runtime.getRuntime().exec(params);
 
@@ -270,11 +272,6 @@ public class PythonPlotting {
                         writer.close();
                         
                         // invoke the Python plotting script
-                        String plotTypeString = "-";
-                        if (plotType == PlotType.POINTS) {
-                            plotTypeString = ".";
-                        }
-
                         String[] params = {
                                 "python",
                                 "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotRCPredictionsNew.py",
@@ -283,7 +280,7 @@ public class PythonPlotting {
                                 xlabel,
                                 ylabel,
                                 title,
-                                plotTypeString,
+                                plotType.toString(),
                         };
                         Process process = Runtime.getRuntime().exec(params);
                         
@@ -338,6 +335,38 @@ public class PythonPlotting {
                 "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotReservoirsSurface.py",
                 inputFileName,
                 title,
+        };
+        Process process = Runtime.getRuntime().exec(params);
+
+        /*Read input streams*/ // TEST
+        printStream(process.getInputStream());
+        printStream(process.getErrorStream());
+        System.out.println(process.exitValue());
+    }
+
+    public static void plotReservoirPerformanceHyperparam(String[][] data, String exampleTitle, String exampleTitleUnformatted, 
+                                                          String parameterName, String xAxis, String yAxis, PlotType plotType, 
+                                                          int valuesPerMeasuerment, int measurements, boolean isNumeric) 
+            throws IOException {
+        String folder = "hyperparameter_performance\\";
+        
+        String inputFileName = "Analyzing " + parameterName + " using " + exampleTitleUnformatted;
+        String inputFilePath = pathToDataOutputDir + folder + inputFileName + ".csv";
+        String title = "Analyzing " + parameterName + " using " + exampleTitle;
+        Utilities.write2DArrayToCSV(inputFilePath, data);
+
+        String[] params = {
+                "python",
+                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotReservoirPerformance.py",
+                inputFileName,
+                title,
+                folder,
+                xAxis,
+                yAxis,
+                plotType.toString(),
+                String.valueOf(valuesPerMeasuerment),
+                String.valueOf(measurements),
+                String.valueOf(isNumeric),
         };
         Process process = Runtime.getRuntime().exec(params);
 

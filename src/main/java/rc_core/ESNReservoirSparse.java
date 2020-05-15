@@ -25,21 +25,20 @@ import java.util.stream.DoubleStream;
  * A Flink map function that transforms a stream of input vectors (u) to a stream of output vectors (x).
  * Represents the reservoir of reservoir computing framework.
  * It realizes the formula x(t) = f(W_in*u(t) + W*x(t-1)). Which is a recurrent neural network (RNN).
- * f can be any (generally non-linear) transformation (function).
+ * f can be any (generally non-linear) transformation (function), applied element-wise on the vector.
  * W_in is the matrix of input weights; (randomly) initialized with uniform distribution from [-0.5; 0.5], dense.
  * W is the matrix of internal connections (weights); initialized similarly to W_in (weights come from the same 
  * distribution and interval), but sparse.
  *      One option is to just control sparsity (e.g. 20% of non-zero elements), another is to have a deterministic 
  *      structure containing cycles.
- * Both matrices are initialized once at the beginning of computation. The reason they are declared static is that we 
- * keep the same matrices when Flink creates multiple instances of this class...
+ * Both matrices are initialized once at the beginning of computation.
  * Utilizing ojAlgo libraries.
  */
 public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double>>, Tuple2<Long, List<Double>>> 
         implements CheckpointedFunction {
-    private static SparseStore<Double> W_input;   // represents a matrix of input weights (N_x*N_u)
-    private static SparseStore<Double> W_internal;    // represents a matrix of internal weights (N_x*N_x)
-    private static ListState<SparseStore<Double>> weightMatricesState;
+    private SparseStore<Double> W_input;   // represents a matrix of input weights (N_x*N_u)
+    private SparseStore<Double> W_internal;    // represents a matrix of internal weights (N_x*N_x)
+    private ListState<SparseStore<Double>> weightMatricesState;
     private MatrixStore<Double> output_previous;   // (internal) state vector (x(t-1)) -- result of the computation in previous time
     private final int N_u;  // input vector (u) size -- an exception is thrown if the input size is different
     private final int N_x;  // (internal) state vector (x) size -- should be higher than N_u
@@ -185,7 +184,8 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         this(N_u, N_x, null, transformation);
     }
 
-
+    private Uniform uniform; // declared as an object field to be part of serialization
+    
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
@@ -212,7 +212,15 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         };
 
         /* W_in and W initialization */
-        if (W_input != null) {
+//        if (weightCounter == 0) {
+//            randomWeights = new ArrayList<>();
+//        }
+//        else {
+//            System.out.println("already have some weights! right?" + RCUtilities.listToString(randomWeights));
+//        }
+//        weightCounter = 0;
+        if (W_input != null) {//not necessary?
+            System.out.println("W_in is not null!");
             //we want to randomly initialize the matrices once and keep them the same for multiple function calls
             return;
         }
@@ -232,8 +240,11 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         
         SparseStore.Factory<Double> matrixFactory = SparseStore.PRIMITIVE64;
         W_input = matrixFactory.make(N_x, N_u);
-        W_input.fillAll(new Uniform(-0.5*range + shift, range));
-//        System.out.println("random W_in: " + W_input);
+        uniform = new Uniform(-0.5*range + shift, range);
+        uniform.setSeed(random.nextLong()); // ensures that the randomly generated sequence is the same after 
+                                            // (de)serialization by setting the object's "state"
+        W_input.fillAll(uniform);
+        System.out.println("random W_in: " + W_input);
 
         /* Create Cycle Reservoir with Jumps */
         double cycleWeight = getRandomWeight(); // a random constant for the unidirectional cycle
@@ -310,9 +321,19 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
 //        System.out.println("scaled W: " + W_internal);
     }
 
-    private static final Random random = new Random();
+    private final Random random = new Random();
+//    private List<Double> randomWeights; // used for repeated invokes of the class after (de)serialization...
+//    private int weightCounter = 0;
     private double getRandomWeight() {
-        return random.nextDouble()*range - (range/2) + shift;
+//        ++weightCounter;
+//        if (randomWeights.size() >= weightCounter) {
+//            System.out.println("reusing saved weight...");
+//            return randomWeights.get(weightCounter - 1);
+//        }
+//        System.out.println("generating new weight...");
+        double randNum = random.nextDouble()*range - (range/2) + shift;
+//        randomWeights.add(randNum);
+        return randNum;
     }
 
     @Override

@@ -2,10 +2,8 @@ package higher_level_examples;
 
 import lm.LinearRegression;
 import lm.streaming.ExampleStreamingUtilities;
-import org.apache.flink.api.java.DataSet;
 import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
-import org.apache.flink.streaming.api.windowing.windows.Window;
 import utilities.BasicIndexer;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.io.TextInputFormat;
@@ -39,23 +37,23 @@ import java.util.*;
  * should be called for execution.
  */
 public class HigherLevelExampleStreaming extends HigherLevelExampleAbstract {
-    private static long EOTRAINING_TIMESTAMP = trainingSetSize*1000;   // finish training at X seconds (after processing X records)
-    private static AssignerWithPeriodicWatermarks<List<Double>> timestampAssigner = new DefaultAssigner();
-    // could contain generics if it was non-static (the code wouldn't execute through main method...)
-    private static WindowAssigner<Object, TimeWindow> windowAssigner = TumblingEventTimeWindows.of(Time.minutes(2));
+    private long EOTRAINING_TIMESTAMP = trainingSetSize*1000;   // finish training at X seconds (after processing X records)
+    private AssignerWithPeriodicWatermarks<List<Double>> timestampAssigner = new DefaultAssigner();
+    // could contain generics instead of TimeWindow, then HLEStreaming would be parametrized ... or ? extends Window
+    private WindowAssigner<Object, TimeWindow> windowAssigner = TumblingEventTimeWindows.of(Time.minutes(2));
     
-    public static void setEotrainingTimestamp(long eotrainingTimestamp) {
+    public void setEotrainingTimestamp(long eotrainingTimestamp) {
         EOTRAINING_TIMESTAMP = eotrainingTimestamp;
     }
 
     
-    public static void main(String[] args) throws Exception {
+    public void run() throws Exception {
         StreamExecutionEnvironment see = StreamExecutionEnvironment.getExecutionEnvironment();
         see.setParallelism(1);
         see.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
         
         DataStream<List<Double>> dataStream = see.readFile(new TextInputFormat(new Path(inputFilePath)), inputFilePath)
-                .flatMap(new ProcessInput()).returns(Types.LIST(Types.DOUBLE));
+                .flatMap(new ProcessInput(columnsBitMask, customParsers, debugging)).returns(Types.LIST(Types.DOUBLE));
         if (debugging) dataStream.print("DATA");
 
         dataStream = dataStream.assignTimestampsAndWatermarks(timestampAssigner);
@@ -186,14 +184,7 @@ public class HigherLevelExampleStreaming extends HigherLevelExampleAbstract {
         see.execute();
     }
 
-    /**
-     * Used for invoking the example through another method.
-     */
-    public static void run() throws Exception {
-        main(null);
-    }
-
-    private static class DefaultAssigner implements AssignerWithPeriodicWatermarks<List<Double>> {
+    private class DefaultAssigner implements AssignerWithPeriodicWatermarks<List<Double>> {
         private int counter = 0;
 
         @Override
@@ -211,7 +202,7 @@ public class HigherLevelExampleStreaming extends HigherLevelExampleAbstract {
     /** Shift (optional) all the outputs if we're dealing with time-series predictions. Also optionally transform the 
      * values, typically by applying the inverse of the original transformation, thus getting them back to the original 
      * scale (should be applied on all outputs - real and predictions). */
-    private static DataStream<Tuple2<Long, Double>> shiftIndicesAndTransformForPlotting(
+    private DataStream<Tuple2<Long, Double>> shiftIndicesAndTransformForPlotting(
             DataStream<Tuple2<Long, Double>> dataStream, int shift) {
         return dataStream.map(x -> Tuple2.of(x.f0 + shift, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE))
                 .map(y -> {

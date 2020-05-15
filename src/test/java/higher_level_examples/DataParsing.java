@@ -1,8 +1,9 @@
 package higher_level_examples;
 
+import java.io.Serializable;
 import java.util.List;
 
-public interface DataParsing {
+public interface DataParsing extends Serializable {
     /**
      * Converts the String data elements of a selected column into one (, zero) or possibly multiple double values, each 
      * typically representing a feature of the input vector u(t) or the output scalar y(t).

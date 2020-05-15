@@ -9,7 +9,6 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.io.TextInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.streaming.api.datastream.DataStream;
 import rc_core.ESNReservoirSparse;
 import utilities.BasicIndexer;
 import utilities.PythonPlotting;
@@ -30,24 +29,13 @@ import java.util.*;
  * should be called for execution.
  */
 public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
-    private static double onlineMSE;
-    private static double offlineMSE;
 
-    public static double getOnlineMSE() {
-        return onlineMSE;
-    }
-
-    public static double getOfflineMSE() {
-        return offlineMSE;
-    }
-
-
-    public static void main(String[] args) throws Exception {
+    public void run() throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
 
         DataSet<List<Double>> dataSet = env.readFile(new TextInputFormat(new Path(inputFilePath)), inputFilePath)
-                .flatMap(new ProcessInput()).returns(Types.LIST(Types.DOUBLE));
+                .flatMap(new ProcessInput(columnsBitMask, customParsers, debugging)).returns(Types.LIST(Types.DOUBLE));
         if (debugging) dataSet.printOnTaskManager("DATA");
 
         DataSet<Tuple2<Long, List<Double>>> indexedDataSet = dataSet.map(new BasicIndexer<>());
@@ -168,18 +156,11 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
                     plotFileName, xlabel, ylabel, title, plotType, null, predictionsOffline);
         }
     }
-
-    /**
-     * Used for invoking the example through another method.
-     */
-    public static void run() throws Exception {
-        main(null);
-    }
     
     /** Shift (optional) all the outputs if we're dealing with time-series predictions. Also optionally transform the 
      * values, typically by applying the inverse of the original transformation, thus getting them back to the original 
      * scale (should be applied on all outputs - real and predictions). */
-    private static DataSet<Tuple2<Long, Double>> shiftIndicesAndTransformForPlotting(
+    private DataSet<Tuple2<Long, Double>> shiftIndicesAndTransformForPlotting(
             DataSet<Tuple2<Long, Double>> dataSet, int shift) {
         return dataSet.map(x -> Tuple2.of(x.f0 + shift, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE))
                       .map(y -> {

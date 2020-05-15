@@ -12,7 +12,7 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
         inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
         columnsBitMask = "110";
         N_u = 1;
-        N_x = 6;
+        N_x = 50;
         learningRate = 20;
         scalingAlpha = 0.8;
         trainingSetRatio = 0.8;
@@ -22,37 +22,39 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
     }
 
     public static void main(String[] args) throws Exception {
-        HigherLevelExampleAbstract.setup(inputFilePath, columnsBitMask, N_u, N_x, true, 
-                null, true, (int) Math.floor(trainingSetRatio*70), learningRate, true,
-                0);
-        HigherLevelExampleAbstract.setLrOnly(false);
-        HigherLevelExampleAbstract.setTimeStepsAhead(1);    // predict the next year's meltdown based on the current data
-        HigherLevelExampleAbstract.addCustomParser((inputString, inputVector) -> {
+        HigherLevelExampleAbstract hle = new HigherLevelExampleBatch();
+        hle.setup(inputFilePath, columnsBitMask, N_u, N_x, true, 
+                null, false, (int) Math.floor(trainingSetRatio*70), learningRate, true,
+                10e-10);
+        hle.setLrOnly(false);
+        hle.setPlottingMode(plottingMode);
+        hle.setTimeStepsAhead(1);    // predict the next year's meltdown based on the current data
+        hle.addCustomParser((inputString, inputVector) -> {
             double year = Double.parseDouble(inputString);
 //            inputVector.add(0, (year - 1945 - 35)/35);    // input feature; move the column values to be around 0
             inputVector.add(year);  // for plotting input
         });
-//        HigherLevelExampleAbstract.addCustomParser((x, y) -> {double mwe = Double.parseDouble(x);
+//        hle.addCustomParser((x, y) -> {double mwe = Double.parseDouble(x);
 //            double normalMwe = (mwe - 14)/14; // normalization
 //            y.add(0, normalMwe);    // input feature
 //            y.add(normalMwe); // for the output - time series prediction
 //        });
-        HigherLevelExampleAbstract.addDataNormalizer(max, min, 0, 2);
-//        HigherLevelExampleAbstract.addCustomParser(2, (x, y) -> {double observations = Double.parseDouble(x); 
+        hle.addDataNormalizer(max, min, 0, 2);
+//        hle.addCustomParser(2, (x, y) -> {double observations = Double.parseDouble(x); 
 //            y.add((observations - 18)/18);});
-        HigherLevelExampleAbstract.setupReservoir(null, Math::tanh, 1, 0, 2, .8, 
+        hle.setupReservoir(null, Math::tanh, 1, 0, 2, .8, 
                 scalingAlpha, Topology.CYCLIC_WITH_JUMPS, true, true);
-//        HigherLevelExampleAbstract.setupPlotting();
-//        HigherLevelExampleAbstract.addPlottingTransformer(0, x -> x*35 + 1945 + 35);
-//        HigherLevelExampleAbstract.addPlottingTransformer(0, x -> x*14 + 14);
-//        HigherLevelExampleAbstract.addPlottingTransformer(1, x -> x*14 + 14);
-//        HigherLevelExampleAbstract.addPlottingTransformer(1, x -> x*14 + 14);   // for the output
-        HigherLevelExampleAbstract.addOutputDenormalizer(max, min, N_u);
+//        hle.setupPlotting();
+//        hle.addPlottingTransformer(0, x -> x*35 + 1945 + 35);
+//        hle.addPlottingTransformer(0, x -> x*14 + 14);
+//        hle.addPlottingTransformer(1, x -> x*14 + 14);
+//        hle.addPlottingTransformer(1, x -> x*14 + 14);   // for the output
+        hle.addOutputDenormalizer(max, min, N_u);
         
-        HigherLevelExampleBatch.run();
+        hle.run();
         
-        onlineMSE = HigherLevelExampleBatch.getOnlineMSE();
-        offlineMSE = HigherLevelExampleBatch.getOfflineMSE();
+        onlineMSE = hle.getOnlineMSE();
+        offlineMSE = hle.getOfflineMSE();
     }
     
     public Tuple2<Double, Double> runAndGetMSEs() throws Exception {

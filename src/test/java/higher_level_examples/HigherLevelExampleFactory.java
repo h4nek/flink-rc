@@ -10,11 +10,13 @@ public abstract class HigherLevelExampleFactory {
     protected static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
     protected static String columnsBitMask = "110";
     protected static int N_u = 1;
-    protected static int N_x = 6;
+    protected static int N_x = 50;
     protected static double learningRate = 0.01;
     protected static double scalingAlpha = 0.8;
     protected static double trainingSetRatio = 0.8;
     protected static Topology topology = Topology.CYCLIC_WITH_JUMPS;
+    
+    protected static boolean plottingMode = true;
     
     // used for min-max normalization
     /** maximum observed value (roughly) */
@@ -35,6 +37,10 @@ public abstract class HigherLevelExampleFactory {
 
     public static void setTopology(Topology topology) {
         HigherLevelExampleFactory.topology = topology;
+    }
+
+    public static void setPlottingMode(boolean plottingMode) {
+        HigherLevelExampleFactory.plottingMode = plottingMode;
     }
 
     public abstract Tuple2<Double, Double> runAndGetMSEs() throws Exception;

@@ -6,37 +6,38 @@ import rc_core.ESNReservoirSparse.Topology;
 import rc_core.Transformation;
 import utilities.PythonPlotting;
 
+import java.io.Serializable;
 import java.util.*;
 
-public abstract class HigherLevelExampleAbstract {
+public abstract class HigherLevelExampleAbstract implements Serializable {
     // the path to the (CSV) file with input data
-    protected static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
-    protected static double learningRate = 0.01;    // used for online linear regression (gradient descent)
-    protected static String columnsBitMask = "111"; // what columns of the input file should be converted to fields
-    protected static boolean debugging = true;    // print various data in the process
+    protected String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
+    protected double learningRate = 0.01;    // used for online linear regression (gradient descent)
+    protected String columnsBitMask = "111"; // what columns of the input file should be converted to fields
+    protected boolean debugging = true;    // print various data in the process
     // potential custom parsing functions for individual input columns (enables e.g. scaling - normalization of inputs)
     // the convention of field order in the initial data vector is: input fields | input feature for plotting | output field
-    protected static Map<Integer, DataParsing> customParsers = new HashMap<>(); 
+    protected Map<Integer, DataParsing> customParsers = new HashMap<>(); 
 
-    protected static int N_u = 2;   // dimension of the input (vectors u(t))
-    protected static int N_x = 6;   // dimension of the reservoir (N_x*N_x matrix; vectors x(t))
+    protected int N_u = 1;   // dimension of the input (vectors u(t))
+    protected int N_x = 50;   // dimension of the reservoir (N_x*N_x matrix; vectors x(t))
     
-    protected static List<Double> lmAlphaInit = null; // initial value of the LM Alpha vector; has to be of length N_x 
+    protected List<Double> lmAlphaInit = null; // initial value of the LM Alpha vector; has to be of length N_x 
                                                       // (or null - zero vector is then created)
-    protected static boolean stepsDecay = true; // a step-based decay of the learning rate (for online LR)
+    protected boolean stepsDecay = true; // a step-based decay of the learning rate (for online LR)
     // regularization factor for LM using pseudoinverse; initialized with a small value - should avoid a singular matrix
-    protected static double regularizationFactor = 1e-10;
+    protected double regularizationFactor = 1e-10;
     // specify if we want to apply only Linear Regression (readout phase) and leave out the reservoir
-    protected static boolean lrOnly = false;
+    protected boolean lrOnly = false;
     
     // number of records to be in the training dataset (rest of the file is ignored)
     // we expect that the indexing is 0-based! (otherwise we'll have a different number of I/O pairs)
-    protected static int trainingSetSize = (int) Math.floor(69*0.5);
-    protected static boolean includeMSE = false;
-    protected static int timeStepsAhead = 0;    // in case of time series predictions, how far ahead do we want to predict?
+    protected int trainingSetSize = (int) Math.floor(69*0.5);
+    protected boolean includeMSE = false;
+    protected int timeStepsAhead = 0;    // in case of time series predictions, how far ahead do we want to predict?
                                                 // changes the indexing of the output set/stream (if != 0)
     /** if we want to plot or not */
-    protected static boolean plottingMode = true;
+    protected boolean plottingMode = true;
     
     protected enum TrainingMethod {
         COMBINED,
@@ -44,87 +45,87 @@ public abstract class HigherLevelExampleAbstract {
         OFFLINE, // not compatible with standard plotting yet
     };
     /** Choose the readout training method (online, offline, or both)*/
-    protected static TrainingMethod trainingMethod = TrainingMethod.COMBINED;
+    protected TrainingMethod trainingMethod = TrainingMethod.COMBINED;
     
     /**
      * Configuring the RC by providing all the general parameters before running it with <i>main</i>. Setups for 
      * reservoir and plotting are also available.
      */
-    public static void setup(String inputFilePath, String columnsBitMask, int N_u, int N_x,
+    public void setup(String inputFilePath, String columnsBitMask, int N_u, int N_x,
                              boolean debugging, List<Double> lmAlphaInit, boolean stepsDecay, int trainingSetSize,
                              double learningRate, boolean includeMSE, double regularizationFactor) {
-        HigherLevelExampleAbstract.inputFilePath = inputFilePath;
-        HigherLevelExampleAbstract.columnsBitMask = columnsBitMask;
-        HigherLevelExampleAbstract.N_u = N_u;
-        HigherLevelExampleAbstract.N_x = N_x;
-        HigherLevelExampleAbstract.debugging = debugging;
-        HigherLevelExampleAbstract.learningRate = learningRate;
-        HigherLevelExampleAbstract.lmAlphaInit = lmAlphaInit;
-        HigherLevelExampleAbstract.stepsDecay = stepsDecay;
-        HigherLevelExampleAbstract.regularizationFactor = regularizationFactor;
-        HigherLevelExampleAbstract.trainingSetSize = trainingSetSize;
-        HigherLevelExampleAbstract.includeMSE = includeMSE;
+        this.inputFilePath = inputFilePath;
+        this.columnsBitMask = columnsBitMask;
+        this.N_u = N_u;
+        this.N_x = N_x;
+        this.debugging = debugging;
+        this.learningRate = learningRate;
+        this.lmAlphaInit = lmAlphaInit;
+        this.stepsDecay = stepsDecay;
+        this.regularizationFactor = regularizationFactor;
+        this.trainingSetSize = trainingSetSize;
+        this.includeMSE = includeMSE;
     }
 
     /* Individual setters */
-    public static void setInputFilePath(String inputFilePath) {
-        HigherLevelExampleAbstract.inputFilePath = inputFilePath;
+    public void setInputFilePath(String inputFilePath) {
+        this.inputFilePath = inputFilePath;
     }
 
-    public static void setLearningRate(double learningRate) {
-        HigherLevelExampleAbstract.learningRate = learningRate;
+    public void setLearningRate(double learningRate) {
+        this.learningRate = learningRate;
     }
 
-    public static void setColumnsBitMask(String columnsBitMask) {
-        HigherLevelExampleAbstract.columnsBitMask = columnsBitMask;
+    public void setColumnsBitMask(String columnsBitMask) {
+        this.columnsBitMask = columnsBitMask;
     }
 
-    public static void setDebugging(boolean debugging) {
-        HigherLevelExampleAbstract.debugging = debugging;
+    public void setDebugging(boolean debugging) {
+        this.debugging = debugging;
     }
 
-    public static void setNu(int nu) {
-        N_u = nu;
+    public void setNu(int nu) {
+        this.N_u = nu;
     }
 
-    public static void setNx(int nx) {
-        N_x = nx;
+    public void setNx(int nx) {
+        this.N_x = nx;
     }
 
-    public static void setLmAlphaInit(List<Double> lmAlphaInit) {
-        HigherLevelExampleAbstract.lmAlphaInit = lmAlphaInit;
+    public void setLmAlphaInit(List<Double> lmAlphaInit) {
+        this.lmAlphaInit = lmAlphaInit;
     }
 
-    public static void setStepsDecay(boolean stepsDecay) {
-        HigherLevelExampleAbstract.stepsDecay = stepsDecay;
+    public void setStepsDecay(boolean stepsDecay) {
+        this.stepsDecay = stepsDecay;
     }
 
-    public static void setTrainingSetSize(int trainingSetSize) {
-        HigherLevelExampleAbstract.trainingSetSize = trainingSetSize;
+    public void setTrainingSetSize(int trainingSetSize) {
+        this.trainingSetSize = trainingSetSize;
     }
 
-    public static void setRegularizationFactor(double regularizationFactor) {
-        HigherLevelExampleAbstract.regularizationFactor = regularizationFactor;
+    public void setRegularizationFactor(double regularizationFactor) {
+        this.regularizationFactor = regularizationFactor;
     }
 
-    public static void setLrOnly(boolean lrOnly) {
-        HigherLevelExampleAbstract.lrOnly = lrOnly;
+    public void setLrOnly(boolean lrOnly) {
+        this.lrOnly = lrOnly;
     }
 
-    public static void setIncludeMSE(boolean includeMSE) {
-        HigherLevelExampleAbstract.includeMSE = includeMSE;
+    public void setIncludeMSE(boolean includeMSE) {
+        this.includeMSE = includeMSE;
     }
 
-    public static void setTimeStepsAhead(int timeStepsAhead) {
-        HigherLevelExampleAbstract.timeStepsAhead = timeStepsAhead;
+    public void setTimeStepsAhead(int timeStepsAhead) {
+        this.timeStepsAhead = timeStepsAhead;
     }
 
-    public static void setPlottingMode(boolean plottingMode) {
-        HigherLevelExampleAbstract.plottingMode = plottingMode;
+    public void setPlottingMode(boolean plottingMode) {
+        this.plottingMode = plottingMode;
     }
 
-    public static void setTrainingMethod(TrainingMethod trainingMethod) {
-        HigherLevelExampleAbstract.trainingMethod = trainingMethod;
+    public void setTrainingMethod(TrainingMethod trainingMethod) {
+        this.trainingMethod = trainingMethod;
     }
 
     /**
@@ -132,7 +133,7 @@ public abstract class HigherLevelExampleAbstract {
      * @param index index of the input file column (0-based) this parser will be applied to
      * @param parser custom parsing implementation
      */
-    public static void addCustomParser(int index, DataParsing parser) {
+    public void addCustomParser(int index, DataParsing parser) {
         customParsers.put(index, parser);
     }
     
@@ -141,134 +142,134 @@ public abstract class HigherLevelExampleAbstract {
      * The index is incremented after each call.
      * @param parser custom parsing implementation
      */
-    public static void addCustomParser(DataParsing parser) {
+    public void addCustomParser(DataParsing parser) {
         customParsers.put(defaultParsingIndex, parser);
         ++defaultParsingIndex;
     }
-    private static int defaultParsingIndex = 0;
+    private int defaultParsingIndex = 0;
 
     /* Reservoir configuration */
-    protected static List<Double> init_vector = null;  // creates a 0 vector of N_x length
-    protected static Transformation transformation = Math::tanh;
-    protected static double range = 1;
-    protected static double shift = 0;
-    protected static long jumpSize = 2;
-    protected static double sparsity = 0.8;
-    protected static double scalingAlpha = 0.5;
-    protected static Topology reservoirTopology = Topology.CYCLIC_WITH_JUMPS;
-    protected static boolean includeInput = true;
-    protected static boolean includeBias = true;
+    protected List<Double> init_vector = null;  // creates a 0 vector of N_x length
+    protected Transformation transformation = Math::tanh;
+    protected double range = 1;
+    protected double shift = 0;
+    protected long jumpSize = 2;
+    protected double sparsity = 0.8;
+    protected double scalingAlpha = 0.5;
+    protected Topology reservoirTopology = Topology.CYCLIC_WITH_JUMPS;
+    protected boolean includeInput = true;
+    protected boolean includeBias = true;
 
-    public static void setupReservoir(List<Double> init_vector, Transformation transformation, double range,
+    public void setupReservoir(List<Double> init_vector, Transformation transformation, double range,
                                       double shift, long jumpSize, double sparsity, double scalingAlpha, 
                                       Topology reservoirTopology, boolean includeInput, boolean includeBias) {
-        HigherLevelExampleAbstract.init_vector = init_vector;
-        HigherLevelExampleAbstract.transformation = transformation;
-        HigherLevelExampleAbstract.range = range;
-        HigherLevelExampleAbstract.shift = shift;
-        HigherLevelExampleAbstract.jumpSize = jumpSize;
-        HigherLevelExampleAbstract.sparsity = sparsity;
-        HigherLevelExampleAbstract.scalingAlpha = scalingAlpha;
-        HigherLevelExampleAbstract.reservoirTopology = reservoirTopology;
-        HigherLevelExampleAbstract.includeInput = includeInput;
-        HigherLevelExampleAbstract.includeBias = includeBias;
+        this.init_vector = init_vector;
+        this.transformation = transformation;
+        this.range = range;
+        this.shift = shift;
+        this.jumpSize = jumpSize;
+        this.sparsity = sparsity;
+        this.scalingAlpha = scalingAlpha;
+        this.reservoirTopology = reservoirTopology;
+        this.includeInput = includeInput;
+        this.includeBias = includeBias;
     }
 
-    public static void setInit_vector(List<Double> init_vector) {
-        HigherLevelExampleAbstract.init_vector = init_vector;
+    public void setInit_vector(List<Double> init_vector) {
+        this.init_vector = init_vector;
     }
 
-    public static void setTransformation(Transformation transformation) {
-        HigherLevelExampleAbstract.transformation = transformation;
+    public void setTransformation(Transformation transformation) {
+        this.transformation = transformation;
     }
 
-    public static void setRange(double range) {
-        HigherLevelExampleAbstract.range = range;
+    public void setRange(double range) {
+        this.range = range;
     }
 
-    public static void setShift(double shift) {
-        HigherLevelExampleAbstract.shift = shift;
+    public void setShift(double shift) {
+        this.shift = shift;
     }
 
-    public static void setJumpSize(long jumpSize) {
-        HigherLevelExampleAbstract.jumpSize = jumpSize;
+    public void setJumpSize(long jumpSize) {
+        this.jumpSize = jumpSize;
     }
 
-    public static void setSparsity(double sparsity) {
-        HigherLevelExampleAbstract.sparsity = sparsity;
+    public void setSparsity(double sparsity) {
+        this.sparsity = sparsity;
     }
     
-    public static void setScalingAlpha(double scalingAlpha) {
-        HigherLevelExampleAbstract.scalingAlpha = scalingAlpha;
+    public void setScalingAlpha(double scalingAlpha) {
+        this.scalingAlpha = scalingAlpha;
     }
     
-    public static void setReservoirTopology(Topology reservoirTopology) {
-        HigherLevelExampleAbstract.reservoirTopology = reservoirTopology;
+    public void setReservoirTopology(Topology reservoirTopology) {
+        this.reservoirTopology = reservoirTopology;
     }
 
-    public static void setIncludeInput(boolean includeInput) {
-        HigherLevelExampleAbstract.includeInput = includeInput;
+    public void setIncludeInput(boolean includeInput) {
+        this.includeInput = includeInput;
     }
 
-    public static void setIncludeBias(boolean includeBias) {
-        HigherLevelExampleAbstract.includeBias = includeBias;
+    public void setIncludeBias(boolean includeBias) {
+        this.includeBias = includeBias;
     }
     
     
     /* Plotting configuration */
-    protected static int inputIndex = 0;
-    protected static String xlabel = "Year";
-    protected static String ylabel = "Mean cumulative mass balance (mwe)";
-    protected static String title = "Glaciers Meltdown";
-    protected static PythonPlotting.PlotType plotType = PythonPlotting.PlotType.LINE;
-    protected static List<String> inputHeaders;
-    protected static List<String> outputHeaders;
-    protected static String plotFileName = title;
-    protected static Map<Integer, DataTransformation> plottingTransformers = new HashMap<>();
+    protected int inputIndex = 0;
+    protected String xlabel = "Year";
+    protected String ylabel = "Mean cumulative mass balance (mwe)";
+    protected String title = "Glaciers Meltdown";
+    protected PythonPlotting.PlotType plotType = PythonPlotting.PlotType.LINE;
+    protected List<String> inputHeaders;
+    protected List<String> outputHeaders;
+    protected String plotFileName = title;
+    protected Map<Integer, DataTransformation> plottingTransformers = new HashMap<>();
 
-    public static void setupPlotting(int inputIndex, String title, String xlabel, String ylabel,
+    public void setupPlotting(int inputIndex, String title, String xlabel, String ylabel,
                                      PythonPlotting.PlotType plotType, List<String> inputHeaders,
                                      List<String> outputHeaders, String plotFileName) {
-        HigherLevelExampleAbstract.inputIndex = inputIndex;
-        HigherLevelExampleAbstract.xlabel = xlabel;
-        HigherLevelExampleAbstract.ylabel = ylabel;
-        HigherLevelExampleAbstract.title = title;
-        HigherLevelExampleAbstract.plotType = plotType;
-        HigherLevelExampleAbstract.inputHeaders = inputHeaders;
-        HigherLevelExampleAbstract.outputHeaders = outputHeaders;
-        HigherLevelExampleAbstract.plotFileName = plotFileName;
+        this.inputIndex = inputIndex;
+        this.xlabel = xlabel;
+        this.ylabel = ylabel;
+        this.title = title;
+        this.plotType = plotType;
+        this.inputHeaders = inputHeaders;
+        this.outputHeaders = outputHeaders;
+        this.plotFileName = plotFileName;
     }
 
-    public static void setInputIndex(int inputIndex) {
-        HigherLevelExampleAbstract.inputIndex = inputIndex;
+    public void setInputIndex(int inputIndex) {
+        this.inputIndex = inputIndex;
     }
 
-    public static void setXlabel(String xlabel) {
-        HigherLevelExampleAbstract.xlabel = xlabel;
+    public void setXlabel(String xlabel) {
+        this.xlabel = xlabel;
     }
 
-    public static void setYlabel(String ylabel) {
-        HigherLevelExampleAbstract.ylabel = ylabel;
+    public void setYlabel(String ylabel) {
+        this.ylabel = ylabel;
     }
 
-    public static void setTitle(String title) {
-        HigherLevelExampleAbstract.title = title;
+    public void setTitle(String title) {
+        this.title = title;
     }
 
-    public static void setPlotType(PythonPlotting.PlotType plotType) {
-        HigherLevelExampleAbstract.plotType = plotType;
+    public void setPlotType(PythonPlotting.PlotType plotType) {
+        this.plotType = plotType;
     }
 
-    public static void setInputHeaders(List<String> inputHeaders) {
-        HigherLevelExampleAbstract.inputHeaders = inputHeaders;
+    public void setInputHeaders(List<String> inputHeaders) {
+        this.inputHeaders = inputHeaders;
     }
 
-    public static void setOutputHeaders(List<String> outputHeaders) {
-        HigherLevelExampleAbstract.outputHeaders = outputHeaders;
+    public void setOutputHeaders(List<String> outputHeaders) {
+        this.outputHeaders = outputHeaders;
     }
 
-    public static void setPlotFileName(String plotFileName) {
-        HigherLevelExampleAbstract.plotFileName = plotFileName;
+    public void setPlotFileName(String plotFileName) {
+        this.plotFileName = plotFileName;
     }
 
     /**
@@ -278,7 +279,7 @@ public abstract class HigherLevelExampleAbstract {
      *              <i>N_u</i> is considered to be the output index
      * @param transformer the transformation function
      */
-    public static void addPlottingTransformer(int index, DataTransformation transformer) {
+    public void addPlottingTransformer(int index, DataTransformation transformer) {
         plottingTransformers.put(index, transformer);
     }
 
@@ -287,12 +288,26 @@ public abstract class HigherLevelExampleAbstract {
      * The index is incremented after each call.
      * @param transformer custom transformation
      */
-    public static void addPlottingTransformer(DataTransformation transformer) {
+    public void addPlottingTransformer(DataTransformation transformer) {
         plottingTransformers.put(defaultTransformerIndex, transformer);
         ++defaultTransformerIndex;
     }
-    private static int defaultTransformerIndex = 0;
+    
+    private int defaultTransformerIndex = 0;
 
+    /* Storage of MSEs after computation */
+    protected double onlineMSE;
+    protected double offlineMSE;
+
+    public double getOnlineMSE() {
+        return onlineMSE;
+    }
+
+    public double getOfflineMSE() {
+        return offlineMSE;
+    }
+    
+    
     /**
      * Add a standard min-max normalization, so that all values are roughly in [-1; 1] range.
      * <br>
@@ -301,7 +316,7 @@ public abstract class HigherLevelExampleAbstract {
      * @param min minimum observed value
      * @param indices vector coordinates that the normalized value should be assigned to
      */
-    public static void addDataNormalizer(double max, double min, int... indices) {
+    public void addDataNormalizer(double max, double min, int... indices) {
         addCustomParser(new DataParsing() {
             @Override
             public void parseAndAddData(String inputString, List<Double> inputVector) {
@@ -322,7 +337,7 @@ public abstract class HigherLevelExampleAbstract {
      * @param min minimum observed value
      * @param N_u size of the input vector; used to add the transformation at the right place
      */
-    public static void addOutputDenormalizer(double max, double min, int N_u) {
+    public void addOutputDenormalizer(double max, double min, int N_u) {
         addPlottingTransformer(N_u, new DataTransformation() {
             @Override
             public double transform(double input) {
@@ -332,39 +347,8 @@ public abstract class HigherLevelExampleAbstract {
     }
 
     /**
-     * An input processing function, common for all HLEs.
-     * Accepts lines of CSV file as {@code String} values. Converts each into a vector ({@code List<Double>}), 
-     * possibly using custom parsers.
-     * <br><br>
-     * The vector is later broken into input, output and input for plotting parts. If we want one column to be used for 
-     * both input and output, we can duplicate it through the custom parser.
+     * Run the configured example using the chosen implementation.
+     * @throws Exception
      */
-    public static class ProcessInput implements FlatMapFunction<String, List<Double>> {
-        @Override
-        public void flatMap(String line, Collector<List<Double>> out) throws Exception {
-            String[] items = line.split(",");
-            List<Double> inputVector = new ArrayList<>();
-            for (int i = 0; i < items.length; ++i) {
-                // perform any necessary modifications
-                // (e.g. "normalize" the data to be in some reasonable range for the transformation)
-                if (columnsBitMask.charAt(i) != '0') {
-                    try {
-                        if (customParsers != null && customParsers.containsKey(i)) {
-                            customParsers.get(i).parseAndAddData(items[i], inputVector);
-                        } else {
-                            inputVector.add(Double.parseDouble(items[i]));
-                        }
-                    }
-                    catch (Exception e) {   // dealing with invalid/unwanted lines - exclude them
-                        if (debugging) {
-                            System.err.println("invalid cell: " + items[i]);
-                            System.err.println("line: " + line);
-                        }
-                        return;  // we don't want to process other cells
-                    }
-                }
-            }
-            out.collect(inputVector); // the line is valid
-        }
-    }
+    public abstract void run() throws Exception;
 }

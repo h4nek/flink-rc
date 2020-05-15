@@ -155,7 +155,7 @@ public abstract class HigherLevelExampleAbstract implements Serializable {
     protected double shift = 0;
     protected long jumpSize = 2;
     protected double sparsity = 0.8;
-    protected double scalingAlpha = 0.5;
+    protected double scalingAlpha = 0.8;
     protected Topology reservoirTopology = Topology.CYCLIC_WITH_JUMPS;
     protected boolean includeInput = true;
     protected boolean includeBias = true;

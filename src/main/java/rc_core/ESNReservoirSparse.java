@@ -183,8 +183,6 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     public ESNReservoirSparse(int N_u, int N_x, Transformation transformation) {
         this(N_u, N_x, null, transformation);
     }
-
-    private Uniform uniform; // declared as an object field to be part of serialization
     
     @Override
     public void open(Configuration parameters) throws Exception {
@@ -240,9 +238,10 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         
         SparseStore.Factory<Double> matrixFactory = SparseStore.PRIMITIVE64;
         W_input = matrixFactory.make(N_x, N_u);
-        uniform = new Uniform(-0.5*range + shift, range);
+        Uniform uniform = new Uniform(-0.5*range + shift, range);
         uniform.setSeed(random.nextLong()); // ensures that the randomly generated sequence is the same after 
                                             // (de)serialization by setting the object's "state"
+                                            // -- this works because Random class implements Serializable
         W_input.fillAll(uniform);
         System.out.println("random W_in: " + W_input);
 
@@ -318,22 +317,13 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
 
         /* Scaling W */
         W_internal = (SparseStore<Double>) W_internal.multiply(alpha/spectralRadius);
-//        System.out.println("scaled W: " + W_internal);
+        System.out.println("scaled W: " + W_internal);
+        System.out.println("spectral radius: " + RCUtilities.spectralRadius(W_internal)); // radius after scaling ... should ~= alpha
     }
 
     private final Random random = new Random();
-//    private List<Double> randomWeights; // used for repeated invokes of the class after (de)serialization...
-//    private int weightCounter = 0;
     private double getRandomWeight() {
-//        ++weightCounter;
-//        if (randomWeights.size() >= weightCounter) {
-//            System.out.println("reusing saved weight...");
-//            return randomWeights.get(weightCounter - 1);
-//        }
-//        System.out.println("generating new weight...");
-        double randNum = random.nextDouble()*range - (range/2) + shift;
-//        randomWeights.add(randNum);
-        return randNum;
+        return random.nextDouble()*range - (range/2) + shift;
     }
 
     @Override

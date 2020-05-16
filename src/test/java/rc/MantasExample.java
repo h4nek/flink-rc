@@ -17,7 +17,7 @@ public class MantasExample extends HigherLevelExampleFactory {
         inputFilePath = "src/test/resources/mantas/MackeyGlass_t17.txt";
         columnsBitMask = "1";
         N_u = 1;
-        N_x = 5;
+        N_x = 50;
         learningRate = 0.01;
         scalingAlpha = 0.8;
     }

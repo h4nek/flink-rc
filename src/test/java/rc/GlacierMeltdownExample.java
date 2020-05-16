@@ -23,9 +23,9 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
 
     public static void main(String[] args) throws Exception {
         HigherLevelExampleAbstract hle = new HigherLevelExampleBatch();
-        hle.setup(inputFilePath, columnsBitMask, N_u, N_x, true, 
+        hle.setup(inputFilePath, columnsBitMask, N_u, N_x, false, 
                 null, false, (int) Math.floor(trainingSetRatio*70), learningRate, true,
-                10e-10);
+                1e-10);
         hle.setLrOnly(false);
         hle.setPlottingMode(plottingMode);
         hle.setTimeStepsAhead(1);    // predict the next year's meltdown based on the current data

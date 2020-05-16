@@ -22,7 +22,7 @@ public class CO2EmmissionsSingleNationExample {
     public static final String INPUT_FILE_PATH = "src/test/resources/co2_emissions/fossil-fuel-co2-emissions-by-nation.csv";
     public static final String[] selectNations = {"UNITED KINGDOM", "NORWAY", "CZECH REPUBLIC", "CHINA (MAINLAND)"};
     public static final int selectedNationIdx = 3;  // select a nation from the selectNations array
-    public static final double LEARNING_RATE = 100; //0.000001;
+    public static final double LEARNING_RATE = 10; //0.000001;
     private static final double SPLIT_RATIO = 0.8;
     private static final int downScaling = 250; // an amount by which the shifted input years should be divided by
 
@@ -110,7 +110,7 @@ public class CO2EmmissionsSingleNationExample {
         }).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE))), outputSetTest, results, 
                 "CO2 Emissions of " + selectNations[selectedNationIdx] + " LR", "Year", 
                 "kt of CO\\textsubscript{2}", "CO$_2$ Emissions of " + selectNations[selectedNationIdx] + " LR", 
-                0, PythonPlotting.PlotType.POINTS, null, null, resultsOffline
+                0, PythonPlotting.PlotType.LINE, null, null, resultsOffline
         );
         
         // plot the training data

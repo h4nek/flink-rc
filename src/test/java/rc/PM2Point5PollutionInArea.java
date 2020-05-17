@@ -7,53 +7,62 @@ import utilities.Utilities;
 
 import java.util.List;
 
+import static utilities.PythonPlotting.PlotType.LINE;
+import static utilities.PythonPlotting.PlotType.POINTS;
+
 public class PM2Point5PollutionInArea extends HigherLevelExampleFactory {
     static {
         inputFilePath = "src/test/resources/pm2.5_pollution/transformed_input/PM2.5 for Seattle-Tacoma-Bellevue, WA Transformed.csv";
         columnsBitMask = "1111111111111111111";
         N_u = 1;
-        N_x = 50;
-        learningRate = 500;
+        N_x = 10;
+        learningRate = 200;
         trainingSetRatio = 0.8;
+        regularizationFactor = 1e-10;
+        scalingAlpha = 0.8;
+        trainingSetSize = (int) Math.floor(trainingSetRatio*365);
+
+        title = "PM$_{2.5}$ Pollution in Seattle Area";
+        xLabel = "Day";
+        yLabel = "$\\mu g/m^3$";
+        plotType = LINE;
+        plotFileName = "PM2pt5 Pollution in Seattle Area";
+
+        debugging = true;
+        includeMSE = true;
+        plottingMode = true;
 
         scalingAlpha = 0.8;
     }
+    
 
     public static void main(String[] args) throws Exception {
-        HigherLevelExampleAbstract hle = new HigherLevelExampleBatch();
-        
+        configure();
+        runAndGetMSEs();
+    }
+
+    @Override
+    protected void concreteExampleConfiguration() {
+        configure();
+    }
+
+    private static void configure() {
         hle.setTimeStepsAhead(1);
-        hle.setup(inputFilePath, columnsBitMask, N_u, N_x, true, null, true, 
-                (int) Math.floor(trainingSetRatio*365), learningRate, true, 1e-10);
-//        hle.addDataNormalizer(364, 0, 0);
         hle.addCustomParser(0, new DataParsing() {
             @Override
             public void parseAndAddData(String inputString, List<Double> inputVector) {
                 double day = Double.parseDouble(inputString);
-//                inputVector.add(0, (day - 182)/182);    // move the column values to be around 0
+//                inputVector.add(0, (day - 182)/182);    // move the column values to be around 0 (~[-1,1])
                 inputVector.add(0, day);    // for plotting input (will be at idx 1 after input is added)
             }
         });
-        AverageDailyPollutionValues sumFunction = new AverageDailyPollutionValues();
+        AverageDailyPollutionValues avgFunction = new AverageDailyPollutionValues();
         for (int i = 1; i < 19; ++i) {
-            hle.addCustomParser(i, sumFunction);
+            hle.addCustomParser(i, avgFunction);
         }
-        hle.setupPlotting(0, "PM$_{2.5}$ Pollution in Seattle Area", "Day", 
-                "$\\mu g/m^3$", PythonPlotting.PlotType.LINE, null, null, 
-                "PM2pt5 Pollution in Seattle Area");
         // reverse the input normalization modifications for plotting
 //        hle.addPlottingTransformer(0, x -> x*182 + 182);\
         hle.addPlottingTransformer(N_u, x -> x*50);   // we want to plot the "denormalized" average as output
-
-        hle.run();
-        offlineMSE = hle.getOfflineMSE();
-        onlineMSE = hle.getOnlineMSE();
-    }
-
-    @Override
-    public Tuple2<Double, Double> runAndGetMSEs() throws Exception {
-        main(null);
-        return Tuple2.of(onlineMSE, offlineMSE);
     }
 
     private static class AverageDailyPollutionValues implements DataParsing {

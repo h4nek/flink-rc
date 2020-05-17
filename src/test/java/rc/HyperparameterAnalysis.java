@@ -13,7 +13,7 @@ import utilities.PythonPlotting;
  * We can choose any example to compare the reservoirs on.
  */
 public class HyperparameterAnalysis {
-    private static Integer[] arrN_x = {50, 75, 100, 125};
+    private static Integer[] arrN_x = {4, 10, 20, 50};
     private static Double[] arrScalingAlpha = {0.1, 0.5, 0.8, 0.9};
     private static int numIters = 10;  // number of iterations for each reservoir configuration to average the MSE over
     private static Topology[] arrTopology = Topology.values();
@@ -26,9 +26,9 @@ public class HyperparameterAnalysis {
     private static final int selectedNationIdx = 0;  // select a nation from the selectNations array
     
     public static void main(String[] args) throws Exception {
-        int chosenParam = 0; // 0 -- spectral radius, 1 -- N_x, 2 -- topology
+        int chosenParam = 1; // 0 -- spectral radius, 1 -- N_x, 2 -- topology
         // 0 - M-G T-S, 1 - Glaciers, 2 - CO2, 3 - PM2.5
-        int chosenExample = 3;
+        int chosenExample = 1;
 
         Object[] arrHyperparam = arrScalingAlpha;
         String paramName = "spectral radius";
@@ -55,6 +55,11 @@ public class HyperparameterAnalysis {
             for (Object hyperparameter : arrHyperparam) {
                 HigherLevelExampleFactory hleProxy = getExampleClass(chosenExample);
                 hleProxy.setPlottingMode(false);
+                // set default config
+                hleProxy.setRegularizationFactor(1e-10);
+                hleProxy.setNx(10);
+                hleProxy.setScalingAlpha(.8);
+                hleProxy.setTopology(Topology.CYCLIC_WITH_JUMPS);
 
                 if (hyperparameter instanceof Integer) { //N_x
                     int N_x = (Integer) hyperparameter;
@@ -74,7 +79,7 @@ public class HyperparameterAnalysis {
                     isNumeric = false;
                 }
 
-                Tuple2<Double, Double> mses = hleProxy.runAndGetMSEs();
+                Tuple2<Double, Double> mses = hleProxy.runConcreteExampleAndGetMSEs();
                 System.out.println("Online MSE: " + mses.f0);
                 System.out.println("Offline MSE: " + mses.f1);
                 data[i][0] = hyperparameter.toString();

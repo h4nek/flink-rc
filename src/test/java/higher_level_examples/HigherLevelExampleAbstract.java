@@ -20,7 +20,7 @@ public abstract class HigherLevelExampleAbstract implements Serializable {
     protected Map<Integer, DataParsing> customParsers = new HashMap<>(); 
 
     protected int N_u = 1;   // dimension of the input (vectors u(t))
-    protected int N_x = 50;   // dimension of the reservoir (N_x*N_x matrix; vectors x(t))
+    protected int N_x = 10;   // dimension of the reservoir (N_x*N_x matrix; vectors x(t))
     
     protected List<Double> lmAlphaInit = null; // initial value of the LM Alpha vector; has to be of length N_x 
                                                       // (or null - zero vector is then created)
@@ -32,7 +32,7 @@ public abstract class HigherLevelExampleAbstract implements Serializable {
     
     // number of records to be in the training dataset (rest of the file is ignored)
     // we expect that the indexing is 0-based! (otherwise we'll have a different number of I/O pairs)
-    protected int trainingSetSize = (int) Math.floor(69*0.5);
+    protected int trainingSetSize = (int) Math.floor(70*0.8);
     protected boolean includeMSE = false;
     protected int timeStepsAhead = 0;    // in case of time series predictions, how far ahead do we want to predict?
                                                 // changes the indexing of the output set/stream (if != 0)

@@ -346,7 +346,7 @@ public class PythonPlotting {
 
     public static void plotReservoirPerformanceHyperparam(String[][] data, String exampleTitle, String exampleTitleUnformatted, 
                                                           String parameterName, String xAxis, String yAxis, PlotType plotType, 
-                                                          int valuesPerMeasuerment, int measurements, boolean isNumeric) 
+                                                          int valuesPerMeasurement, int measurements, boolean isNumeric) 
             throws IOException {
         String folder = "hyperparameter_performance\\";
         
@@ -364,7 +364,7 @@ public class PythonPlotting {
                 xAxis,
                 yAxis,
                 plotType.toString(),
-                String.valueOf(valuesPerMeasuerment),
+                String.valueOf(valuesPerMeasurement),
                 String.valueOf(measurements),
                 String.valueOf(isNumeric),
         };

@@ -154,6 +154,11 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
             }
             PythonPlotting.plotRCPredictionsDataSetNew(inputPlottingSet, testingOutput, predictions,
                     plotFileName, xlabel, ylabel, title, plotType, null, predictionsOffline);
+            
+            PythonPlotting.saveConfigAndResults(plotFileName, "", columnsBitMask, N_u, N_x, lmAlphaInit, stepsDecay, 
+                    trainingSetSize, learningRate, regularizationFactor, reservoirTopology, range, shift, scalingAlpha, 
+                    jumpSize, sparsity, init_vector, includeBias, includeInput, decayGranularity, decayAmount, 
+                    timeStepsAhead, lrOnly, onlineMSE, offlineMSE);
         }
     }
     

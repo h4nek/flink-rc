@@ -1,19 +1,13 @@
 package utilities;
 
 import lm.batch.ExampleBatchUtilities;
-import org.apache.flink.api.common.functions.FlatJoinFunction;
-import org.apache.flink.api.common.serialization.Encoder;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
-import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink;
 import org.apache.flink.streaming.api.functions.windowing.ProcessAllWindowFunction;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
-import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 import rc_core.ESNReservoirSparse.Topology;
@@ -374,6 +368,69 @@ public class PythonPlotting {
         printStream(process.getInputStream());
         printStream(process.getErrorStream());
         System.out.println(process.exitValue());
+    }
+
+    private static String[][] configArray;
+    public static void saveConfigAndResults(String outputFileName, String folder, String columnsBitMask, int N_u, int N_x, 
+                                            List<Double> lmAlphaInit, boolean stepsDecay, int trainingSetSize, double learningRate,
+                                            double regularizationFactor, Topology topology, double range, double shift,
+                                            double scalingAlpha, long jumps, double sparsity, List<Double> initialStateVector,
+                                            boolean includeBias, boolean includeInput, double decayGranularity, double decayAmount,
+                                            int timeStepsAhead, boolean lrOnly, double MSEOnline, double MSEOffline) throws IOException {
+        configArray = new String[22][2];
+        i = 0;  // reset the counter
+        
+        addToConfig("Online MSE", String.valueOf(MSEOnline));
+        addToConfig("Offline MSE", String.valueOf(MSEOffline));
+        addToConfig("Nu", String.valueOf(N_u));
+        addToConfig("Nx", String.valueOf(N_x));
+        addToConfig("topology", topology.toString());
+        String interval = "[" + (-0.5*range + shift) + ";" + (0.5*range + shift) + "]";
+        addToConfig("interval for weights", interval);
+        addToConfig("spectral radius", String.valueOf(scalingAlpha));
+        addToConfig("size of jumps", String.valueOf(jumps));
+        addToConfig("sparsity of W", String.valueOf(sparsity*100) + "%");
+//        if (initialStateVector == null) {
+//            initialStateVector = Collections.nCopies(N_x, 0.0);
+//        }
+        if (initialStateVector != null) {   // only save if we have a non-standard vector
+            addToConfig("x(0)", Utilities.listToString(initialStateVector));
+        }
+        else {
+            addToConfig("x(0)", "Zero vector of Nx values");
+        }
+        addToConfig("training set size", String.valueOf(trainingSetSize));
+//        if (lmAlphaInit == null) {
+//            lmAlphaInit = Collections.nCopies(N_x + (includeBias ? 1 : 0) + (includeInput ? N_u : 0), 0.0);
+//        }
+        if (lmAlphaInit != null) {
+            addToConfig("initial vector of regression coefficients (alpha_0)", Utilities.listToString(lmAlphaInit));
+        }
+        else {
+            addToConfig("initial vector of regression coefficients (alpha_0)", "Zero vector of Nx" + 
+                    (includeBias ? "+1" : "") + (includeInput ? "+Nu" : "") + " values");
+        }
+        addToConfig("learning rate", String.valueOf(learningRate));
+        addToConfig("steps decay", String.valueOf(stepsDecay));
+        addToConfig("regularization factor", String.valueOf(regularizationFactor));
+        addToConfig("include bias", String.valueOf(includeBias));
+        addToConfig("include input", String.valueOf(includeInput));
+        addToConfig("decay granularity", String.valueOf(decayGranularity));
+        addToConfig("decay amount", String.valueOf(decayAmount));
+        addToConfig("time-steps ahead", String.valueOf(timeStepsAhead));
+        addToConfig("LR-only model", String.valueOf(lrOnly));
+
+        addToConfig("columns bit mask", columnsBitMask);
+        
+        String outputFilePath = "..\\python_plots\\config+MSE_metadata\\" + folder + outputFileName + ".csv";
+        Utilities.write2DArrayToCSV(outputFilePath, configArray);
+    }
+    
+    private static int i;
+    private static void addToConfig(String fieldName, String fieldValue) {
+        configArray[i][0] = fieldName;
+        configArray[i][1] = fieldValue;
+        ++i;
     }
     
     private static void printStream(InputStream stream) throws IOException {

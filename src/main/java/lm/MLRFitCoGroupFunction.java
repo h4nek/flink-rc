@@ -90,7 +90,8 @@ class MLRFitCoGroupFunction extends RichCoGroupFunction<Tuple2<Long, List<Double
     @Override
     public void coGroup(Iterable<Tuple2<Long, List<Double>>> inputGroup, Iterable<Tuple2<Long, Double>> outputGroup, Collector<Tuple2<Long, List<Double>>> out) throws Exception {
         iterationCounter.add(1);    // starts from 1
-        if (stepsDecay && iterationCounter.getLocalValuePrimitive()%decayPeriod == 0) {   // introduce a decay with given "granularity"
+        if (stepsDecay && iterationCounter.getLocalValuePrimitive()%decayPeriod == 0 && 
+                iterationCounter.getLocalValuePrimitive() != 0) {   // introduce a decay with given "granularity"
             learningRate = learningRate* decayCoeff; // reduce the learning rate by a given amount
         }
         for (Tuple2<Long, List<Double>> input : inputGroup) {

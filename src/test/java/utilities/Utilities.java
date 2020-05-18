@@ -39,7 +39,7 @@ public class Utilities {
     public static <T> void write2DArrayToCSV(String pathToFile, Object[][] data) throws IOException {
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < data.length; ++i) {
-            stringBuilder.append(data[i][0]);   // first element isn't preceded by a comma
+            stringBuilder.append(data[i][0]);   // first element in each row isn't preceded by a comma
             for (int j = 1; j < data[0].length; ++j) {  // put the row values in a comma-separated line
                 stringBuilder.append(',').append(data[i][j]);
             }

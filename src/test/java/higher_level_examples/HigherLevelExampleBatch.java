@@ -82,7 +82,7 @@ public class HigherLevelExampleBatch extends HigherLevelExampleAbstract {
         if (trainingMethod != TrainingMethod.OFFLINE) {
             LinearRegression lr = new LinearRegression();
             DataSet<Tuple2<Long, List<Double>>> alphas = lr.fit(trainingInput, trainingOutput, lmAlphaInit,
-                    learningRate, trainingSetSize, includeMSE, stepsDecay);
+                    learningRate, trainingSetSize, includeMSE, stepsDecay, decayGranularity, decayAmount);
             if (includeMSE) {
                 DataSet<Tuple2<Long, List<Double>>> MSEs = alphas.filter(x -> x.f0 == -1);
                 alphas = alphas.filter(x -> x.f0 != -1);

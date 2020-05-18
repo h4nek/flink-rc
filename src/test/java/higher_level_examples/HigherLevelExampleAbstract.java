@@ -25,6 +25,8 @@ public abstract class HigherLevelExampleAbstract implements Serializable {
     protected List<Double> lmAlphaInit = null; // initial value of the LM Alpha vector; has to be of length N_x 
                                                       // (or null - zero vector is then created)
     protected boolean stepsDecay = true; // a step-based decay of the learning rate (for online LR)
+    double decayGranularity = 32; // how often (after what # of steps/samples) should the step-based decay be applied
+    double decayAmount = 1.0/16; // by what portion should the value be "decayed" (e.g. for the default value 1/16, the decayed learning rate will be 15/16 of the previous learning rate)
     // regularization factor for LM using pseudoinverse; initialized with a small value - should avoid a singular matrix
     protected double regularizationFactor = 1e-10;
     // specify if we want to apply only Linear Regression (readout phase) and leave out the reservoir

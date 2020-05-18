@@ -38,8 +38,8 @@ public class CO2EmmissionsSingleNationExample extends HigherLevelExampleFactory 
         includeMSE = true;
         plottingMode = true;
         
-        min = 2552;   // UK - 2552; China - 26
-        max = 180219;   // UK - 180219; China - 699644
+        min = 2552;   // UK - 2552, Norway - 1, Czech Republic - 29359, China - 26
+        max = 160605;   // UK - 160605, Norway - 8473, Czech Republic - 37681, China - 699644
     }
     
 

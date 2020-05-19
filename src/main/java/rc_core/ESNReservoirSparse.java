@@ -126,7 +126,6 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         }
         else if (sparsity < 0 || sparsity > 1) {
             throw new IllegalArgumentException("The sparsity has to be a value between 0-1 (inclusive).");
-
         }
         
         if (alpha < 0 || alpha > 1) {

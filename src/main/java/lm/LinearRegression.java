@@ -32,7 +32,7 @@ public class LinearRegression implements Serializable {
      * 
      * @see #fit(DataSet, DataSet, List, double, int, boolean, boolean, double, double)
      */
-    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
+    public static DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                           DataSet<Tuple2<Long, Double>> outputSet, int numSamples) {
         return fit(inputSet, outputSet, null, .00001, numSamples, false);
     }
@@ -42,7 +42,7 @@ public class LinearRegression implements Serializable {
      * 
      * @see #fit(DataSet, DataSet, List, double, int, boolean, boolean, double, double)
      */
-    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
+    public static DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
                                                    double learningRate, int numSamples, boolean includeMSE) {
@@ -54,7 +54,7 @@ public class LinearRegression implements Serializable {
      * 
      * @see #fit(DataSet, DataSet, List, double, int, boolean, boolean, double, double)
      */
-    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
+    public static DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
                                                    double learningRate, int numSamples, boolean includeMSE, 
@@ -80,7 +80,7 @@ public class LinearRegression implements Serializable {
      * @return A set of regression coefficients vectors (Alpha_t). Typically, one wants to use the latest vector, but 
      * the vectors could also be analyzed and the one with lowest MSE chosen.
      */
-    public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
+    public static DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
                                                    List<Double> alphaInit,
                                                    double learningRate, int numSamples, boolean includeMSE, 
@@ -94,7 +94,7 @@ public class LinearRegression implements Serializable {
      * 
      * @see #fit(DataStream, DataStream, List, double, int, boolean, boolean, double, double, WindowAssigner)
      */
-    public <W extends Window> DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
+    public static <W extends Window> DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       DataStream<Tuple2<Long, Double>> outputStream,
                                                       List<Double> alphaInit,
                                                       double learningRate, int numSamples, boolean includeMSE,
@@ -125,7 +125,7 @@ public class LinearRegression implements Serializable {
      * @return A set of regression coefficients vectors (Alpha_t). Typically, one wants to use the latest vector, but
      * the vectors could also be analyzed and the one with lowest MSE chosen.
      */
-    public <W extends Window> DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
+    public static <W extends Window> DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       DataStream<Tuple2<Long, Double>> outputStream,
                                                       List<Double> alphaInit,
                                                       double learningRate, int numSamples, boolean includeMSE,
@@ -147,7 +147,7 @@ public class LinearRegression implements Serializable {
      * @param alpha The List (vector) of optimal regression coefficients, computed beforehand.
      * @return a stream of predictions (y^(t))
      */
-    public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
+    public static SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       List<Double> alpha) {
         return inputStream.process(new MLRPredictProcessFunction(alpha)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
     }
@@ -176,7 +176,7 @@ public class LinearRegression implements Serializable {
      * @param chosenAlphaIndex the index of the chosen vector of regression coefficients that defines the used model
      * @return a stream of predictions (y^(t))
      */
-    public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
+    public static SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                                     DataStream<Tuple2<Long, List<Double>>> alphaStream,
                                                                     long chosenAlphaIndex) {
         return inputStream.connect(alphaStream).process(new MLRPredictCoProcessFunction(chosenAlphaIndex))

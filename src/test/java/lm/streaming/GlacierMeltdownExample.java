@@ -49,7 +49,7 @@ public class GlacierMeltdownExample {
 //
         /* Online learning (GD) */
         for (double learningRate : new double[]{0.01}) {   // 0.0000004 -- originally ~ best
-            fitLRForMatlab(learningRate, TrainingMethod.GRADIENT_DESCENT);
+            fitAndPredictLR(learningRate, TrainingMethod.GRADIENT_DESCENT);
         }
         
         /* Offline learning (PINV)*/ //-- Seems to be working well
@@ -61,11 +61,13 @@ public class GlacierMeltdownExample {
     /**
      * A function that makes it easier to realize the linear regression for different step sizes. 
      * It uses simple linear regression (with one input variable). Which is suitable for a 2D graph plot.
-     * It is using both offline (pseudoinverse) and online (gradient descent) approach.
+     * We've used the <i>Year</i> column also for indexing (time) of the records and shifted the values to start at 0
+     * (therefore e.g. x(t) = t).
+     * 
      * @param learningRate for GD, serves as a regularization factor when using pseudoinverse
-     * @param trainingMethod
+     * @param trainingMethod choose between pseudoinverse (offline) and gradient descent (online) approach
      */
-    public static void fitLRForMatlab(double learningRate, TrainingMethod trainingMethod) throws Exception {
+    public static void fitAndPredictLR(double learningRate, TrainingMethod trainingMethod) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
 
@@ -78,7 +80,8 @@ public class GlacierMeltdownExample {
         DataSet<Tuple2<Long, List<Double>>> glaciersInput = glaciers.map(x -> {
             List<Double> y = new ArrayList<Double>(); y.add(1.0); y.add(x.f0.doubleValue()-1945); //y.add(x.f2);
             return Tuple2.of(x.f0-1945, y);}).returns(Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
-        DataSet<Tuple2<Long, Double>> glaciersOutput = glaciers.map(x -> Tuple2.of(x.f0-1945, x.f1)).returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
+        DataSet<Tuple2<Long, Double>> glaciersOutput = glaciers.map(x -> Tuple2.of(x.f0-1945, x.f1))
+                .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
 
         /* Split the data for testing and training */
         int datasetSize = glaciers.collect().size();

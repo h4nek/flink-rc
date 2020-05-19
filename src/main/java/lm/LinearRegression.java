@@ -7,10 +7,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
-import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.streaming.api.windowing.windows.Window;
 import org.apache.flink.util.Collector;
 
@@ -32,6 +29,8 @@ public class LinearRegression implements Serializable {
 
     /**
      * Create a linear model with default parameters. An initial alpha is set to a zero vector.
+     * 
+     * @see #fit(DataSet, DataSet, List, double, int, boolean, boolean, double, double)
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                           DataSet<Tuple2<Long, Double>> outputSet, int numSamples) {
@@ -40,6 +39,8 @@ public class LinearRegression implements Serializable {
 
     /**
      * Create a linear model from training DataSets using Gradient Descent, without learning rate decay.
+     * 
+     * @see #fit(DataSet, DataSet, List, double, int, boolean, boolean, double, double)
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
@@ -50,6 +51,8 @@ public class LinearRegression implements Serializable {
 
     /**
      * Create a linear model from training DataSets using Gradient Descent. A version with default decay values.
+     * 
+     * @see #fit(DataSet, DataSet, List, double, int, boolean, boolean, double, double)
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
@@ -62,6 +65,20 @@ public class LinearRegression implements Serializable {
 
     /**
      * Create a linear model from training DataSets using Gradient Descent.
+     * @param inputSet indexed set of input vectors (x(t))
+     * @param outputSet indexed set of output scalars (y(t))
+     * @param alphaInit initial vector of regression coefficients (Alpha_0)
+     * @param learningRate learning rate of the stochastic gradient descent
+     * @param numSamples size of the training set (number of data points that will be used for training)
+     * @param includeMSE if MSE estimates computed at each iteration should be included in the output set or not 
+     *                   (if true, every MSE has an index of -1 and can be easily filtered)
+     * @param stepsDecay if step-based decay of the learning rate should be used
+     * @param decayGranularity how often (after what # of steps/samples) should the step-based decay be applied. 
+     *                         is computed as ceiling(trainingSetSize/decayGranularity) (relevant only if stepsDecay == true)
+     * @param decayAmount by what portion of itself should the learning rate be lowered (e.g. 1/16 -> subtracting 1/16th 
+     *                    of the current learning rate to obtain the decayed value) (relevant only if stepsDecay == true)
+     * @return A set of regression coefficients vectors (Alpha_t). Typically, one wants to use the latest vector, but 
+     * the vectors could also be analyzed and the one with lowest MSE chosen.
      */
     public DataSet<Tuple2<Long, List<Double>>> fit(DataSet<Tuple2<Long, List<Double>>> inputSet,
                                                    DataSet<Tuple2<Long, Double>> outputSet,
@@ -74,6 +91,8 @@ public class LinearRegression implements Serializable {
 
     /**
      * Create a linear model from training DataStreams using Gradient Descent. A version with default decay values.
+     * 
+     * @see #fit(DataStream, DataStream, List, double, int, boolean, boolean, double, double, WindowAssigner)
      */
     public <W extends Window> DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       DataStream<Tuple2<Long, Double>> outputStream,
@@ -84,9 +103,27 @@ public class LinearRegression implements Serializable {
                 .apply(new MLRFitCoGroupFunction(alphaInit, learningRate, numSamples, includeMSE, stepsDecay, 
                         32, 1.0/16));
     }
-    
+
     /**
      * Create a linear model from training DataStreams using Gradient Descent.
+     * 
+     * @param inputStream indexed stream of input vectors (x(t))
+     * @param outputStream indexed stream of output scalars (y(t))
+     * @param alphaInit initial vector of regression coefficients (Alpha_0)
+     * @param learningRate learning rate of the stochastic gradient descent
+     * @param numSamples size of the training set (number of data points that will be used for training)
+     * @param includeMSE if MSE estimates computed at each iteration should be included in the output set or not 
+     *                   (if true, every MSE has an index of -1 and can be easily filtered)
+     * @param stepsDecay if step-based decay of the learning rate should be used
+     * @param decayGranularity how often (after what # of steps/samples) should the step-based decay be applied. 
+     *                         is computed as ceiling(trainingSetSize/decayGranularity) (relevant only if stepsDecay == true)
+     * @param decayAmount by what portion of itself should the learning rate be lowered (e.g. 1/16 -> subtracting 1/16th 
+     *                    of the current learning rate to obtain the decayed value) (relevant only if stepsDecay == true)
+     * @param windowAssigner a custom window for the inputs and outputs to be grouped by and form input-output pairs for 
+     *                       training. overlapping windows probably make sense to not miss some pairs unnecessarily
+     * @param <W> The type of {@code Window} that this assigner assigns. ({@link WindowAssigner})
+     * @return A set of regression coefficients vectors (Alpha_t). Typically, one wants to use the latest vector, but
+     * the vectors could also be analyzed and the one with lowest MSE chosen.
      */
     public <W extends Window> DataStream<Tuple2<Long, List<Double>>> fit(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       DataStream<Tuple2<Long, Double>> outputStream,
@@ -105,8 +142,10 @@ public class LinearRegression implements Serializable {
      * Predicts the dependent (scalar) variable from the independent (vector) variable using a single non-updateable 
      * list of optimal alpha parameters. Such model can be trained using methods from {@link LinearRegressionPrimitive} class 
      * or {@link LinearRegression} class.
-     * @param alpha The List (vector) of optimal alpha parameters, computed beforehand.
-     * @return
+     * 
+     * @param inputStream a stream of input vectors (x(t))
+     * @param alpha The List (vector) of optimal regression coefficients, computed beforehand.
+     * @return a stream of predictions (y^(t))
      */
     public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                       List<Double> alpha) {
@@ -130,12 +169,17 @@ public class LinearRegression implements Serializable {
 
     /**
      * MLR model prediction using DataStreams. Training is separate and considered finished by 
-     * producing the final Alpha with (trainingSetSize - 1) index.
+     * producing the final Alpha with (chosenAlphaIndex - 1) index.
+     * 
+     * @param inputStream a stream of input vectors (x(t)) to be used for predicting
+     * @param alphaStream a stream of vectors of regression coefficients
+     * @param chosenAlphaIndex the index of the chosen vector of regression coefficients that defines the used model
+     * @return a stream of predictions (y^(t))
      */
     public SingleOutputStreamOperator<Tuple2<Long, Double>> predict(DataStream<Tuple2<Long, List<Double>>> inputStream,
                                                                     DataStream<Tuple2<Long, List<Double>>> alphaStream,
-                                                                    int trainingSetSize) {
-        return inputStream.connect(alphaStream).process(new MLRPredictCoProcessFunction(trainingSetSize))
+                                                                    long chosenAlphaIndex) {
+        return inputStream.connect(alphaStream).process(new MLRPredictCoProcessFunction(chosenAlphaIndex))
                 .returns(Types.TUPLE(Types.LONG, Types.DOUBLE));
     }
 
@@ -155,20 +199,20 @@ public class LinearRegression implements Serializable {
         private List<Tuple2<Long, List<Double>>> inputsBacklog = new ArrayList<>(); // input vectors that are yet to be 
                                                                       // processed after the final alpha vector arrives
 //        private long EOTRAINING_TIMESTAMP;
-        private int trainingSetSize;
+        private long chosenAlphaIndex;
         
 //        public MLRPredictCoProcessFunction(long EOTRAINING_TIMESTAMP) {
 //            this.EOTRAINING_TIMESTAMP = EOTRAINING_TIMESTAMP;
 //        }
-        public MLRPredictCoProcessFunction(int trainingSetSize) {
-            this.trainingSetSize = trainingSetSize;
+        public MLRPredictCoProcessFunction(long chosenAlphaIndex) {
+            this.chosenAlphaIndex = chosenAlphaIndex;
         }
 
         @Override
         public void processElement1(Tuple2<Long, List<Double>> input, Context ctx, 
                                     Collector<Tuple2<Long, Double>> out) throws Exception {
 //            if (alphaTimestamp < EOTRAINING_TIMESTAMP) {
-            if (alphaIndex < trainingSetSize) {
+            if (alphaIndex < chosenAlphaIndex) {
 //                System.out.println("storing the input");
 //                System.out.println("input:" + input);
                 inputsBacklog.add(input);
@@ -209,7 +253,7 @@ public class LinearRegression implements Serializable {
                 alphaIndex = alpha.f0;
             }
 //            if (alphaTimestamp >= EOTRAINING_TIMESTAMP) {
-            if (alphaIndex >= trainingSetSize - 1) {    // we have the final Alpha
+            if (alphaIndex == chosenAlphaIndex) {    // we have the chosen Alpha
                 System.out.println("Releasing the backlog (from the Alpha process)");
                 for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {
                     predict(oldInput, out, this.alpha);

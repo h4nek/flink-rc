@@ -136,7 +136,7 @@ public class HigherLevelExampleStreaming extends HigherLevelExampleAbstract {
             });
         
         //TODO Reconsider? ... continuous/lifetime learning would be more suitable, can implement later
-        DataStream<Tuple2<Long, Double>> predictions = lr.predict(predictingInput, alphas, trainingSetSize);
+        DataStream<Tuple2<Long, Double>> predictions = lr.predict(predictingInput, alphas, trainingSetSize - 1);
         if (debugging) predictions.print("JUST PREDS");
         //TODO Add PINV fitting (offline) -- we aggregate all training elements, then compute the offline Alpha...
         

@@ -133,14 +133,48 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         }
     }
 
+    /**
+     * Getter for the matrix of random input weights (should be called only after {@link #open(Configuration)}, where 
+     * the matrices are generated).
+     * 
+     * @return W_in
+     */
     public SparseStore<Double> getW_input() {
         return W_input;
     }
 
+    /**
+     * Getter for the matrix of random internal weights (should be called only after {@link #open(Configuration)}, where 
+     * the matrices are generated).
+     * @return W
+     */
     public SparseStore<Double> getW_internal() {
         return W_internal;
     }
 
+    /**
+     * Construct a custom reservoir of an ESN.
+     * (the matrices {@link #W_input} and {@link #W_internal} are generated in the {@link #open(Configuration)} method, 
+     * where some fields are also converted)
+     * 
+     * @param N_u dimension of input vectors u(t) (number of coordinates)
+     * @param N_x dimension of state vectors x(t); determines the size of {@link #W_internal} matrix as well as number 
+     *            of rows of {@link #W_input}
+     * @param initVector initial state vector x(0)
+     * @param transformation an activation function to be applied element-wise on each coordinate of the intermediate 
+     *                       vector. accepts and produces a double
+     * @param range a length of the interval from which the weights are randomly chosen
+     * @param shift a shift of the scaled interval (by default symmetric around 0) from which the weights are randomly chosen
+     * @param jumpSize a size of bidirectional jumps (i.e. when jumping from j-th to i-th node (and back), jumpSize == |i-j|) 
+     *                 (relevant if the selected topology includes jumps)
+     * @param sparsity the sparsity of {@link #W_internal} (percentage of nonzero elements, divided by 100). a value 
+     *                 between 0 (fully dense) - 1 (zero matrix). used for {@link Topology#SPARSE} topology
+     * @param alpha the hyperparameter for scaling {@code #W_internal}, equal to its spectral radius after scaling
+     * @param reservoirTopology the topology (pattern of connectivity) of {@link #W_internal}
+     * @param includeInput if input vector u(t) should be concatenated (prepended) to x(t) after reservoir computation
+     * @param includeBias if bias constant (1) should be concatenated (prepended) to x(t) after reservoir computation 
+     *                    (positioned before input u(t) if it's also present)
+     */
     public ESNReservoirSparse(int N_u, int N_x, List<Double> initVector, Transformation transformation, double range,
                               double shift, long jumpSize, double sparsity, double alpha,
                               Topology reservoirTopology, boolean includeInput, boolean includeBias) {
@@ -166,20 +200,36 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
 
         argumentsCheck();   // check the validity of all arguments after instantiating them, so no need to pass them
     }
-    
+
+    /**
+     * @see ESNReservoirSparse#ESNReservoirSparse(int, int, List, Transformation, double, double, long, double, 
+     * double, Topology, boolean, boolean)
+     */
     public ESNReservoirSparse(int N_u, int N_x, List<Double> initVector, Transformation transformation) {
         this(N_u, N_x, initVector, transformation, 1, 0, 2, 0.8, 0.8, 
                 Topology.CYCLIC_WITH_JUMPS, true, true);
     }
-
+    
+    /**
+     * @see ESNReservoirSparse#ESNReservoirSparse(int, int, List, Transformation, double, double, long, double,
+     * double, Topology, boolean, boolean)
+     */
     public ESNReservoirSparse(int N_u, int N_x, List<Double> initVector) {
         this(N_u, N_x, initVector, Math::tanh);
     }
 
+    /**
+     * @see ESNReservoirSparse#ESNReservoirSparse(int, int, List, Transformation, double, double, long, double,
+     * double, Topology, boolean, boolean)
+     */
     public ESNReservoirSparse(int N_u, int N_x) {
         this(N_u, N_x, (List<Double>) null);
     }
 
+    /**
+     * @see ESNReservoirSparse#ESNReservoirSparse(int, int, List, Transformation, double, double, long, double,
+     * double, Topology, boolean, boolean)
+     */
     public ESNReservoirSparse(int N_u, int N_x, Transformation transformation) {
         this(N_u, N_x, null, transformation);
     }

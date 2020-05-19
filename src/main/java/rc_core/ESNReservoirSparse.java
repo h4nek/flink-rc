@@ -116,13 +116,17 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
     
     private void argumentsCheck() {
         if (N_u < 1 || N_x < 1) {
-            throw new IllegalArgumentException("The input/internal vector size has to be positive");
+            throw new IllegalArgumentException("The input/internal vector size has to be positive.");
         }
         else if (initVector.size() != N_x) {
             throw new IllegalArgumentException("The length of the initial vector must be N_x.");
         }
         else if (range < 0) {
-            throw new IllegalArgumentException("The range of weights has to be positive");
+            throw new IllegalArgumentException("The range of weights has to be positive.");
+        }
+        else if (sparsity < 0 || sparsity > 1) {
+            throw new IllegalArgumentException("The sparsity has to be a value between 0-1 (inclusive).");
+
         }
         
         if (alpha < 0 || alpha > 1) {
@@ -166,7 +170,8 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
      * @param range a length of the interval from which the weights are randomly chosen
      * @param shift a shift of the scaled interval (by default symmetric around 0) from which the weights are randomly chosen
      * @param jumpSize a size of bidirectional jumps (i.e. when jumping from j-th to i-th node (and back), jumpSize == |i-j|) 
-     *                 (relevant if the selected topology includes jumps)
+     *                 (relevant if the selected topology includes jumps). it is usually preferred for the jumps to 
+     *                 form one bidirectional cycle, which is achieved if jumpSize|N_x
      * @param sparsity the sparsity of {@link #W_internal} (percentage of nonzero elements, divided by 100). a value 
      *                 between 0 (fully dense) - 1 (zero matrix). used for {@link Topology#SPARSE} topology
      * @param alpha the hyperparameter for scaling {@code #W_internal}, equal to its spectral radius after scaling
@@ -198,7 +203,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         this.includeInput = includeInput;
         this.includeBias = includeBias;
 
-        argumentsCheck();   // check the validity of all arguments after instantiating them, so no need to pass them
+        argumentsCheck();   // check the validity of all arguments after instantiating them
     }
 
     /**

@@ -297,7 +297,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
                                             // (de)serialization by setting the object's "state"
                                             // -- this works because Random class implements Serializable
         W_input.fillAll(uniform);
-        System.out.println("random W_in: " + W_input);
+//        System.out.println("random W_in: " + W_input);
 
         /* Create Cycle Reservoir with Jumps */
         double cycleWeight = getRandomWeight(); // a random constant for the unidirectional cycle
@@ -360,7 +360,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
                 }
             }
         }
-        System.out.println("reservoir W: " + W_internal);
+//        System.out.println("reservoir W: " + W_internal);
 
         /* Custom MatrixStore */    // alternative
 //        JumpsSaturatedMatrix W_input_jumps = new JumpsSaturatedMatrix(N_x, range, jumpSize);
@@ -371,8 +371,8 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
 
         /* Scaling W */
         W_internal = (SparseStore<Double>) W_internal.multiply(alpha/spectralRadius);
-        System.out.println("scaled W: " + W_internal);
-        System.out.println("spectral radius: " + RCUtilities.spectralRadius(W_internal)); // radius after scaling ... should ~= alpha
+//        System.out.println("scaled W: " + W_internal);
+//        System.out.println("spectral radius: " + RCUtilities.spectralRadius(W_internal)); // radius after scaling ... should ~= alpha
     }
 
     private final Random random = new Random();

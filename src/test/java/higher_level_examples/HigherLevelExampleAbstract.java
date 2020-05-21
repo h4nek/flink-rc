@@ -9,6 +9,10 @@ import utilities.PythonPlotting;
 import java.io.Serializable;
 import java.util.*;
 
+/**
+ * "Higher-level example" providing all configuration fields, setters and methods needed to run the chosen HLE version 
+ * with custom configuration. Used by all the concrete examples.
+ */
 public abstract class HigherLevelExampleAbstract implements Serializable {
     // the path to the (CSV) file with input data
     protected String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";

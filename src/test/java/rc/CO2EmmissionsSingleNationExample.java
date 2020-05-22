@@ -12,7 +12,9 @@ public class CO2EmmissionsSingleNationExample extends HigherLevelExampleFactory 
     private static final String[] selectNations = {"UNITED KINGDOM", "NORWAY", "CZECH REPUBLIC", "CHINA (MAINLAND)"};
     private static int selectedNationIdx = 3;  // select a nation from the selectNations array
     private static final int[] datasetSizes = {264, 183, 23, 114};   // the amount of a data for each individual country, in order
-
+    private static final double[] mins = {2552, 1, 29359, 26};  // minimum observed values (from the training dataset)
+    private static final double[] maxes = {160605, 8473, 37681, 699644}; // maximum observed values (from the training dataset)
+    
     public static void setSelectedNationIdx(int selectedNationIdx) {
         CO2EmmissionsSingleNationExample.selectedNationIdx = selectedNationIdx;
     }
@@ -32,14 +34,16 @@ public class CO2EmmissionsSingleNationExample extends HigherLevelExampleFactory 
         xLabel = "Year";
         yLabel = "kt of CO\\textsubscript{2}";
         plotType = POINTS;
-        plotFileName = "CO2 Emissions of " + selectNations[selectedNationIdx];
+        plotFileName = "CO2 Emissions of " + selectNations[selectedNationIdx] + " lr " + learningRate;
 
-        debugging = true;
+        debugging = false;
         includeMSE = true;
         plottingMode = true;
-        
-        min = 2552;   // UK - 2552, Norway - 1, Czech Republic - 29359, China - 26
-        max = 160605;   // UK - 160605, Norway - 8473, Czech Republic - 37681, China - 699644
+
+//        min = 2552;   // UK - 2552, Norway - 1, Czech Republic - 29359, China - 26
+//        max = 160605;   // UK - 160605, Norway - 8473, Czech Republic - 37681, China - 699644
+        min = mins[selectedNationIdx];
+        max = maxes[selectedNationIdx];
     }
     
 

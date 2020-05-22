@@ -12,7 +12,7 @@ import static utilities.PythonPlotting.PlotType.LINE;
  * time series with delay (= 17) as the dataset. (reference: https://mantas.info/code/simple_esn/)
  * This scalar series is used both as an input (record in time t) and an output (record in time (t+1)).
  * 
- * We can use it to cross-check that our implementation is (probably) correct by ensuring it emmits similar results.
+ * We can use it to cross-check that our implementation is (probably) correct by ensuring it emits similar results.
  */
 public class MantasExample extends HigherLevelExampleFactory {
     static {

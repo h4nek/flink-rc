@@ -194,16 +194,11 @@ public class LinearRegression implements Serializable {
     private static class MLRPredictCoProcessFunction extends CoProcessFunction<Tuple2<Long, List<Double>>, 
             Tuple2<Long, List<Double>>, Tuple2<Long, Double>> {
         private List<Double> alpha; // latest alpha vector
-//        private long alphaTimestamp = Long.MIN_VALUE; // timestamp of the latest alpha vector
         private long alphaIndex = Long.MIN_VALUE; // index of the latest alpha vector
         private List<Tuple2<Long, List<Double>>> inputsBacklog = new ArrayList<>(); // input vectors that are yet to be 
                                                                       // processed after the final alpha vector arrives
-//        private long EOTRAINING_TIMESTAMP;
         private long chosenAlphaIndex;
         
-//        public MLRPredictCoProcessFunction(long EOTRAINING_TIMESTAMP) {
-//            this.EOTRAINING_TIMESTAMP = EOTRAINING_TIMESTAMP;
-//        }
         public MLRPredictCoProcessFunction(long chosenAlphaIndex) {
             this.chosenAlphaIndex = chosenAlphaIndex;
         }
@@ -211,21 +206,16 @@ public class LinearRegression implements Serializable {
         @Override
         public void processElement1(Tuple2<Long, List<Double>> input, Context ctx, 
                                     Collector<Tuple2<Long, Double>> out) throws Exception {
-//            if (alphaTimestamp < EOTRAINING_TIMESTAMP) {
             if (alphaIndex < chosenAlphaIndex) {
-//                System.out.println("storing the input");
-//                System.out.println("input:" + input);
                 inputsBacklog.add(input);
             }
             else if (inputsBacklog.size() > 0) {
-//                System.out.println("releasing the backlog");
                 for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {
                     predict(oldInput, out, alpha);
                 }
                 inputsBacklog.clear();
             }
             else {
-//                System.out.println("outputting the new input");
                 predict(input, out, alpha);
             }
         }
@@ -247,12 +237,10 @@ public class LinearRegression implements Serializable {
                                     Collector<Tuple2<Long, Double>> out) throws Exception {
             System.out.println("alpha value: " + alpha);
             System.out.println("incoming alpha timestamp: " + ctx.timestamp());
-//            if (ctx.timestamp() > alphaTimestamp) { // update the model with newest Alpha
             if (alpha.f0 > alphaIndex) { // update the model with newest Alpha
                 this.alpha = alpha.f1;
                 alphaIndex = alpha.f0;
             }
-//            if (alphaTimestamp >= EOTRAINING_TIMESTAMP) {
             if (alphaIndex == chosenAlphaIndex) {    // we have the chosen Alpha
                 System.out.println("Releasing the backlog (from the Alpha process)");
                 for (Tuple2<Long, List<Double>> oldInput : inputsBacklog) {

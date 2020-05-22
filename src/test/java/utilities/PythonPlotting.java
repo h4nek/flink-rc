@@ -233,7 +233,7 @@ public class PythonPlotting {
                     .window(windowAssigner).apply((x,y) -> {List<Double> data = new ArrayList<>(x.f1); data.add(y.f1); 
                         return Tuple2.of(x.f0, data);}, Types.TUPLE(Types.LONG, Types.LIST(Types.DOUBLE)));
         }
-        combinedInputOutputStream.print("To be saved in file");//TEST
+//        combinedInputOutputStream.print("To be saved in file");//TEST
         // plotting DataStreams (windows) - we can't collect them
         combinedInputOutputStream.windowAll(windowAssigner).process(
                 new ProcessAllWindowFunction<Tuple2<Long, List<Double>>, String, TimeWindow>() {

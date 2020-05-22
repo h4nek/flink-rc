@@ -63,7 +63,7 @@ public class PythonPlotting {
         
         String[] params = {
                 "python",
-                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotRCPredictions.py",
+                "..\\python_plots\\plotRCPredictions.py",
                 plotFileName + "_InputData",
                 plotFileName + "_OutputData",
                 plotFileName,
@@ -166,7 +166,7 @@ public class PythonPlotting {
 
         String[] params = {
                 "python",
-                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotRCPredictionsNew.py",
+                "..\\python_plots\\plotRCPredictionsNew.py",
                 plotFileName + "_PlottingData",
                 plotFileName,
                 xlabel,
@@ -268,7 +268,7 @@ public class PythonPlotting {
                         // invoke the Python plotting script
                         String[] params = {
                                 "python",
-                                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotRCPredictionsNew.py",
+                                "..\\python_plots\\plotRCPredictionsNew.py",
                                 "streaming\\" + plotFileName + "_PlottingData_"+ context.timestamp(),
                                 plotFileName,
                                 xlabel,
@@ -305,7 +305,7 @@ public class PythonPlotting {
 
         String[] params = {
                 "python",
-                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotReservoirHeatmap.py",
+                "..\\python_plots\\plotReservoirHeatmap.py",
                 title,
         };
         Process process = Runtime.getRuntime().exec(params);
@@ -326,7 +326,7 @@ public class PythonPlotting {
 
         String[] params = {
                 "python",
-                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotReservoirsSurface.py",
+                "..\\python_plots\\plotReservoirsSurface.py",
                 inputFileName,
                 title,
         };
@@ -351,7 +351,7 @@ public class PythonPlotting {
 
         String[] params = {
                 "python",
-                "D:\\Programy\\BachelorThesis\\Development\\python_plots\\plotReservoirPerformance.py",
+                "..\\python_plots\\plotReservoirPerformance.py",
                 inputFileName,
                 title,
                 folder,

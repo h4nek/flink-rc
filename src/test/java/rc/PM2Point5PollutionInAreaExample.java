@@ -10,7 +10,7 @@ import java.util.List;
 import static utilities.PythonPlotting.PlotType.LINE;
 import static utilities.PythonPlotting.PlotType.POINTS;
 
-public class PM2Point5PollutionInArea extends HigherLevelExampleFactory {
+public class PM2Point5PollutionInAreaExample extends HigherLevelExampleFactory {
     static {
         inputFilePath = "src/test/resources/pm2.5_pollution/transformed_input/PM2.5 for Seattle-Tacoma-Bellevue, WA Transformed.csv";
         columnsBitMask = "1111111111111111111";

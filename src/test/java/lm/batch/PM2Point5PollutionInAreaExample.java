@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
  * The data seems to have a periodic fashion and also shows non-linear immediate tendency. 
  * There might also be a linear overall tendency.
  */
-public class PM2Point5PollutionInArea {
+public class PM2Point5PollutionInAreaExample {
     public static final String INPUT_FILE_PATH = "src/test/resources/pm2.5_pollution/transformed_input/PM2.5 for Seattle-Tacoma-Bellevue, WA Transformed.csv";
     public static final double LEARNING_RATE = 0.001;   // 0.001 - without decay (MSE ~ 12.6)
     private static final double SPLIT_RATIO = 0.8;

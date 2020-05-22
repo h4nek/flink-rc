@@ -124,7 +124,7 @@ public class ESNReservoirSparse extends RichMapFunction<Tuple2<Long, List<Double
         else if (range < 0) {
             throw new IllegalArgumentException("The range of weights has to be positive.");
         }
-        else if (sparsity < 0 || sparsity > 1) {
+        else if (reservoirTopology == Topology.SPARSE && (sparsity < 0 || sparsity > 1)) {
             throw new IllegalArgumentException("The sparsity has to be a value between 0-1 (inclusive).");
         }
         

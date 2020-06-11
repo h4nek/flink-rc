@@ -29,7 +29,7 @@ import java.util.List;
  */
 public class GlacierMeltdownExample {
     public static String inputFilePath = "src/test/resources/glaciers/input_data/glaciers.csv";
-    private static final double SPLIT_RATIO = 0.5;
+    private static final double SPLIT_RATIO = 0.8;
     public static final double[] ALPHA_INIT = {1, 1, 1};
     public static final double LEARNING_RATE = 0.000004;
     public static final String EXAMPLE_ABSOLUTE_DIR_PATH = System.getProperty("user.dir") + "/src/test/resources/glaciers";

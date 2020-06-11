@@ -25,7 +25,7 @@ public class CO2EmmissionsSingleNationExample extends HigherLevelExampleFactory 
         N_u = 1;
         N_x = 10;
         learningRate = 10;
-        regularizationFactor = 1e-10;
+        regularizationFactor = 1e-20;
         scalingAlpha = 0.8;
         trainingSetRatio = 0.8;
         trainingSetSize = (int) Math.floor(trainingSetRatio*datasetSizes[selectedNationIdx]);

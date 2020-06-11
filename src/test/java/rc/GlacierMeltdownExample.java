@@ -7,6 +7,8 @@ import higher_level_examples.HigherLevelExampleStreaming;
 import org.apache.flink.api.java.tuple.Tuple2;
 import rc_core.ESNReservoirSparse.Topology;
 
+import java.util.Collections;
+
 import static utilities.PythonPlotting.PlotType.LINE;
 import static utilities.PythonPlotting.PlotType.POINTS;
 
@@ -16,19 +18,21 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
         columnsBitMask = "110";
         N_u = 1;
         N_x = 10;
-        learningRate = 20;
-        regularizationFactor = 1e-10;
+        learningRate = 110;
+        regularizationFactor = 0;
         scalingAlpha = 0.8;
         trainingSetRatio = 0.8;
-        trainingSetSize = (int) Math.floor(trainingSetRatio*70);
-
+        datasetSize = 70;
+        trainingSetSize = (int) Math.floor(trainingSetRatio*datasetSize);
+//        lmAlphaInit = Collections.nCopies(2, 1.0);
 
         title = "Glaciers Meltdown";
         xLabel = "Year";
         yLabel = "Mean cumulative mass balance (mwe)";
         plotType = LINE;
-        plotFileName = title;
+        plotFileName = title + " lr " + learningRate;
         
+        lrOnly = true;
         debugging = true;
         includeMSE = true;
         plottingMode = true;
@@ -49,10 +53,10 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
     }
     
     private static void configure() {
-        hle.setTimeStepsAhead(1);    // predict the next year's meltdown based on the current data
+//        hle.setTimeStepsAhead(1);    // predict the next year's meltdown based on the current data
         hle.addCustomParser((inputString, inputVector) -> {
             double year = Double.parseDouble(inputString);
-//            inputVector.add(0, (year - 1945 - 35)/35);    // input feature; move the column values to be around 0
+            inputVector.add(0, (year - 1945 - 35)/35);    // input feature; move the column values to be around 0
             inputVector.add(year);  // for plotting input
         });
 //        hle.addCustomParser((x, y) -> {double mwe = Double.parseDouble(x);
@@ -60,7 +64,7 @@ public class GlacierMeltdownExample extends HigherLevelExampleFactory {
 //            y.add(0, normalMwe);    // input feature
 //            y.add(normalMwe); // for the output - time series prediction
 //        });
-        hle.addDataNormalizer(max, min, 0, 2);
+        hle.addDataNormalizer(max, min, 2);
 //        hle.addCustomParser(2, (x, y) -> {double observations = Double.parseDouble(x); 
 //            y.add((observations - 18)/18);});
 //        hle.setupPlotting();

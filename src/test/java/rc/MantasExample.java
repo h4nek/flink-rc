@@ -20,9 +20,9 @@ public class MantasExample extends HigherLevelExampleFactory {
         columnsBitMask = "1";
         trainingSetSize = 2000;
         N_u = 1;
-        N_x = 5;
-        learningRate = 0.01;
-        regularizationFactor = 1e-10;
+        N_x = 50;
+        learningRate = 1000;
+        regularizationFactor = 0;
         
         scalingAlpha = 0.8;
 
@@ -30,11 +30,11 @@ public class MantasExample extends HigherLevelExampleFactory {
         xLabel = "index";
         yLabel = "$y(index + 2000)$";
         plotType = LINE;
-        plotFileName = title;
+        plotFileName = title + " lr " + learningRate;
         
         debugging = false;
         includeMSE = true;
-        plottingMode = false;
+        plottingMode = true;
     }
 
     public static void main(String[] args) throws Exception {

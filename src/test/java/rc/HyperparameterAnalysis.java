@@ -5,6 +5,8 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import rc_core.ESNReservoirSparse.Topology;
 import utilities.PythonPlotting;
 
+import static rc_core.ESNReservoirSparse.Topology.*;
+
 /**
  * Similarly to {@link ReservoirComparison}, compare differently configured reservoirs in terms of performance.
  * In this case, we'll be evaluating a single chosen hyperparameter with everything else fixed.
@@ -14,9 +16,11 @@ import utilities.PythonPlotting;
  */
 public class HyperparameterAnalysis {
     private static Integer[] arrN_x = {4, 10, 20, 50};
+//    private static Integer[] arrN_x = {50, 75, 100, 125};
     private static Double[] arrScalingAlpha = {0.1, 0.5, 0.8, 0.9};
     private static int numIters = 10;  // number of iterations for each reservoir configuration to average the MSE over
-    private static Topology[] arrTopology = Topology.values();
+//    private static Topology[] arrTopology = Topology.values();
+    private static Topology[] arrTopology = {JUMPS_ONLY, JUMPS_ONLY_RANDOMIZED, CYCLIC_WITH_JUMPS, CYCLIC_WITH_JUMPS_RANDOMIZED};
     
     private static String exampleTitle = "Mackey-Glass Time Series";
     private static String exampleTitleUnformatted = "Mackey-Glass Time Series";
@@ -59,7 +63,7 @@ public class HyperparameterAnalysis {
                 hleProxy.setRegularizationFactor(1e-10);
                 hleProxy.setNx(10);
                 hleProxy.setScalingAlpha(.8);
-                hleProxy.setTopology(Topology.CYCLIC_WITH_JUMPS);
+                hleProxy.setTopology(CYCLIC_WITH_JUMPS);
 
                 if (hyperparameter instanceof Integer) { //N_x
                     int N_x = (Integer) hyperparameter;
@@ -87,7 +91,7 @@ public class HyperparameterAnalysis {
                 ++i;
             }
         }
-        
+        exampleTitleUnformatted += " (without Sparse)";
         PythonPlotting.plotReservoirPerformanceHyperparam(data, exampleTitle, exampleTitleUnformatted, paramName, xAxis, 
                 "MSE", plotType, arrHyperparam.length, numIters, isNumeric);
     }
@@ -106,7 +110,7 @@ public class HyperparameterAnalysis {
                 return new CO2EmmissionsSingleNationExample();
             case 3: exampleTitle = "PM$_{2.5}$ Pollution in Seattle Area";
                 exampleTitleUnformatted = "PM2pt5 Pollution in Seattle Area";
-                return new PM2Point5PollutionInArea();
+                return new PM2Point5PollutionInAreaExample();
         }
         return new MantasExample();
     }
